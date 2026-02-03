@@ -175,14 +175,14 @@ def main():
                 # Si el usuario está en Moodle y en SIGAD miro si en SIGAD sigue teniendo el mismo email
                 # si no coinciden el email en SIGAD y en Moodle entonces actualizo en Moodle al email que haya en SIGAD
                 print("alumnoSIGAD.getEmailSigad(): ", alumnoSIGAD.getEmailSigad())
-                print("alumnoMoodle['email']: ", alumnoMoodle['email_sigad'])
+                print("alumnoMoodle['email_sigad']: ", alumnoMoodle['email_sigad'])
                 if alumnoSIGAD.getEmailSigad() is not None and alumnoMoodle['email_sigad'] is not None and alumnoSIGAD.getEmailSigad().lower() != alumnoMoodle['email_sigad'].lower():
                     userid = alumnoMoodle['userid']
                     email_nuevo = alumnoSIGAD.getEmailSigad().lower()
                     update_moodle_email_sigad(userid, email_nuevo)
                     num_alumnos_modificado_email = num_alumnos_modificado_email + 1
-                    escribeEnFichero(filename_md, "- Al alumno " + alumnoMoodle['username'] + " que tenia el email " + alumnoMoodle['email'] + \
-                        " se le ha cambiado a " + alumnoSIGAD.getEmailSigad() + ").")
+                    escribeEnFichero(filename_md, "- Al alumno " + alumnoMoodle['username'] + " que tenia el email " + alumnoMoodle['email_sigad'] + \
+                        " se le ha cambiado a " + alumnoSIGAD.getEmailSigad() + ".")
                 #
                 break
         
