@@ -1,7 +1,7 @@
 import json, requests, time, os
 from pathlib import Path
 from datetime import datetime
-from logger_config import logger
+from gestion_alumnos.logger_config import logger
 
 BASE_URL = os.getenv("API_BASE_URL", "https://aplicaciones.aragon.es/pcrpe/services/alumnosFPDistancia")
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"

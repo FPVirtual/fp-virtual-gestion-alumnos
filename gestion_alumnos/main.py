@@ -11,11 +11,11 @@ import ssl
 import traceback
 from datetime import datetime
 from Config import *
-from Conexion import *
-from classes.Alumno import *
-from classes.Centro import *
-from classes.Ciclo import *
-from classes.Modulo import *
+from gestion_alumnos.conexion import *
+from gestion_alumnos.classes.alumno import *
+from gestion_alumnos.classes.centro import *
+from gestion_alumnos.classes.ciclo import *
+from gestion_alumnos.classes.modulo import *
 from email.message import EmailMessage
 from email.headerregistry import Address
 from email.mime.multipart import MIMEMultipart
@@ -24,7 +24,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 from pathlib import Path
 import re
-from logger_config import logger
+from gestion_alumnos.logger_config import logger
 from utils import api_client, utils, json_parser
 
 filename_md = "";
@@ -85,9 +85,7 @@ def gestion_alumnos_v1():
     ##     NUEVAS_ALTAS
     ##     LIMPIEZA_AGOSTO
     # -----------------------------------------------------------------------------
-
-   
-        
+       
 
 
 def gestion_alumnos():

@@ -1,5 +1,5 @@
 
-from Util import *
+from gestion_alumnos.util import *
 
 class Alumno:
     NAME = "ALUMNO"

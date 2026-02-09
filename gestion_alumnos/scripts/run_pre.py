@@ -8,15 +8,15 @@ sys.path.insert(0, str(proyecto_root))
 import os
 import errno
 from dotenv import load_dotenv
-from logger_config import logger   # logger global MarkdownLogger
-from main import gestion_alumnos
+from gestion_alumnos.logger_config import logger   # logger global MarkdownLogger
+from gestion_alumnos.main import gestion_alumnos
 
 proyecto_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(proyecto_root))
 
 logger.info("## Inicio de la ejecución del script GESTION ALUMNOS ##")
 
-env = os.getenv("APP_ENV", "produccion")
+env = os.getenv("APP_ENV", "preproduccion")
 dotenv_file = Path(f".env.{env}").resolve()
 ok = load_dotenv(dotenv_path=dotenv_file, override=True)
 
@@ -25,6 +25,8 @@ if ok:
 else:
     raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), dotenv_file)
 
+def main():
+    gestion_alumnos()
 
 if __name__ == "__main__":
     gestion_alumnos()

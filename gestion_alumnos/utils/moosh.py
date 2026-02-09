@@ -1,5 +1,5 @@
 import subprocess
-from logger_config import logger
+from gestion_alumnos.logger_config import logger
 
 def run_moosh_command(moodle, command, capture=False, timeout=10):
     logger.info("run_moosh_command(...)")

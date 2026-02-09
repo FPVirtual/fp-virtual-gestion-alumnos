@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from logger_config import logger 
+from gestion_alumnos.logger_config import logger 
 
 def extraer_resumen_final(carpeta_logs: str) -> dict:
     """

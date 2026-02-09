@@ -1,4 +1,4 @@
-# scripts/run_pre.py
+# scripts/run_dev.py
 import sys
 from pathlib import Path
 
@@ -8,8 +8,8 @@ sys.path.insert(0, str(proyecto_root))
 import os
 import errno
 from dotenv import load_dotenv
-from logger_config import logger   # logger global MarkdownLogger
-from main import gestion_alumnos
+from gestion_alumnos.logger_config import logger   # logger global MarkdownLogger
+from gestion_alumnos.main import gestion_alumnos_v1
 
 proyecto_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(proyecto_root))
@@ -26,7 +26,7 @@ else:
     raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), dotenv_file)
 
 def main():
-    gestion_alumnos()
+    gestion_alumnos_v1()
 
 if __name__ == "__main__":
-    gestion_alumnos()
+    main()

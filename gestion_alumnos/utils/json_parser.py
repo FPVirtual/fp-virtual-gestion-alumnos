@@ -1,10 +1,11 @@
 import json
 import os
 from pathlib import Path
-from logger_config import logger
+from gestion_alumnos.classes import alumno, centro, ciclo
+from gestion_alumnos.logger_config import logger
 from models import Registro
 from .parser import parse_json
-from classes import Alumno, Centro, Ciclo, Modulo
+from gestion_alumnos.classes import modulo
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
@@ -73,7 +74,7 @@ def procesaJsonEstudiantes(y, alumnos_sigad):
         # print( "type(centros): ", type(centros) ) # list
         # print( "len(centros): ", len(centros) ) # 
         # creo el objeto
-        miAlumno = Alumno(idAlumno, idTipoDocumento, documento, nombre, 
+        miAlumno = alumno(idAlumno, idTipoDocumento, documento, nombre, 
                 apellido1, apellido2, emailSigad)
         # miAlumno.toText()
         #
@@ -88,7 +89,7 @@ def procesaJsonEstudiantes(y, alumnos_sigad):
             # print("ciclos: ", ciclos)
             # print("type(ciclos): ", type(ciclos) ) # str
 
-            miCentro = Centro(codigoCentro, centroo)
+            miCentro = centro(codigoCentro, centroo)
 
             k = 0
             for ciclo in ciclos:
@@ -101,7 +102,7 @@ def procesaJsonEstudiantes(y, alumnos_sigad):
                 siglasCiclo = ciclo["siglasCiclo"]
                 modulos = ciclo["modulos"]
 
-                miCiclo = Ciclo(idFicha, codigoCiclo, cicloo, siglasCiclo)
+                miCiclo = ciclo(idFicha, codigoCiclo, cicloo, siglasCiclo)
 
                 l = 0
                 for modulo in modulos:
@@ -110,7 +111,7 @@ def procesaJsonEstudiantes(y, alumnos_sigad):
                     moduloo = modulo["modulo"]
                     siglasModulo = modulo["siglasModulo"]
                     #
-                    miModulo = Modulo(idMateria, moduloo, siglasModulo)
+                    miModulo = modulo(idMateria, moduloo, siglasModulo)
                     #
                     miCiclo.addModulo(miModulo)
                 #

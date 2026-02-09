@@ -1,7 +1,7 @@
 import io
 import os
 from utils.moosh import run_moosh_command, run_command
-from logger_config import logger
+from gestion_alumnos.logger_config import logger
 
 
 def get_moodle(subdomain):
