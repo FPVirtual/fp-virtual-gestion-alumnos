@@ -1,0 +1,161 @@
+{
+  "fecha": "15/12/2025",
+  "hora": "11:42:28",
+  "alumnos": [
+    {
+      "idAlumno": 16839,
+      "idTipoDocumento": 1,
+      "documento": "78842153Q",
+      "nombre": "Valeria",
+      "apellido1": "Torres",
+      "apellido2": "Medina",
+      "email": "valeria.torres.medina@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50009348",
+          "centro": "AVEMPACE",
+          "ciclos": [
+            {
+              "idFicha": 22,
+              "codigoCiclo": "12242301",
+              "ciclo": "Educación Infantil (Formación Profesional)",
+              "siglasCiclo": "SSC302",
+              "modulos": [
+                {
+                  "idMateria": 18599,
+                  "modulo": "Itinerario personal para la empleabilidad I ( Virtual )",
+                  "siglasModulo": "IPPE1"
+                },
+                {
+                  "idMateria": 18601,
+                  "modulo": "Primeros auxilios ( Virtual )",
+                  "siglasModulo": "PA"
+                },
+                {
+                  "idMateria": 18603,
+                  "modulo": "Desarrollo socioafectivo ( Virtual )",
+                  "siglasModulo": "DS"
+                },
+                {
+                  "idMateria": 18606,
+                  "modulo": "El juego infantil y su metodología ( Virtual )",
+                  "siglasModulo": "JIM"
+                },
+                {
+                  "idMateria": 18608,
+                  "modulo": "Expresión y comunicación ( Virtual )",
+                  "siglasModulo": "EC"
+                },
+                {
+                  "idMateria": 18611,
+                  "modulo": "Intervención con familias y atención a menores en riesgo social  ( Virtual )",
+                  "siglasModulo": "IFAMRS"
+                },
+                {
+                  "idMateria": 18613,
+                  "modulo": "Itinerario personal para la empleabilidad II ( Virtual )",
+                  "siglasModulo": "IPPE2"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "idAlumno": 16920,
+      "idTipoDocumento": 1,
+      "documento": "73106923C",
+      "nombre": "Bruno",
+      "apellido1": "Rojas",
+      "apellido2": null,
+      "email": "bruno.rojas@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50009348",
+          "centro": "AVEMPACE",
+          "ciclos": [
+            {
+              "idFicha": 19,
+              "codigoCiclo": "12242301",
+              "ciclo": "Educación Infantil (Formación Profesional)",
+              "siglasCiclo": "SSC302",
+              "modulos": [
+                {
+                  "idMateria": 18586,
+                  "modulo": "Autonomía personal y salud infantil ( Virtual )",
+                  "siglasModulo": "APSI"
+                },
+                {
+                  "idMateria": 18588,
+                  "modulo": "Desarrollo cognitivo y motor ( Virtual )",
+                  "siglasModulo": "DCM"
+                },
+                {
+                  "idMateria": 18593,
+                  "modulo": "Digitalización aplicada a los sectores productivos (GS) ( Virtual )",
+                  "siglasModulo": "DASP"
+                },
+                {
+                  "idMateria": 18595,
+                  "modulo": "Habilidades sociales ( Virtual )",
+                  "siglasModulo": "HS"
+                },
+                {
+                  "idMateria": 18597,
+                  "modulo": "Inglés profesional ( Virtual )",
+                  "siglasModulo": "IN"
+                },
+                {
+                  "idMateria": 18599,
+                  "modulo": "Itinerario personal para la empleabilidad I ( Virtual )",
+                  "siglasModulo": "IPPE1"
+                },
+                {
+                  "idMateria": 18601,
+                  "modulo": "Primeros auxilios ( Virtual )",
+                  "siglasModulo": "PA"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "idAlumno": 16939,
+      "idTipoDocumento": 3,
+      "documento": "X4579557G",
+      "nombre": "Irene",
+      "apellido1": "Gallardo",
+      "apellido2": "Parra",
+      "email": "irene.gallardo.parra@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50009567",
+          "centro": "RÍO GÁLLEGO",
+          "ciclos": [
+            {
+              "idFicha": 18,
+              "codigoCiclo": "12140601",
+              "ciclo": "Emergencias Sanitarias",
+              "siglasCiclo": "SAN203",
+              "modulos": [
+                {
+                  "idMateria": 18021,
+                  "modulo": "Apoyo psicológico en situaciones de emergencia ( Virtual )",
+                  "siglasModulo": "APSE"
+                },
+                {
+                  "idMateria": 18044,
+                  "modulo": "Logística sanitaria en emergencias ( Virtual )",
+                  "siglasModulo": "LSE"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
