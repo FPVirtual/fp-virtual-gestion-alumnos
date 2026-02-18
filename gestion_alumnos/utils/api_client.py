@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime
 from gestion_alumnos.logger_config import logger
 
-BASE_URL = os.getenv("API_BASE_URL", "https://aplicaciones.aragon.es/pcrpe/services/alumnosFPDistancia ")
+BASE_URL = os.getenv("API_BASE_URL", "https://aplicaciones.aragon.es/pcrpe/services/alumnosFPDistancia")
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 # --- Crear directorio si no existe
 DATA_DIR.mkdir(parents=True, exist_ok=True)

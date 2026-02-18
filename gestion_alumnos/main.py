@@ -67,7 +67,7 @@ def gestion_alumnos_v1():
     ## 2. Obtener los alumnos actuales en sigad
     logger.info("## 1. Recuperación de todo el alumnado matriculado en SIGAD")
     nombre_fichero = api_client.main()
-    logger.info(f"### Datos recuperados en: \" "+ nombre_fichero+"\"")
+    logger.info(f"### Datos recuperados en: \" "+ nombre_fichero +"\"")
     registro_sigad = json_parser.cargar_fichero_estudiantes()
 
     logger.info(f"### Total de alumnos recuperados de SIGAD: " + str(len(registro_sigad.alumnos)) )
@@ -85,7 +85,8 @@ def gestion_alumnos_v1():
     ##     NUEVAS_ALTAS
     ##     LIMPIEZA_AGOSTO
     # -----------------------------------------------------------------------------
-       
+
+        
 
 
 def gestion_alumnos():

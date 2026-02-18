@@ -3,7 +3,7 @@ import json
 from dotenv import load_dotenv
 from pathlib import Path
 import pytest
-from models import Registro
+from gestion_alumnos.models import Registro
 
 # Si se ha marcado entorno «test», cargamos .env.test
 if os.getenv("APP_ENV") == "test":

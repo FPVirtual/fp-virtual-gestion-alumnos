@@ -1,66 +1,47 @@
+from dataclasses import dataclass, field
+from typing import Optional, List
+from gestion_alumnos.util import crea_emails_dominio  # Import específico
 
-from gestion_alumnos.util import *
 
+@dataclass
 class Alumno:
-    NAME = "ALUMNO"
+    """Representa un alumno del sistema de gestión."""
+    
+    id_alumno: int
+    id_tipo_documento: int  # tipo de documento
+    documento: str          # número de DNI, NIE...
+    nombre: str
+    p_apellido: str              # primer apellido
+    s_apellido: Optional[str] = None  # segundo apellido
+    email_sigad: str
+    centros: List = field(default_factory=list, repr=False)
+    
+    # Atributo calculado en post-init
+    email_dominio: str = field(init=False, repr=True)
 
-    def __init__(
-            self, idAlumno, idTipoDocumento, documento, nombre, pape,
-            sape, emailSigad ):
-        self.__idAlumno = idAlumno
-        self.__idTipoDocumento = idTipoDocumento # tipo de documento
-        self.__documento = documento #numero de DNI, NIE,...
-        self.__nombre = nombre
-        self.__pape = pape
-        self.__sape = sape
-        self.__emailSigad = emailSigad
-        self.__centros = None
-        # Campo calculado
-        self.__emailDominio = creaEmailsDominio(nombre, pape, sape, documento)
+    def __post_init__(self):
+        """Inicializa campos calculados después de la construcción."""
+        self.email_dominio = crea_emails_dominio(
+            self.nombre, self.p_apellido, self.s_apellido, self.documento
+        )
 
-    def addCentro(self, centro):
-        if self.__centros is None:
-            self.__centros = []
-        self.__centros.append(centro)
+    @property
+    def apellidos(self) -> str:
+        """Devuelve apellidos completos (p_apellido + s_apellido si existe)."""
+        if self.s_apellido:
+            return f"{self.p_apellido} {self.s_apellido}"
+        return self.p_apellido
 
-    def getDocumento(self):
-        return self.__documento
+    def add_centro(self, centro) -> None:
+        """Añade un centro a la lista de centros del alumno."""
+        self.centros.append(centro)
 
-    def getNombre(self):
-        return self.__nombre
-
-    def getApellidos(self):
-        apellidos = self.__pape
-        if self.__sape is not None:
-            apellidos = apellidos + " " + self.__sape
-        return apellidos
-
-    def getPape(self):
-        return self.__pape
-
-    def getSape(self):
-        return self.__sape
-
-    def getEmailSigad(self):
-        return self.__emailSigad
-
-    def getEmailDominio(self):
-        return self.__emailDominio
-
-    def getCentros(self):
-        return self.__centros
-
-    def __repr__(self):
-        cadena =  "idAlumno: " + str(self.__idAlumno) \
-            + ", idTipoDocumento: " + str(self.__idTipoDocumento) \
-            + ", documento: '" + str(self.__documento) + "', " \
-            + ", nombre: " + str(self.__nombre) \
-            + ", pape: " + str(self.__pape) \
-            + ", sape " + str(self.__sape) \
-            + ", emailSigad: '" + str(self.__emailSigad) + "'" \
-            + ", emailDominio: '" + str(self.__emailDominio) + "'"
-            
-        for centro in self.__centros:
-            cadena = cadena +  "\n\t" + repr(centro)
-        
-        return cadena
+    def __repr__(self) -> str:
+        """Representación legible para debug."""
+        centros_repr = "\n\t".join(repr(c) for c in self.centros)
+        return (
+            f"Alumno(id={self.id_alumno}, doc={self.documento}, "
+            f"nombre='{self.nombre}', apellidos='{self.apellidos}', "
+            f"email_sigad='{self.email_sigad}', email_dominio='{self.email_dominio}'"
+            f"{f'\n\t{centros_repr}' if self.centros else ''})"
+        )

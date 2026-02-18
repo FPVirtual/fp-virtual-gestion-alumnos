@@ -4,7 +4,7 @@ import pytest
 from unittest import mock
 from datetime import datetime
 
-from utils.api_client import solicitar_datos, obtener_estudiantes, main
+from gestion_alumnos.utils.api_client import solicitar_datos, obtener_estudiantes, main
 
 
 ###############################################################################
@@ -90,7 +90,8 @@ def test_obtener_estudiantes_error_definitivo(fake_creds, requests_mock):
 ###############################################################################
 def test_main_exito(fake_creds, requests_mock, fake_estudiantes_dict, tmp_path, monkeypatch):
     """Flujo completo: solicitar id, reintento, guardar json."""
-    monkeypatch.chdir(tmp_path)          # guardar el json en tmp
+    # Parchamos DATA_DIR para que use tmp_path en lugar de la ruta real
+    monkeypatch.setattr("gestion_alumnos.utils.api_client.DATA_DIR", tmp_path)
     # 1) solicitar id
     requests_mock.get(
         f"https://aplicaciones.aragon.es/pcrpe/services/alumnosFPDistancia"
@@ -113,7 +114,7 @@ def test_main_sin_credenciales(monkeypatch, caplog):
     """Sin API_USER / API_PASSWORD debe terminar sin llamar a la API."""
     monkeypatch.delenv("API_USER", raising=False)
     monkeypatch.delenv("API_PASSWORD", raising=False)
-    with mock.patch("utils.api_client.solicitar_datos") as mock_sol:
+    with mock.patch("gestion_alumnos.utils.api_client.solicitar_datos") as mock_sol:
         main()
     mock_sol.assert_not_called()
     assert "Faltan API_USER y/o API_PASSWORD" in caplog.text
