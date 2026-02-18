@@ -5,14 +5,15 @@ Este archivo muestra cómo utilizar EmailService para enviar
 notificaciones a usuarios e informes a administradores.
 """
 
-from gestion_alumnos.utils.email_service import EmailService, crear_email_service
+import os
+from gestion_alumnos.utils.email_service import EmailService, crear_email_service_desde_env
 from gestion_alumnos.models import Alumno, Centro, Ciclo, Modulo
 
 
 def ejemplo_crear_servicio():
     """Ejemplo de creación del servicio de email."""
     
-    # Opción 1: Crear directamente
+    # Opción 1: Crear directamente (útil para testing)
     email_service = EmailService(
         smtp_host="smtp.gmail.com",
         smtp_port=587,
@@ -23,21 +24,12 @@ def ejemplo_crear_servicio():
         report_to="admin1@ejemplo.com admin2@ejemplo.com"
     )
     
-    # Opción 2: Desde configuración (usando variables de entorno o Config.py)
-    from Config import (
-        SMTP_HOSTS, SMTP_PORT, SMTP_USER, SMTP_PASSWORD,
-        SUBDOMAIN, PATH, REPORT_TO
-    )
+    # Opción 2: Desde variables de entorno (.env) - RECOMENDADO
+    # Requiere tener cargado el archivo .env en el entorno
+    # from dotenv import load_dotenv
+    # load_dotenv(".env.produccion")  # o .env.preproduccion, .env.test
     
-    email_service = crear_email_service(
-        smtp_host=SMTP_HOSTS,
-        smtp_port=SMTP_PORT,
-        smtp_user=SMTP_USER,
-        smtp_password=SMTP_PASSWORD,
-        subdomain=SUBDOMAIN,
-        templates_path=f"{PATH}/templates",
-        report_to=REPORT_TO
-    )
+    email_service = crear_email_service_desde_env()
     
     return email_service
 
@@ -215,22 +207,16 @@ def ejemplo_flujo_completo():
     """
     Ejemplo de flujo completo de uso del servicio de email
     en el contexto de la gestión de alumnos.
-    """
-    from Config import (
-        SMTP_HOSTS, SMTP_PORT, SMTP_USER, SMTP_PASSWORD,
-        SUBDOMAIN, PATH, REPORT_TO
-    )
     
-    # 1. Inicializar servicio
-    email_service = crear_email_service(
-        smtp_host=SMTP_HOSTS,
-        smtp_port=SMTP_PORT,
-        smtp_user=SMTP_USER,
-        smtp_password=SMTP_PASSWORD,
-        subdomain=SUBDOMAIN,
-        templates_path=f"{PATH}/templates",
-        report_to=REPORT_TO
-    )
+    Este ejemplo asume que las variables de entorno están cargadas
+    desde un archivo .env (ej: .env.produccion, .env.preproduccion)
+    """
+    # 1. Inicializar servicio desde variables de entorno
+    # Asegúrate de cargar el .env antes de llamar a esta función:
+    # from dotenv import load_dotenv
+    # load_dotenv(".env.produccion")
+    
+    email_service = crear_email_service_desde_env()
     
     # 2. Procesar nuevos alumnos
     alumnos_nuevos = [...]  # Lista de objetos Alumno
@@ -268,6 +254,9 @@ def ejemplo_flujo_completo():
 if __name__ == "__main__":
     print("Ejemplos de uso de EmailService")
     print("=" * 50)
+    print("\nIMPORTANTE: Configura las variables de entorno antes de ejecutar.")
+    print("Puedes usar: from dotenv import load_dotenv; load_dotenv('.env.test')")
+    print()
     
     # Descomentar para probar cada ejemplo:
     # ejemplo_crear_servicio()

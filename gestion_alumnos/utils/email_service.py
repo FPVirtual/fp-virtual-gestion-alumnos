@@ -3,8 +3,11 @@ Módulo para la gestión de envío de emails.
 
 Proporciona funcionalidades para enviar notificaciones a usuarios
 y reportes a los administradores del sistema.
+
+Las configuraciones se obtienen de variables de entorno (.env)
 """
 
+import os
 import ssl
 import smtplib
 from pathlib import Path
@@ -107,7 +110,14 @@ class EmailService:
         Raises:
             FileNotFoundError: Si no existe el template
         """
-        template_path = self.templates_path / nombre_template
+        # Si el path no es absoluto, buscar relativo al proyecto
+        templates_path = self.templates_path
+        if not templates_path.is_absolute():
+            # Intentar encontrar relativo a la ubicación del módulo
+            base_path = Path(__file__).resolve().parent.parent.parent
+            templates_path = base_path / templates_path
+        
+        template_path = templates_path / nombre_template
         try:
             return template_path.read_text(encoding="utf-8")
         except FileNotFoundError:
@@ -495,37 +505,58 @@ class EmailService:
         return self.emails_enviados >= self.max_emails_diarios
 
 
-# Función de fábrica para crear el servicio desde configuración
-def crear_email_service(
-    smtp_host: str,
-    smtp_port: str,
-    smtp_user: str,
-    smtp_password: str,
-    subdomain: str,
-    templates_path: str,
-    report_to: str
-) -> EmailService:
+# Función de fábrica para crear el servicio desde variables de entorno
+def crear_email_service_desde_env() -> EmailService:
     """
-    Crea una instancia de EmailService desde valores de configuración.
+    Crea una instancia de EmailService desde variables de entorno.
     
-    Args:
-        smtp_host: Servidor SMTP
-        smtp_port: Puerto SMTP (como string, se convertirá a int)
-        smtp_user: Usuario SMTP
-        smtp_password: Contraseña SMTP
-        subdomain: Subdominio del entorno
-        templates_path: Ruta a los templates
-        report_to: Emails para reportes separados por espacios
-        
+    Lee las siguientes variables de entorno:
+    - SMTP_HOSTS: Servidor SMTP
+    - SMTP_PORT: Puerto SMTP
+    - SMTP_USER: Usuario SMTP
+    - SMTP_PASSWORD: Contraseña SMTP
+    - SUBDOMAIN: Subdominio del entorno (www, preproduccion, test)
+    - PATH: Ruta base del proyecto (para templates)
+    - REPORT_TO: Emails para reportes separados por espacios
+    
     Returns:
         Instancia de EmailService configurada
+        
+    Raises:
+        ValueError: Si falta alguna variable de entorno obligatoria
     """
+    # Variables obligatorias
+    smtp_host = os.getenv("SMTP_HOSTS")
+    smtp_port = os.getenv("SMTP_PORT")
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    subdomain = os.getenv("SUBDOMAIN", "test")
+    path = os.getenv("PATH", "/")
+    report_to = os.getenv("REPORT_TO", "")
+    
+    # Validar variables obligatorias
+    faltantes = []
+    if not smtp_host:
+        faltantes.append("SMTP_HOSTS")
+    if not smtp_port:
+        faltantes.append("SMTP_PORT")
+    if not smtp_user:
+        faltantes.append("SMTP_USER")
+    if not smtp_password:
+        faltantes.append("SMTP_PASSWORD")
+    
+    if faltantes:
+        raise ValueError(
+            f"Faltan variables de entorno obligatorias: {', '.join(faltantes)}. "
+            f"Asegúrate de tener configurado el archivo .env"
+        )
+    
     return EmailService(
         smtp_host=smtp_host,
         smtp_port=int(smtp_port),
         smtp_user=smtp_user,
         smtp_password=smtp_password,
         subdomain=subdomain,
-        templates_path=templates_path,
+        templates_path=f"{path}/templates",
         report_to=report_to
     )

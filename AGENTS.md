@@ -240,6 +240,36 @@ logger.info("Mensaje informativo")
 logger.markdown("Entrada para informe markdown")
 ```
 
+### Email Service
+
+El servicio de email utiliza variables de entorno para su configuración:
+
+```python
+from dotenv import load_dotenv
+from gestion_alumnos.utils.email_service import crear_email_service_desde_env
+
+# Cargar variables de entorno
+load_dotenv(".env.produccion")
+
+# Crear servicio desde variables de entorno
+email_service = crear_email_service_desde_env()
+
+# Usar el servicio
+email_service.enviar_email_nuevo_usuario(alumno, password, matriculas)
+email_service.enviar_informe_ejecucion(filename_md, filename_csv)
+```
+
+**Variables de entorno requeridas:**
+- `SMTP_HOSTS` - Servidor SMTP
+- `SMTP_PORT` - Puerto SMTP
+- `SMTP_USER` - Usuario SMTP
+- `SMTP_PASSWORD` - Contraseña SMTP
+
+**Variables opcionales:**
+- `SUBDOMAIN` - Entorno (www, preproduccion, test)
+- `PATH` - Ruta base para templates
+- `REPORT_TO` - Emails para informes separados por espacios
+
 ---
 
 ## 7. Arquitectura del Sistema

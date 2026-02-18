@@ -7,9 +7,9 @@ Este paquete contiene utilidades compartidas como:
 - json_parser: Parser de datos JSON
 """
 
-from gestion_alumnos.utils.email_service import EmailService, crear_email_service
+from gestion_alumnos.utils.email_service import EmailService, crear_email_service_desde_env
 
 __all__ = [
     "EmailService",
-    "crear_email_service",
+    "crear_email_service_desde_env",
 ]

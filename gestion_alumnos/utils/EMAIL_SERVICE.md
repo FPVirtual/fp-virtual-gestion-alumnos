@@ -8,7 +8,7 @@ El `EmailService` es un módulo dedicado a la gestión de envíos de email en la
 
 ```
 gestion_alumnos/utils/
-├── __init__.py              # Exporta EmailService y crear_email_service
+├── __init__.py              # Exporta EmailService y crear_email_service_desde_env
 ├── email_service.py         # Clase principal EmailService
 ├── email_service_example.py # Ejemplos de uso
 └── EMAIL_SERVICE.md         # Esta documentación
@@ -41,9 +41,13 @@ Los templates HTML se encuentran en `gestion_alumnos/templates/`:
 ### 1. Crear el servicio
 
 ```python
-from gestion_alumnos.utils.email_service import EmailService, crear_email_service
+from gestion_alumnos.utils.email_service import EmailService, crear_email_service_desde_env
+from dotenv import load_dotenv
 
-# Opción 1: Crear directamente
+# Cargar variables de entorno desde archivo .env
+load_dotenv(".env.produccion")  # o .env.preproduccion, .env.test
+
+# Opción 1: Crear directamente (útil para testing)
 service = EmailService(
     smtp_host="smtp.gmail.com",
     smtp_port=587,
@@ -54,28 +58,38 @@ service = EmailService(
     report_to="admin1@ejemplo.com admin2@ejemplo.com"
 )
 
-# Opción 2: Desde configuración (recomendado)
-from Config import (
-    SMTP_HOSTS, SMTP_PORT, SMTP_USER, SMTP_PASSWORD,
-    SUBDOMAIN, PATH, REPORT_TO
-)
-
-service = crear_email_service(
-    smtp_host=SMTP_HOSTS,
-    smtp_port=SMTP_PORT,
-    smtp_user=SMTP_USER,
-    smtp_password=SMTP_PASSWORD,
-    subdomain=SUBDOMAIN,
-    templates_path=f"{PATH}/templates",
-    report_to=REPORT_TO
-)
+# Opción 2: Desde variables de entorno (recomendado)
+service = crear_email_service_desde_env()
 ```
 
-### 2. Enviar email a nuevo usuario
+### Variables de Entorno Requeridas
+
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `SMTP_HOSTS` | Servidor SMTP | `smtp.gmail.com` |
+| `SMTP_PORT` | Puerto SMTP | `587` |
+| `SMTP_USER` | Usuario SMTP | `usuario@gmail.com` |
+| `SMTP_PASSWORD` | Contraseña SMTP | `contraseña` |
+| `SUBDOMAIN` | Entorno | `www`, `preproduccion`, `test` |
+| `PATH` | Ruta base del proyecto | `/var/fp-distancia/` |
+| `REPORT_TO` | Emails para informes | `admin1@ej.com admin2@ej.com` |
+
+### 2. Ejemplo Completo con .env
 
 ```python
+from dotenv import load_dotenv
+from gestion_alumnos.utils.email_service import crear_email_service_desde_env
 from gestion_alumnos.models import Alumno
 
+# Cargar configuración según entorno
+# load_dotenv(".env.produccion")
+# load_dotenv(".env.preproduccion")
+load_dotenv(".env.test")
+
+# Crear servicio
+service = crear_email_service_desde_env()
+
+# Crear alumno de ejemplo
 alumno = Alumno(
     idAlumno=12345,
     idTipoDocumento=1,
@@ -84,33 +98,27 @@ alumno = Alumno(
     apellido1="García",
     apellido2="López",
     email="maria@email.com",
-    centros=[...]
+    centros=[]
 )
 
+# Enviar email de bienvenida
 exito = service.enviar_email_nuevo_usuario(
     alumno=alumno,
     password="Pass1234!",
     matriculado_en_texto="<b>Gestión Administrativa</b> - Comunicación empresarial<br/>"
 )
-```
 
-### 3. Enviar informe a administradores
+# Verificar estado
+if exito:
+    print("Email enviado correctamente")
+else:
+    print("Error al enviar email")
 
-```python
-exito = service.enviar_informe_ejecucion(
+# Enviar informe a administradores (REPORT_TO)
+service.enviar_informe_ejecucion(
     filename_md="/logs/informe_2024-01-15.md",
     filename_csv="/logs/alumnos_2024-01-15.csv"
 )
-```
-
-### 4. Verificar límites
-
-```python
-if service.limite_alcanzado():
-    print("Límite de emails diarios alcanzado")
-else:
-    stats = service.obtener_estadisticas()
-    print(f"Disponibles: {stats['disponibles']}")
 ```
 
 ## API Reference
@@ -130,6 +138,29 @@ EmailService(
     report_to: str         # Emails para reportes (separados por espacios)
 )
 ```
+
+### Función `crear_email_service_desde_env()`
+
+Crea un `EmailService` usando variables de entorno:
+
+```python
+from gestion_alumnos.utils.email_service import crear_email_service_desde_env
+from dotenv import load_dotenv
+
+load_dotenv(".env.produccion")
+service = crear_email_service_desde_env()
+```
+
+**Variables de entorno requeridas:**
+- `SMTP_HOSTS`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASSWORD`
+
+**Variables opcionales:**
+- `SUBDOMAIN` (default: "test")
+- `PATH` (default: "/")
+- `REPORT_TO` (default: "")
 
 #### Métodos principales
 

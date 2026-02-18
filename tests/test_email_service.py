@@ -9,7 +9,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
-from gestion_alumnos.utils.email_service import EmailService, crear_email_service
+from gestion_alumnos.utils.email_service import EmailService, crear_email_service_desde_env
 from gestion_alumnos.models import Alumno, Centro, Ciclo, Modulo
 
 
@@ -269,24 +269,38 @@ class TestEmailService:
         assert stats["disponibles"] == 5
 
 
-class TestCrearEmailService:
-    """Tests para la función de fábrica."""
+class TestCrearEmailServiceDesdeEnv:
+    """Tests para la función de fábrica desde variables de entorno."""
     
-    def test_crear_email_service(self, tmp_path):
-        """Test de creación desde configuración."""
+    def test_crear_email_service_desde_env_exito(self, tmp_path, monkeypatch):
+        """Test de creación exitosa desde variables de entorno."""
+        # Configurar variables de entorno
+        monkeypatch.setenv("SMTP_HOSTS", "smtp.test.com")
+        monkeypatch.setenv("SMTP_PORT", "587")
+        monkeypatch.setenv("SMTP_USER", "user@test.com")
+        monkeypatch.setenv("SMTP_PASSWORD", "pass")
+        monkeypatch.setenv("SUBDOMAIN", "preproduccion")
+        monkeypatch.setenv("PATH", str(tmp_path))
+        monkeypatch.setenv("REPORT_TO", "admin@test.com")
+        
+        # Crear directorio de templates
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
         
-        service = crear_email_service(
-            smtp_host="smtp.test.com",
-            smtp_port="587",
-            smtp_user="user@test.com",
-            smtp_password="pass",
-            subdomain="preproduccion",
-            templates_path=str(templates_dir),
-            report_to="admin@test.com"
-        )
+        service = crear_email_service_desde_env()
         
         assert isinstance(service, EmailService)
-        assert service.smtp_port == 587  # Convertido a int
+        assert service.smtp_port == 587
+        assert service.smtp_host == "smtp.test.com"
         assert service.subdomain == "preproduccion"
+    
+    def test_crear_email_service_desde_env_faltan_variables(self, monkeypatch):
+        """Test de error cuando faltan variables de entorno."""
+        # Limpiar variables de entorno SMTP
+        monkeypatch.delenv("SMTP_HOSTS", raising=False)
+        monkeypatch.delenv("SMTP_PORT", raising=False)
+        monkeypatch.delenv("SMTP_USER", raising=False)
+        monkeypatch.delenv("SMTP_PASSWORD", raising=False)
+        
+        with pytest.raises(ValueError, match="Faltan variables de entorno"):
+            crear_email_service_desde_env()
