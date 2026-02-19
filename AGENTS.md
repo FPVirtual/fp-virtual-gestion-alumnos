@@ -28,6 +28,7 @@
 ### Dependencias Principales
 - `requests` - Llamadas HTTP a Web Services
 - `python-dotenv` - Gestión de variables de entorno
+- `pymysql` - Conexión a base de datos MySQL
 - `pytest`, `pytest-cov`, `pytest-mock`, `requests-mock` - Testing
 - Librerías estándar: `http.client`, `smtplib`, `json`, `subprocess`
 
@@ -35,6 +36,7 @@
 - **Docker** - Contenedores Moodle (interactúa vía `moosh` y MySQL)
 - **MySQL** - Acceso directo a base de datos de Moodle para operaciones complejas
 - **Moodle** + **Moosh** - Gestión de usuarios, cursos y matrículas
+- **SIGAD** - API REST de la que se obtienen los datos de estudiantes
 
 ---
 
@@ -44,10 +46,10 @@
 ├── gestion_alumnos/           # Código fuente principal
 │   ├── __init__.py
 │   ├── __main__.py            # Punto de entrada vacío
-│   ├── main.py                # Lógica principal de gestión (1783 líneas)
-│   ├── models.py              # Dataclasses: Alumno, Centro, Ciclo, Modulo, Registro
-│   ├── conexion.py            # Clase Conexion para llamadas HTTP
-│   ├── logger_config.py       # Configuración de logging personalizado
+│   ├── main.py                # Lógica principal de gestión (~1780 líneas)
+│   ├── models.py              # Dataclasses modernos: Alumno, Centro, Ciclo, Modulo, Registro
+│   ├── conexion.py            # Clase Conexion para llamadas HTTP (legacy)
+│   ├── logger_config.py       # Configuración de logging personalizado con nivel MARKDOWN
 │   ├── util.py                # Funciones utilitarias (emails, conversión LFP→LOE)
 │   ├── classes/               # Clases legacy (alumno.py, centro.py, ciclo.py, modulo.py)
 │   ├── scripts/               # Entry points para entornos
@@ -59,12 +61,17 @@
 │       ├── api_client.py      # Cliente API REST para SIGAD
 │       ├── json_parser.py     # Parser de JSON a objetos modelo
 │       ├── parser.py          # Parser de diccionario a modelo Registro
-│       ├── moodle.py          # (pendiente) Operaciones Moodle
-│       └── moosh.py           # (pendiente) Wrapper Moosh
+│       ├── moodle.py          # Operaciones sobre Moodle (get_moodle, get_alumnos_moodle)
+│       ├── moosh.py           # Wrapper para ejecutar comandos moosh en Docker
+│       ├── email_service.py   # Servicio de envío de emails con límites diarios
+│       └── utils.py           # Funciones auxiliares
 ├── tests/                     # Tests pytest
 │   ├── conftest.py            # Fixtures y configuración
 │   ├── test_api_client.py     # Tests del cliente API
 │   ├── test_json_parser.py    # Tests del parser JSON
+│   ├── test_email_service.py  # Tests del servicio de email
+│   ├── test_moodle.py         # Tests de operaciones Moodle
+│   ├── test_moosh.py          # Tests de comandos moosh
 │   └── data/                  # Fixtures de test
 │       ├── estudiantes_0001.json
 │       └── test_estudiantes_data.json
@@ -100,7 +107,7 @@ El proyecto usa archivos `.env.{entorno}` para configuración:
 **Variables importantes:**
 ```bash
 # General
-ENVIROMENT="test|preproduccion|produccion"
+ENVIRONMENT="test|preproduccion|produccion"
 SUBDOMAIN="test|preproduccion|www"
 PATH="/var/fp-distancia-gestion-usuarios-automatica/"
 
@@ -164,7 +171,7 @@ poetry run pytest --cov=gestion_alumnos
 ### Ejecutar Aplicación
 
 ```bash
-# Desarrollo (usa gestion_alumnos_v1 - nueva versión)
+# Desarrollo (usa gestion_alumnos_v1 - nueva versión refactorizada)
 APP_ENV=dev poetry run dev
 
 # Preproducción (usa gestion_alumnos legacy)
@@ -200,6 +207,7 @@ def reactiva_usuario(): ...
 class Alumno: ...
 class Centro: ...
 class Ciclo: ...
+class EmailService: ...
 
 # Variables: snake_case
 alumnos_sigad = []
@@ -284,7 +292,7 @@ email_service.enviar_informe_ejecucion(filename_md, filename_csv)
                                           │
                                           ▼
                               ┌──────────────────────┐
-                              │ data/estudiantes_*.json │
+                              │ data/estudiantes_*.json│
                               └──────────┬───────────┘
                                          │
                                          ▼
@@ -330,12 +338,17 @@ email_service.enviar_informe_ejecucion(filename_md, filename_csv)
    - `Centro` → contiene `List[Ciclo]`
    - `Ciclo` → contiene `List[Modulo]`
 
+5. **email_service.py**: Servicio de envío de emails
+   - Límites diarios: 1000 en producción, 10 en otros entornos
+   - Templates HTML para diferentes tipos de notificación
+   - Redirección automática en entornos no productivos
+
 ---
 
 ## 8. Estrategia de Testing
 
 ### Tipos de Tests
-- **Unitarios:** Funciones aisladas (api_client, parser)
+- **Unitarios:** Funciones aisladas (api_client, parser, email_service)
 - **Integración:** Flujos completos con mocks
 - **Fixtures:** Datos JSON en `tests/data/`
 
@@ -421,7 +434,7 @@ command = f"""
 
 ### Límites Operativos
 - Máximo 1000 emails/día en producción (limitación Gmail)
-- Máximo 3-10 emails en entornos no producción
+- Máximo 10 emails en entornos no producción
 - Lista de usuarios no borrables hardcodeada (IDs 1-33, 3725, etc.)
 
 ### Casos Especiales
@@ -449,12 +462,12 @@ ENVIRONMENT=test poetry run dev
 ## 12. Roadmap/Tareas Pendientes
 
 Marcadas en `v0.1-README.md`:
-- [x] Sistema de logs nuevo
-- [x] Utilización de .env
+- [x] Sistema de logs nuevo funcionando
+- [x] Utilización de .env sin problemas
 - [x] Sistema de tests
-- [x] Descarga de archivos SIGAD
-- [ ] Comprobación versión antigua sin modificar
-- [ ] Prueba de matriculación real
+- [x] Prueba de descarga de archivos desde sigad y transformación en diccionario
+- [ ] Comprobación de funcionamiento de la versión antigua sin modificar
+- [ ] Prueba de matriculación de un alumno
 
 Refactorización en curso:
 - Migración de `main.py` (1800 líneas) a módulos más pequeños
