@@ -25,4 +25,5 @@ gestion_alumnos/data/*
 
 # no subimos logs   
 gestion_alumnos/logs/*
+errno
 
