@@ -65,3 +65,8 @@ wadllib==1.3.2
 wxPython==4.0.1
 xkit==0.0.0
 zope.interface==4.3.2
+
+# --- Nuevas dependencias (mejores prácticas) ---
+pydantic>=2.10.0
+pydantic-settings>=2.7.0
+structlog>=25.1.0

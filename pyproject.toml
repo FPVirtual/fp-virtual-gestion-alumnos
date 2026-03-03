@@ -16,13 +16,32 @@ pro = "scripts.run_pro:main"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-asn1crypto = "^1.5.1"
-certifi = "^2025.11.12"
-chardet = "^5.2.0"
-cryptography = "^46.0.3"
-distro-info = "^1.0"
+# --- Core ---
+pydantic = "^2.10.0"
+pydantic-settings = "^2.7.0"
+python-dotenv = "^1.2.1"
+structlog = "^25.1.0"
+
+# --- HTTP / API ---
+requests = "^2.32.5"
+httpx = "^0.28.0"  # Cliente HTTP async
 httplib2 = "^0.31.0"
+
+# --- Database ---
+pymysql = "^1.1.1"
+
+# --- Email ---
+aiohttp = "^3.11.0"
+
+# --- Utilidades ---
+certifi = "^2025.11.12"
 idna = "^3.11"
+cryptography = "^46.0.3"
+
+# --- Legacy (mantener por compatibilidad) ---
+asn1crypto = "^1.5.1"
+chardet = "^5.2.0"
+distro-info = "^1.0"
 keyring = "^25.7.0"
 keyrings-alt = "^5.0.2"
 launchpadlib = "^2.1.0"
@@ -35,17 +54,18 @@ pexpect = "^4.9.0"
 pillow = "^12.0.0"
 py3dns = "^4.0.2"
 pycurl = "^7.45.7"
-python-dotenv = "^1.2.1"
-pymysql = "^1.1.1"
-requests = "^2.32.5"
-pytest = "^9.0.2"
 
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"
+pytest-asyncio = "^0.25.0"
 pytest-cov = "^7.0.0"
 pytest-mock = "^3.15.1"
 requests-mock = "^1.12.1"
+respx = "^0.22.0"  # Mock para httpx
+mypy = "^1.14.0"
+ruff = "^0.9.0"
+pre-commit = "^4.1.0"
 
 [build-system]
 requires = ["poetry-core"]

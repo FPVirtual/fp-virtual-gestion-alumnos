@@ -46,7 +46,7 @@
 ├── gestion_alumnos/           # Código fuente principal
 │   ├── __init__.py
 │   ├── __main__.py            # Punto de entrada vacío
-│   ├── main.py                # Lógica principal de gestión (~1780 líneas)
+│   ├── main.py                # Lógica principal de gestión (versión refactorizada v1)
 │   ├── models.py              # Dataclasses modernos: Alumno, Centro, Ciclo, Modulo, Registro
 │   ├── conexion.py            # Clase Conexion para llamadas HTTP (legacy)
 │   ├── logger_config.py       # Configuración de logging personalizado con nivel MARKDOWN
@@ -65,6 +65,9 @@
 │       ├── moosh.py           # Wrapper para ejecutar comandos moosh en Docker
 │       ├── email_service.py   # Servicio de envío de emails con límites diarios
 │       └── utils.py           # Funciones auxiliares
+├── scripts/                   # Scripts de ejemplo y utilidades
+│   ├── ejemplo_aplicar_cambios.py
+│   └── ejemplo_uso_sigad_sync.py
 ├── tests/                     # Tests pytest
 │   ├── conftest.py            # Fixtures y configuración
 │   ├── test_api_client.py     # Tests del cliente API
@@ -79,6 +82,7 @@
 ├── logs/                      # Logs de ejecución
 │   ├── app_*.log             # Logs normales
 │   └── informe_*.md          # Informes en Markdown
+├── csvs/                      # CSVs generados (extracción de alumnado)
 ├── Config.py                  # Configuración sensible (ignorada por git)
 ├── Config-sample.py           # Plantilla de configuración
 ├── .env.example               # Plantilla de variables de entorno
@@ -476,5 +480,49 @@ Refactorización en curso:
 
 ---
 
-**Última actualización:** Febrero 2026
+## 13. Estructura de Datos
+
+### JSON de Estudiantes (API SIGAD)
+```json
+{
+  "fecha": "15/12/2025",
+  "hora": "11:42:28",
+  "alumnos": [
+    {
+      "idAlumno": 16839,
+      "idTipoDocumento": 1,
+      "documento": "78842153Q",
+      "nombre": "Valeria",
+      "apellido1": "Torres",
+      "apellido2": "Medina",
+      "email": "valeria.torres.medina@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50009348",
+          "centro": "AVEMPACE",
+          "ciclos": [
+            {
+              "idFicha": 22,
+              "codigoCiclo": "12242301",
+              "ciclo": "Educación Infantil (Formación Profesional)",
+              "siglasCiclo": "SSC302",
+              "modulos": [
+                {
+                  "idMateria": 18599,
+                  "modulo": "Itinerario personal para la empleabilidad I ( Virtual )",
+                  "siglasModulo": "IPPE1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+**Última actualización:** Marzo 2026
 **Autor del documento:** Agente IA
