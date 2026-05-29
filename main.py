@@ -360,13 +360,6 @@ def main():
                             continue
                     if not en_sigad_esta_matriculado:
                         print("  - En SIGAD el alumno", username, "NO está matriculado en", course_shortname, "se procede a suspender su matrícula en el curso de moodle")
-
-                        # Casos especiales de fusión de cursos de Maite
-                        # TODO Borrar el if para antes de empezar el curso 2026-2027
-                        if course_shortname == "50020125-IFC301-5061" or course_shortname == "50020125-IFC302-5077" or course_shortname == "50020125-IFC303-5092" or course_shortname == "50020125-IFC201-5001":
-                            continue;
-                        # Fin del if que haría que borrar.
-
                         suspende_matricula_en_curso(moodle, userid, courseid)
                         # NO hay que sacarlo de la cohorte, eso borra progreso
                         escribeEnFichero(filename_md, "- " + username + "  matricula suspendida en " + course_shortname)
@@ -537,9 +530,7 @@ def main():
                 else:
                     print("Debería haberse enviado a '", alumno.getEmailSigad(), "'." )
                 
-                # TODO Deschacer esto cuando no haya alumnos suspendidos.
-                # enviado = send_email( destinatario , "FP virtual - Aragón", mensaje)
-                enviado = False 
+                enviado = send_email( destinatario , "FP virtual - Aragón", mensaje)
 
                 if enviado:
                     num_emails_enviados = num_emails_enviados + 1
@@ -1671,20 +1662,10 @@ def crearAlumnoEnMoodle(moodle, alumno, password):
 
 def crearShortnameCurso(codigo_centro, siglas_ciclo, id_materia):
     """
-    Crea el shortname del curso a partir de los datos dados teniendo en cuenta que hay que fusionar los cursos de Maite.
+    Crea el shortname del curso a partir de los datos dados
     """
 
     shortname = str(codigo_centro) + "-" + str(siglas_ciclo) + "-" + str(id_materia)
-
-    # Casos especiales de fusión de cursos de Maite
-    # TODO Borrar para antes de empezar el curso 2026-2027
-    if shortname == "50020125-IFC301-5061" or shortname == "50020125-IFC302-5077" or shortname == "50020125-IFC303-5092" or shortname == "50020125-IFC201-5001":
-        shortname = "50020125-IFC301-5061"
-
-    return shortname
-    #
-    # End of crearShortnameCurso
-    #
 
 def es_nie_valido(nie: str) -> bool:
     """
