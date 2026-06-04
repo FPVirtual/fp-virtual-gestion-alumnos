@@ -119,16 +119,33 @@ class TestMoodleAPIUsuarios:
         # Nota: Moodle puede no devolver el usuario inmediatamente en
         # búsquedas por caché/permisos, por eso no verificamos usuario_existe
 
-    @pytest.mark.skip(
-        reason="Pendiente: requiere usuario de test que no sea moodle-api"
-    )
     def test_suspender_y_reactivar_usuario(self, repo):
         """Ciclo: suspender → verificar → reactivar.
 
-        ⚠️  NUNCA usar moodle-api para este test.
-            Usar un usuario de test dedicado.
+        Usa el usuario prof_cd_daw (profesor de test) en lugar de moodle-api.
         """
-        pass
+        username = "prof_cd_daw"
+
+        # 1. Verificar que existe
+        assert repo.usuario_existe(username) is True
+
+        # 2. Obtener datos actuales
+        usuario = repo.obtener_por_username(username)
+        assert usuario is not None
+        estado_original = usuario.get("suspended", 0)
+
+        # 3. Suspender
+        assert repo.suspender_usuario(username) is True
+        usuario = repo.obtener_por_username(username)
+        assert usuario["suspended"] == 1
+
+        # 4. Reactivar (restaurar estado original)
+        if estado_original == 0:
+            assert repo.reactivar_usuario(username) is True
+            usuario = repo.obtener_por_username(username)
+            assert usuario["suspended"] == 0
+        else:
+            assert usuario["suspended"] == 1
 
 
 class TestMoodleAPICursos:
