@@ -1,0 +1,71 @@
+{
+  "fecha": "15/12/2025",
+  "hora": "11:42:28",
+  "alumnos": [
+    {
+      "idAlumno": 16839,
+      "idTipoDocumento": 1,
+      "documento": "78842153Q",
+      "nombre": "Valeria",
+      "apellido1": "Torres",
+      "apellido2": "Medina",
+      "email": "valeria.torres.medina@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50009348",
+          "centro": "AVEMPACE",
+          "ciclos": [
+            {
+              "idFicha": 22,
+              "codigoCiclo": "12242301",
+              "ciclo": "Educación Infantil (Formación Profesional)",
+              "siglasCiclo": "SSC302",
+              "modulos": [
+                {
+                  "idMateria": 18599,
+                  "modulo": "Itinerario personal para la empleabilidad I ( Virtual )",
+                  "siglasModulo": "IPPE1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "idAlumno": 16840,
+      "idTipoDocumento": 1,
+      "documento": "12345678A",
+      "nombre": "Juan",
+      "apellido1": "Pérez",
+      "apellido2": "García",
+      "email": "juan.perez@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50009349",
+          "centro": "IES TEST",
+          "ciclos": [
+            {
+              "idFicha": 23,
+              "codigoCiclo": "12242302",
+              "ciclo": "Desarrollo de Aplicaciones Web",
+              "siglasCiclo": "DAW",
+              "modulos": [
+                {
+                  "idMateria": 18600,
+                  "modulo": "Programación",
+                  "siglasModulo": "PROG"
+                },
+                {
+                  "idMateria": 18601,
+                  "modulo": "Bases de Datos",
+                  "siglasModulo": "BD"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

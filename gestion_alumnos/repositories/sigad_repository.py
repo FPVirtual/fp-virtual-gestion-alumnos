@@ -66,7 +66,7 @@ class SIGADRepository:
     def _cargar_desde_test(self) -> Registro:
         """Carga datos desde archivo de test."""
         test_file = (
-            Path(__file__).resolve().parent.parent / "tests" / "data" /
+            Path(__file__).resolve().parent.parent.parent / "tests" / "data" /
             "test_estudiantes_data.json"
         )
         if not test_file.exists():
