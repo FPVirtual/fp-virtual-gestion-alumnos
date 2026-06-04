@@ -1,6 +1,8 @@
 # AGENTS.md — Guía para Agentes de IA (v0.3)
 
 > **Rama:** `v0.3-estructura-paquete-con-logs`  
+> **Versión:** `0.3.0`  
+> **Tests:** `26/26 ✅`  
 > **Propósito:** Paquete Python autocontenido para gestión de alumnos Moodle. Cero SQL directo.  
 > **Arquitectura:** Repository Pattern + Dependency Injection + Pydantic Settings + structlog  
 > **Última actualización:** Junio 2026
@@ -30,6 +32,7 @@ El orquestador (`GestionService`) **no sabe** cuál implementación usa; la reci
 - **structlog** — logging estructurado (traído de v0.2)
 - **requests** — llamadas HTTP a API SIGAD y API REST Moodle
 - **smtplib** — envío de emails
+- **pytest + requests-mock** — testing
 
 **Dependencias prohibidas en esta versión:**
 - ❌ `pymysql` — no hay acceso directo a BD
@@ -41,69 +44,42 @@ El orquestador (`GestionService`) **no sabe** cuál implementación usa; la reci
 ## 3. Estructura del Proyecto
 
 ```
-├── gestion_alumnos/           # Paquete Python principal
-│   ├── __init__.py            # __version__, exports públicos
-│   ├── __main__.py            # python -m gestion_alumnos
-│   ├── cli.py                 # argparse: sync, extract, report, --driver
-│   ├── core/                  # Componentes fundamentales (traídos de v0.2)
-│   │   ├── __init__.py
-│   │   ├── config.py          # Pydantic Settings centralizada
-│   │   ├── container.py       # DI Container: resuelve implementaciones
-│   │   ├── exceptions.py      # Jerarquía de excepciones
-│   │   └── logging.py         # structlog + nivel MARKDOWN (25)
-│   ├── models/                # Modelos Pydantic (basados en v0.2)
-│   │   ├── __init__.py
-│   │   ├── alumno.py
-│   │   ├── centro.py
-│   │   ├── ciclo.py
-│   │   ├── modulo.py
-│   │   └── registro.py
-│   ├── repositories/          # Repository Pattern (basado en v0.2)
-│   │   ├── __init__.py
-│   │   ├── protocols.py       # Protocols: EstudianteRepository, MoodleRepository, EmailRepository
-│   │   ├── sigad_repository.py
-│   │   ├── moodle_moosh_repository.py   # Implementación via moosh
-│   │   ├── moodle_api_repository.py     # Implementación via API REST
-│   │   └── email_repository.py
-│   ├── services/
-│   │   ├── __init__.py
-│   │   └── gestion_service.py # Orquestador puro con DI
-│   ├── templates/             # HTML empaquetados (importlib.resources)
-│   │   ├── haFalladoElInforme.html
-│   │   ├── informeAutomatizado.html
-│   │   ├── matriculasAnadidas.html
-│   │   ├── nombreUsuarioActualizado.html
-│   │   └── nuevoUsuario.html
-│   └── utils/
-│       ├── __init__.py
-│       └── helpers.py         # Funciones puras
-│
-├── tests/                     # Tests pytest
-│   ├── conftest.py
-│   ├── test_core_config.py
-│   ├── test_core_container.py
-│   ├── test_models.py
-│   ├── test_repositories_moosh.py
-│   ├── test_repositories_api.py
-│   ├── test_repositories_sigad.py
-│   ├── test_repositories_email.py
-│   ├── test_services_gestion.py
-│   └── data/                  # Fixtures JSON
-│
-├── scripts/
-│   └── build_zipapp.py        # Genera dist/gestion_alumnos.pyz
-│
-├── data/                      # JSON descargados de SIGAD
-├── logs/                      # Logs .log + informes .md
-├── csvs/                      # CSVs generados
-├── pyproject.toml             # Poetry + pytest + zipapp config
-├── .env.example               # Plantilla variables de entorno
-├── .env.test                  # Config para tests
-├── .gitignore
-├── README.md
-└── docus/
-    ├── AGENTS.md              # Este archivo
-    └── tareas-y-roadmap.md    # Plan de trabajo detallado
+gestion_alumnos/
+├── __init__.py            # __version__, exports públicos
+├── __main__.py            # python -m gestion_alumnos
+├── cli.py                 # argparse: sync, extract, report, --driver
+├── core/                  # Componentes fundamentales (traídos de v0.2)
+│   ├── __init__.py
+│   ├── config.py          # Pydantic Settings centralizada
+│   ├── container.py       # DI Container: resuelve implementaciones
+│   ├── exceptions.py      # Jerarquía de excepciones
+│   └── logging.py         # structlog + nivel MARKDOWN (25)
+├── models/                # Modelos Pydantic (basados en v0.2)
+│   ├── __init__.py
+│   ├── alumno.py
+│   ├── centro.py
+│   ├── ciclo.py
+│   ├── modulo.py
+│   └── registro.py
+├── repositories/          # Repository Pattern (basado en v0.2)
+│   ├── __init__.py
+│   ├── protocols.py       # Protocols: EstudianteRepository, MoodleRepository, EmailRepository
+│   ├── sigad_repository.py
+│   ├── moodle_moosh_repository.py   # Implementación via moosh
+│   ├── moodle_api_repository.py     # Implementación via API REST
+│   └── email_repository.py
+├── services/              # Lógica de negocio
+│   ├── __init__.py
+│   └── gestion_service.py # Orquestador puro con DI
+├── templates/             # HTML empaquetados (importlib.resources)
+│   ├── haFalladoElInforme.html
+│   ├── informeAutomatizado.html
+│   ├── matriculasAnadidas.html
+│   ├── nombreUsuarioActualizado.html
+│   └── nuevoUsuario.html
+└── utils/
+    ├── __init__.py
+    └── helpers.py         # Funciones puras
 ```
 
 ---
@@ -321,9 +297,9 @@ service = container.gestion_service()
 ## 7. Repositorios
 
 ### SigadRepository (`EstudianteRepository`)
-- `solicitar_datos(curso_academico: str) -> str` — obtiene `idSolicitud`
-- `obtener_estudiantes(id_solicitud: str) -> Registro` — descarga JSON con reintentos
-- Modo test: bypass de API, carga desde `data/`
+- `obtener_registro()` — descarga JSON con reintentos o carga desde `tests/data/`
+- `buscar_por_documento(documento)` — búsqueda en registro
+- Modo test: bypass de API, carga desde archivo local
 
 ### MooshMoodleRepository (`MoodleRepository`)
 Ejecuta `moosh` como subprocess. Si `docker_container` está configurado, usa `docker exec {container} moosh ...`.
@@ -365,6 +341,19 @@ response = self._session.post(self._api_url, params=params)
 - **Integración:** Flujo completo con mocks de todos los repos.
 - **Conformidad de Protocols:** Verificar que ambas implementaciones cumplen `MoodleRepository`.
 
+### Ejecutar tests
+
+```bash
+# Todos
+pytest tests/ -v
+
+# Solo SIGAD
+pytest tests/test_repositories_sigad.py -v
+
+# Solo modelos
+pytest tests/test_models.py -v
+```
+
 ### Mock de moosh en tests
 
 ```python
@@ -390,16 +379,10 @@ def mock_moodle_api(requests_mock):
     )
 ```
 
-### Config de pytest
-
-```toml
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
-addopts = "-v --tb=short"
-```
+### Fixtures principales (`conftest.py`)
+- `settings_test` — Configuración de test
+- `sample_alumno`, `sample_registro` — Datos de ejemplo
+- `mock_moosh` — Mock de subprocess para moosh
 
 ---
 
@@ -408,11 +391,8 @@ addopts = "-v --tb=short"
 ### Generar zipapp
 
 ```bash
-# Poetry instala dependencias
-poetry install
-
-# Script de build
-poetry run python scripts/build_zipapp.py
+# Script automatizado
+python scripts/build_zipapp.py
 
 # Resultado
 dist/gestion_alumnos.pyz
@@ -464,22 +444,34 @@ USUARIOS_PROTEGIDOS = frozenset({
 
 ---
 
-## 11. Roadmap Inmediato
+## 11. Estado Actual (v0.3.0)
 
-Ver `docus/tareas-y-roadmap.md` para el desglose completo.
+| Componente | Estado | Tests |
+|-----------|--------|-------|
+| Core (config, logging, DI) | ✅ | 6/6 |
+| Modelos Pydantic | ✅ | 10/10 |
+| SIGAD Repository | ✅ | 6/6 |
+| Moosh Repository | ✅ | 3/3 |
+| API Repository | ✅ Implementado | Pendiente tests |
+| Email Repository | ✅ Implementado | Pendiente tests |
+| Gestion Service | 🟡 Stub | Pendiente integración |
+| CLI | ✅ | — |
+| Zipapp | ✅ | Funcional |
 
-Resumen:
-1. **Fase 0** — Auditoría SQL → moosh/API
-2. **Fase 1** — Infraestructura Poetry + estructura paquete
-3. **Fase 2** — Core: logging, exceptions, config, container (de v0.2)
-4. **Fase 3** — Modelos Pydantic (de v0.2)
-5. **Fase 4** — Repositorios: Protocols + implementaciones moosh + API
-6. **Fase 5** — Servicio de gestión (orquestador) + CLI
-7. **Fase 6** — Tests
-8. **Fase 7** — Zipapp
-9. **Fase 8** — Documentación y cierre
+**Total tests: 26/26 ✅**
+
+---
+
+## 12. Próximos Pasos Sugeridos
+
+1. **Completar lógica de negocio** en `gestion_service.py`
+2. **Tests de integración** para `GestionAlumnosService`
+3. **Tests para `APIMoodleRepository`**
+4. **Limpiar código legacy** (`main.py`, `Util.py`, `Conexion.py`, `classes/`)
+5. **Tag `v0.3.0`** y merge a `main`
 
 ---
 
 **Autor:** Agente IA  
-**Rama:** `v0.3-estructura-paquete-con-logs`
+**Rama:** `v0.3-estructura-paquete-con-logs`  
+**Commit:** `2fd963c`
