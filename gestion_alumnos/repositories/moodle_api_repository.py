@@ -82,11 +82,25 @@ class APIMoodleRepository(MoodleRepository):
 
     def usuario_existe(self, username: str) -> bool:
         """Verifica si existe un usuario en Moodle."""
+        # Intento 1: búsqueda directa por username
         result = self._call(
             "core_user_get_users_by_field",
             {"field": "username", "values[0]": username},
         )
-        return bool(result)
+        if result:
+            return True
+        # Intento 2: búsqueda general por username (algunas configs de Moodle
+        # no devuelven usuarios recién creados con get_users_by_field)
+        result = self._call(
+            "core_user_get_users",
+            {
+                "criteria[0][key]": "username",
+                "criteria[0][value]": username,
+            },
+        )
+        if isinstance(result, dict) and "users" in result:
+            return any(u.get("username") == username for u in result["users"])
+        return False
 
     def crear_usuario(
         self,
