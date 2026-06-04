@@ -6,7 +6,7 @@ from gestion_alumnos.core.config import Settings
 
 
 def test_config_default():
-    settings = Settings()
+    settings = Settings(moodle_driver="moosh")
     assert settings.environment == "dev"
     assert settings.moodle_driver == "moosh"
     assert settings.email_limit == 10

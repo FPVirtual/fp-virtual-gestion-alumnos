@@ -174,13 +174,13 @@ class TestSIGADRepository:
             registro = repo.obtener_registro()
             assert registro.total_alumnos == 0
 
-    def test_error_credenciales(self, monkeypatch):
+    def test_error_credenciales(self):
         """Test error cuando faltan credenciales."""
-        monkeypatch.setenv("ENVIRONMENT", "dev")
-        monkeypatch.delenv("API_USER", raising=False)
-        monkeypatch.delenv("API_PASSWORD", raising=False)
-
-        settings = Settings()
+        settings = Settings(
+            environment="dev",
+            api_user=None,
+            api_password=None,
+        )
         repo = SIGADRepository(settings)
 
         with pytest.raises(APIError, match="Faltan credenciales"):

@@ -20,10 +20,10 @@ class Ciclo(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    id_ficha: int = Field(..., alias="idFicha", gt=0)
-    codigo: str = Field(..., alias="codigoCiclo", min_length=1, max_length=20)
-    nombre: str = Field(..., alias="ciclo", min_length=1, max_length=200)
-    siglas: str = Field(..., alias="siglasCiclo", min_length=1, max_length=20)
+    id_ficha: int = Field(0, alias="idFicha", ge=0)
+    codigo: str | None = Field(None, alias="codigoCiclo", min_length=1, max_length=20)
+    nombre: str | None = Field(None, alias="ciclo", min_length=1, max_length=200)
+    siglas: str | None = Field(None, alias="siglasCiclo", min_length=1, max_length=20)
     modulos: list[Modulo] = Field(default_factory=list)
 
     @field_validator("modulos", mode="before")

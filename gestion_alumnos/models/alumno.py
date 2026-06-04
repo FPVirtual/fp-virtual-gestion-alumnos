@@ -24,20 +24,20 @@ class Alumno(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    id_alumno: int = Field(..., alias="idAlumno", gt=0)
-    id_tipo_documento: int = Field(..., alias="idTipoDocumento", gt=0)
-    documento: str = Field(
-        ...,
+    id_alumno: int = Field(0, alias="idAlumno", ge=0)
+    id_tipo_documento: int = Field(0, alias="idTipoDocumento", ge=0)
+    documento: str | None = Field(
+        None,
         min_length=5,
         max_length=20,
         pattern=r"^[a-zA-Z0-9]+$",
         description="DNI/NIE sin espacios ni guiones",
     )
-    nombre: str = Field(..., min_length=1, max_length=100)
-    apellido1: str = Field(..., alias="apellido1", min_length=1, max_length=100)
+    nombre: str | None = Field(None, min_length=1, max_length=100)
+    apellido1: str | None = Field(None, alias="apellido1", min_length=1, max_length=100)
     apellido2: str | None = Field(None, alias="apellido2", max_length=100)
-    email: str = Field(
-        ...,
+    email: str | None = Field(
+        None,
         pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
         max_length=200,
     )
@@ -45,8 +45,10 @@ class Alumno(BaseModel):
 
     @field_validator("documento")
     @classmethod
-    def normalizar_documento(cls, v: str) -> str:
+    def normalizar_documento(cls, v: str | None) -> str | None:
         """Convierte el documento a mayúsculas."""
+        if v is None:
+            return None
         return v.upper()
 
     @field_validator("email")
@@ -69,20 +71,24 @@ class Alumno(BaseModel):
     @property
     def nombre_completo(self) -> str:
         """Nombre completo del alumno."""
-        partes = [self.nombre, self.apellido1]
+        partes = []
+        if self.nombre:
+            partes.append(self.nombre)
+        if self.apellido1:
+            partes.append(self.apellido1)
         if self.apellido2:
             partes.append(self.apellido2)
-        return " ".join(partes)
+        return " ".join(partes) if partes else "SIN_NOMBRE"
 
     @property
     def username_moodle(self) -> str:
         """Username para Moodle (documento en minúsculas)."""
-        return self.documento.lower()
+        return (self.documento or "").lower()
 
     @property
     def email_institucional(self) -> str:
         """Email institucional generado."""
-        return f"{self.username_moodle}@fpvirtualaragon.es"
+        return f"{self.username_moodle}@fpvirtualaragon.es" if self.documento else ""
 
     def obtener_todos_modulos(self) -> list[Modulo]:
         """Obtiene todos los módulos de todos los ciclos y centros."""

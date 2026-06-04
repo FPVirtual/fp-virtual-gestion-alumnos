@@ -18,8 +18,8 @@ class Centro(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    codigo: str = Field(..., alias="codigoCentro", min_length=1, max_length=20)
-    nombre: str = Field(..., alias="centro", min_length=1, max_length=200)
+    codigo: str | None = Field(None, alias="codigoCentro", min_length=1, max_length=20)
+    nombre: str | None = Field(None, alias="centro", min_length=1, max_length=200)
     ciclos: list[Ciclo] = Field(default_factory=list)
 
     @field_validator("ciclos", mode="before")

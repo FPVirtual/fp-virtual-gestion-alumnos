@@ -14,9 +14,9 @@ class Modulo(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    id_materia: int = Field(..., alias="idMateria", gt=0)
-    nombre: str = Field(..., alias="modulo", min_length=1, max_length=500)
-    siglas: str = Field(..., alias="siglasModulo", min_length=1, max_length=20)
+    id_materia: int = Field(0, alias="idMateria", ge=0)
+    nombre: str | None = Field(None, alias="modulo", min_length=1, max_length=500)
+    siglas: str | None = Field(None, alias="siglasModulo", min_length=1, max_length=20)
 
     def __str__(self) -> str:
         return f"{self.siglas} - {self.nombre}"
