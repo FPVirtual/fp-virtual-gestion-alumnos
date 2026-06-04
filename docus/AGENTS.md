@@ -80,6 +80,8 @@ gestion_alumnos/
 └── utils/
     ├── __init__.py
     └── helpers.py         # Funciones puras
+
+archive/                   # Código legacy v0.2 (main.py, Util.py, Conexion.py, classes/)
 ```
 
 ---
@@ -467,7 +469,7 @@ USUARIOS_PROTEGIDOS = frozenset({
 1. **Completar lógica de negocio** en `gestion_service.py`
 2. **Tests de integración** para `GestionAlumnosService`
 3. **Tests para `APIMoodleRepository`**
-4. **Limpiar código legacy** (`main.py`, `Util.py`, `Conexion.py`, `classes/`)
+4. ~~**Limpiar código legacy** (`main.py`, `Util.py`, `Conexion.py`, `classes/`)~~ ✅ Movido a `archive/`
 5. **Tag `v0.3.0`** y merge a `main`
 
 ---

@@ -30,7 +30,11 @@ gestion_alumnos/
 ├── repositories/  # Protocols + implementations (SIGAD, Moosh, API, Email)
 ├── services/      # GestionAlumnosService (orquestador)
 └── templates/     # HTML empaquetados
+
+archive/           # Código legacy v0.2 (main.py, Util.py, Conexion.py, classes/)
 ```
+
+> **Nota:** El código procedural legacy de la v0.2 (`main.py`, `Util.py`, `Conexion.py`, `classes/`, etc.) ha sido movido a `archive/` para conservar la historia sin interferir con el paquete actual. El ejecutable actual es el paquete `gestion_alumnos`.
 
 ### Dual Driver Moodle
 

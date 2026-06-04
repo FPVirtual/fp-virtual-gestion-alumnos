@@ -1,23 +1,29 @@
-# For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.8-slim-buster
+# Dockerfile mínimo para gestion-alumnos v0.3
+# Uso:
+#   docker build -t gestion-alumnos .
+#   docker run --rm -v $(pwd)/.env.produccion:/app/.env:ro gestion-alumnos
 
-# Keeps Python from generating .pyc files in the container
+FROM python:3.10-slim-bookworm
+
 ENV PYTHONDONTWRITEBYTECODE=1
-
-# Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
 
-# Install pip requirements
-COPY requirements.txt .
-RUN python3 -m pip install -r requirements.txt
-
 WORKDIR /app
-COPY . /app
 
-# Creates a non-root user and adds permission to access the /app folder
-# For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
+# Instalar dependencias de runtime
+COPY requirements.txt .
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
+
+# Copiar solo el paquete y scripts necesarios
+COPY gestion_alumnos/ ./gestion_alumnos/
+COPY scripts/ ./scripts/
+COPY .env.example .
+
+# Crear usuario no root
 RUN useradd appuser && chown -R appuser /app
 USER appuser
 
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["python", "main.py"]
+# El comando por defecto muestra la ayuda.
+# Sobrescribir en ejecución con el comando deseado, p. ej.:
+#   docker run ... gestion-alumnos python -m gestion_alumnos sync --env-file /app/.env
+CMD ["python", "-m", "gestion_alumnos", "--help"]

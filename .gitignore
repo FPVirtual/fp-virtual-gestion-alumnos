@@ -16,7 +16,6 @@ build/
 # Configuración sensible
 .env
 .env.produccion
-Config.py
 
 # Datos y logs
 data/*.json
@@ -38,3 +37,6 @@ htmlcov/
 
 # Poetry
 poetry.lock
+
+# Código legacy archivado (conservado por historial; no añadir nuevos ficheros aquí)
+# archive/

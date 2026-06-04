@@ -175,7 +175,7 @@ docker exec moodle python3 /opt/gestion_alumnos.pyz sync
 | 8.1 | `README.md` | ✅ | Instalación, uso, arquitectura, zipapp |
 | 8.2 | `docus/AGENTS.md` | ✅ | Convenciones, estructura, DI, Protocols |
 | 8.3 | `.env.example` | ✅ | Sin credenciales BD, con `MOODLE_DRIVER` |
-| 8.4 | Limpiar código legacy | ⬜ | `main.py` raíz, `Util.py`, `Conexion.py`, `classes/` aún existen |
+| 8.4 | Limpiar código legacy | ✅ | `main.py`, `Util.py`, `Conexion.py`, `classes/` y `templates/` raíz movidos a `archive/`; `Dockerfile` y `requirements.txt` actualizados |
 | 8.5 | Tag `v0.3.0` | ⬜ | Pendiente release |
 
 ---
@@ -206,11 +206,11 @@ docker exec moodle python3 /opt/gestion_alumnos.pyz sync
 
 4. **Crear tests para `APIMoodleRepository`** usando `requests_mock`.
 
-5. **Limpiar código legacy** de la raíz (`main.py`, `Util.py`, `Conexion.py`, `classes/`).
+5. ~~**Limpiar código legacy** de la raíz (`main.py`, `Util.py`, `Conexion.py`, `classes/`).~~ ✅ Completado.
 
 6. **Tag `v0.3.0`** y merge a `main`.
 
 ---
 
 **Última actualización:** Junio 2026  
-**Commit:** `2fd963c` — feat: tests de recuperación SIGAD; 26/26 tests pasan
+**Commit:** limpieza de código legacy + requirements.txt

@@ -7,12 +7,6 @@ license = "MIT"
 readme = "README.md"
 packages = [{include = "gestion_alumnos"}]
 
-[tool.poetry.scripts]
-test = "scripts.run_tests:main"
-dev = "scripts.run_dev:main"
-pre = "scripts.run_pre:main"
-pro = "scripts.run_pro:main"
-
 [tool.poetry.dependencies]
 python = "^3.10"
 # --- Core ---
@@ -23,10 +17,6 @@ structlog = "^25.1.0"
 
 # --- HTTP / API ---
 requests = "^2.32.5"
-
-# --- Utilidades ---
-certifi = "^2025.11.12"
-idna = "^3.11"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"
