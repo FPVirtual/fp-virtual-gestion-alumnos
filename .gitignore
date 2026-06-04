@@ -1,12 +1,40 @@
-!gitignore
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Configuración sensible
+.env
+.env.produccion
 Config.py
-Config-predesarrollo.py
-Config-test.py
-Config-www.py
-.vscode/*
-__pycache__/*
-logs/*
-classes/__pycache__/*
-jsons/
-csvs/
-scripts/
+
+# Datos y logs
+data/*.json
+!data/.gitkeep
+logs/*.log
+logs/*.md
+csvs/*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Poetry
+poetry.lock

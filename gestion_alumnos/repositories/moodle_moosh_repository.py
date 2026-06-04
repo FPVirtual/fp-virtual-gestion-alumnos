@@ -1,0 +1,215 @@
+"""Implementación de MoodleRepository usando moosh.
+
+Ejecuta comandos moosh via subprocess. Si docker_container está
+configurado, usa ``docker exec {container} moosh ...``.
+"""
+
+import json
+import subprocess
+from typing import Any
+
+from gestion_alumnos.core.config import Settings
+from gestion_alumnos.core.exceptions import MoodleError
+from gestion_alumnos.core.logging import get_logger
+from gestion_alumnos.repositories.protocols import MoodleRepository
+
+logger = get_logger(__name__)
+
+
+class MooshMoodleRepository(MoodleRepository):
+    """Repositorio de Moodle usando moosh.
+
+    TODAS las operaciones pasan por moosh. Cero SQL directo.
+    """
+
+    USUARIOS_PROTEGIDOS = frozenset({
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+        16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+        29, 30, 31, 32, 33, 3725, 3729, 3730, 7152, 7490,
+        7491, 11720, 12270, 12272,
+    })
+
+    def __init__(self, settings: Settings | None = None) -> None:
+        self._settings = settings or Settings()
+
+    def _run(self, comando: list[str], capture: bool = True) -> str:
+        """Ejecuta un comando moosh.
+
+        Args:
+            comando: Lista de argumentos para moosh (sin el propio moosh).
+            capture: Si True, captura stdout/stderr.
+
+        Returns:
+            stdout del comando.
+
+        Raises:
+            MoodleError: Si el comando falla.
+        """
+        if self._settings.docker_container:
+            cmd = [
+                "docker", "exec", self._settings.docker_container,
+                self._settings.moosh_path,
+            ] + comando
+        else:
+            cmd = [self._settings.moosh_path] + comando
+
+        try:
+            logger.debug(f"Ejecutando moosh: {' '.join(cmd)}")
+            result = subprocess.run(
+                cmd,
+                capture_output=capture,
+                text=True,
+                timeout=self._settings.moosh_timeout,
+            )
+            if result.returncode != 0:
+                raise MoodleError(
+                    mensaje=f"Moosh error: {result.stderr}",
+                    comando=" ".join(cmd),
+                    codigo_salida=result.returncode,
+                )
+            return result.stdout
+        except subprocess.TimeoutExpired:
+            raise MoodleError(
+                mensaje="Timeout ejecutando moosh",
+                comando=" ".join(cmd),
+            )
+        except FileNotFoundError:
+            raise MoodleError(
+                mensaje=f"moosh no encontrado: {self._settings.moosh_path}",
+                comando=" ".join(cmd),
+            )
+
+    def usuario_existe(self, username: str) -> bool:
+        """Verifica si existe un usuario en Moodle."""
+        try:
+            salida = self._run(["user-get", username])
+            return bool(salida.strip())
+        except MoodleError:
+            return False
+
+    def crear_usuario(
+        self,
+        username: str,
+        email: str,
+        nombre: str,
+        apellido: str,
+        password: str | None = None,
+    ) -> int:
+        """Crea un usuario en Moodle.
+
+        Returns:
+            ID del usuario creado (parseado de la salida de moosh).
+        """
+        args = [
+            "user-create",
+            "--username", username,
+            "--email", email,
+            "--firstname", nombre,
+            "--lastname", apellido,
+        ]
+        if password:
+            args.extend(["--password", password])
+        salida = self._run(args)
+        # moosh user-create imprime el ID del usuario creado
+        try:
+            return int(salida.strip().splitlines()[-1].strip())
+        except (ValueError, IndexError):
+            logger.warning(f"No se pudo parsear ID del usuario creado: {salida}")
+            return 0
+
+    def actualizar_usuario(self, username: str, **campos) -> bool:
+        """Actualiza campos de un usuario."""
+        args = ["user-mod", "--username", username]
+        for campo, valor in campos.items():
+            args.extend([f"--{campo}", str(valor)])
+        self._run(args)
+        return True
+
+    def suspender_usuario(self, username: str) -> bool:
+        """Suspende un usuario."""
+        self._run(["user-mod", "--username", username, "--suspend", "1"])
+        return True
+
+    def reactivar_usuario(self, username: str) -> bool:
+        """Reactiva un usuario suspendido."""
+        self._run(["user-mod", "--username", username, "--suspend", "0"])
+        return True
+
+    def matricular_en_curso(self, username: str, curso_id: str) -> bool:
+        """Matricula un usuario en un curso."""
+        self._run(["course-enrol", "--user", username, curso_id])
+        return True
+
+    def desmatricular_de_curso(self, username: str, curso_id: str) -> bool:
+        """Desmatricula un usuario de un curso."""
+        self._run(["course-unenrol", "--user", username, curso_id])
+        return True
+
+    def matricular_en_cohorte(self, username: str, cohorte: str) -> bool:
+        """Matricula un usuario en una cohorte."""
+        self._run(["cohort-enrol", cohorte, username])
+        return True
+
+    def obtener_matriculas(self, username: str) -> list[dict]:
+        """Obtiene las matrículas activas de un usuario."""
+        try:
+            salida = self._run(["course-list-enrolled", username])
+            # Intentar parsear como JSON si moosh lo soporta
+            lineas = salida.strip().splitlines()
+            matriculas = []
+            for linea in lineas:
+                if not linea.strip():
+                    continue
+                try:
+                    matriculas.append(json.loads(linea))
+                except json.JSONDecodeError:
+                    # Formato plano: id,shortname,fullname
+                    partes = linea.split(",")
+                    if len(partes) >= 2:
+                        matriculas.append({
+                            "id": partes[0].strip(),
+                            "shortname": partes[1].strip(),
+                        })
+            return matriculas
+        except MoodleError:
+            return []
+
+    def obtener_todos_usuarios(self) -> list[dict]:
+        """Obtiene todos los usuarios de Moodle."""
+        try:
+            salida = self._run(["user-list"])
+            lineas = salida.strip().splitlines()
+            usuarios = []
+            for linea in lineas:
+                if not linea.strip():
+                    continue
+                try:
+                    usuarios.append(json.loads(linea))
+                except json.JSONDecodeError:
+                    partes = linea.split(",")
+                    if len(partes) >= 3:
+                        usuarios.append({
+                            "id": partes[0].strip(),
+                            "username": partes[1].strip(),
+                            "email": partes[2].strip(),
+                        })
+            return usuarios
+        except MoodleError:
+            return []
+
+    def obtener_por_username(self, username: str) -> dict | None:
+        """Obtiene un usuario por su username."""
+        try:
+            salida = self._run(["user-get", username])
+            # Intentar parsear como JSON
+            lineas = salida.strip().splitlines()
+            for linea in lineas:
+                if not linea.strip():
+                    continue
+                try:
+                    return json.loads(linea)
+                except json.JSONDecodeError:
+                    continue
+            return None
+        except MoodleError:
+            return None

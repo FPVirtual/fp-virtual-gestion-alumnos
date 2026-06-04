@@ -1,0 +1,77 @@
+[tool.poetry]
+name = "gestion-alumnos"
+version = "0.3.0"
+description = "Aplicación para la gestión automática del alumnado en CampusDigitalFP via moosh o API REST"
+authors = ["Dario Ureña <darioaxel@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "gestion_alumnos"}]
+
+[tool.poetry.scripts]
+test = "scripts.run_tests:main"
+dev = "scripts.run_dev:main"
+pre = "scripts.run_pre:main"
+pro = "scripts.run_pro:main"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+# --- Core ---
+pydantic = "^2.10.0"
+pydantic-settings = "^2.7.0"
+python-dotenv = "^1.2.1"
+structlog = "^25.1.0"
+
+# --- HTTP / API ---
+requests = "^2.32.5"
+
+# --- Utilidades ---
+certifi = "^2025.11.12"
+idna = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.2"
+pytest-asyncio = "^0.25.0"
+pytest-cov = "^7.0.0"
+pytest-mock = "^3.15.1"
+requests-mock = "^1.12.1"
+mypy = "^1.14.0"
+ruff = "^0.9.0"
+pre-commit = "^4.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+# ==========================================
+# Pytest Configuration
+# ==========================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short"
+
+# ==========================================
+# Ruff Configuration
+# ==========================================
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "D", "UP", "B", "C4", "SIM"]
+ignore = ["D100", "D104", "D203", "D213"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# ==========================================
+# MyPy Configuration
+# ==========================================
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

@@ -1,45 +1,102 @@
-# fp-distancia-gestion-usuarios-automatica
-Aplicación para gestionar automáticamente la creación y borrado de usuarios en Moodle así como su matriculación/desmatriculación
+# Gestion Alumnos v0.3.0
 
-# Hacer funcionar este programa
-Crea una copia del fichero Config-sample.py llamada Config.py en la misma ruta con los datos de acceso adecuados
+Aplicación para la gestión automática del alumnado en **CampusDigitalFP** (Moodle).
 
-# Funcionamiento
-1. El programa se conecta a un Web Service que le devuelve un identificador de un fichero a descargar
-2. Se espera 10 segundos mientras el fichero JSON se genera.
-3. Se llama a un 2º WS y si el fichero está listo lo procesa. Si no está listo se vuelve al punto anterior. Este bucle puede ocurrir un máximo de 10 veces
-4. Con el listado de alumnos/as se da de alta a aquellos que no existan y se elimina a aquellos que no figuren en el fichero. Igualmente se matricula a cada alumno/a en los cursos que indique el fichero.
+## Características v0.3
 
-## Ayuda en predesarrollo
+- **Paquete Python con Poetry**
+- **Logging estructurado** con structlog + nivel MARKDOWN para informes
+- **Repository Pattern + Dependency Injection**
+- **Dual driver Moodle**: `moosh` (local/contenedor) o **API REST** (remoto)
+- **Distribución via zipapp** (`.pyz` autocontenido)
+- **Zero SQL directo**
 
-Creación de usuarios en mysql:
+## Instalación
 
-```sql
-CREATE USER 'admin'@'192.168.1.%' IDENTIFIED BY '<rellena con tu contraseña>';
-GRANT ALL PRIVILEGES ON predesarrollo_fpvirtualaragon_es.* TO 'admin'@'192.168.1.%';
-FLUSH PRIVILEGES;
+```bash
+# Con Poetry
+poetry install
+
+# O con pip
+pip install -r requirements.txt
 ```
 
-Prueba de que funciona desde `ssh_redestel_moodle`:
+## Uso
 
-```sql
-mysql --user="admin" --password="acte1tuna&Roja" --host="192.168.1.110" -D "predesarrollo_fpvirtualaragon_es" --execute="SELECT id, fullname, shortname FROM predesarrollo_fpvirtualaragon_es.mdl_course limit 1;"
+### Desarrollo
+
+```bash
+poetry run dev
+# o
+python -m gestion_alumnos sync --driver moosh
 ```
 
-## Ayuda en www
+### Preproducción
 
-```sql
-CREATE USER 'admin'@'192.168.1.%' IDENTIFIED BY '<rellena con tu contraseña>';
-GRANT ALL PRIVILEGES ON www_fpvirtualaragon_es.* TO 'admin'@'192.168.1.%';
-FLUSH PRIVILEGES;
+```bash
+APP_ENV=preproduccion poetry run pre
 ```
 
-```sql
-mysql --user="admin" --password="acte1tuna&Roja" --host="192.168.1.110" -D "www_fpvirtualaragon_es" --execute="SELECT id, fullname, shortname FROM www_fpvirtualaragon_es.mdl_course limit 1;"
+### Producción (zipapp)
+
+```bash
+# Generar
+poetry run python scripts/build_zipapp.py
+
+# Desplegar en contenedor Moodle
+docker cp dist/gestion_alumnos.pyz moodle:/opt/
+docker exec moodle python3 /opt/gestion_alumnos.pyz sync --env-file /opt/.env
 ```
- 
-## Ejecuciones
 
-Antes de meter cualquier alumno habia 246 usuarios en la plataforma.
+## Configuración
 
-En el segundo intento, antes de meter cualquier alumno habia 247 usuarios en la plataforma.
+Copia `.env.example` a `.env` y ajusta:
+
+```bash
+# Driver: moosh (local) o api (remoto)
+MOODLE_DRIVER=moosh
+
+# Moosh (si driver=moosh)
+MOOSH_PATH=moosh
+DOCKER_CONTAINER=moodle_app  # o vacío si está en PATH
+
+# API REST (si driver=api)
+MOODLE_API_URL=https://moodle.fpvirtualaragon.es/webservice/rest/server.php
+MOODLE_API_TOKEN=xxx
+
+# SIGAD
+API_USER=xxx
+API_PASSWORD=xxx
+```
+
+## Tests
+
+```bash
+poetry run pytest
+```
+
+## Arquitectura
+
+```
+gestion_alumnos/
+├── core/          # Config, logging, exceptions, DI container
+├── models/        # Pydantic models (Alumno, Centro, Ciclo, Modulo, Registro)
+├── repositories/  # Protocols + implementations (SIGAD, Moosh, API, Email)
+├── services/      # GestionAlumnosService (orquestador)
+└── templates/     # HTML empaquetados
+```
+
+### Cambio de driver en runtime
+
+```python
+from gestion_alumnos.core.container import create_container
+from gestion_alumnos.repositories.moodle_api_repository import APIMoodleRepository
+
+container = create_container()
+container.override_moodle_repository(APIMoodleRepository())
+service = container.gestion_service()
+```
+
+## Licencia
+
+MIT
