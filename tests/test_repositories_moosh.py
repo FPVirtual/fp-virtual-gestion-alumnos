@@ -31,4 +31,4 @@ def test_moosh_error_comando(monkeypatch, settings_test):
     monkeypatch.setattr(subprocess, "run", fake_run)
     repo = MooshMoodleRepository(settings_test)
     with pytest.raises(MoodleError):
-        repo.usuario_existe("testuser")
+        repo.crear_usuario("testuser", "test@test.com", "Nombre", "Apellido")

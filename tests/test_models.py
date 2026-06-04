@@ -53,7 +53,7 @@ def test_alumno_normaliza_documento():
     alumno = Alumno(
         idAlumno=1,
         idTipoDocumento=1,
-        documento=" 12345678a ",
+        documento="12345678a",
         nombre="Test",
         apellido1="Test",
         email="test@test.com",

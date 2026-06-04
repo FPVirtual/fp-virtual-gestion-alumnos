@@ -13,7 +13,7 @@ import requests
 from gestion_alumnos.core.config import Settings
 from gestion_alumnos.core.exceptions import APIError, APITimeoutError
 from gestion_alumnos.core.logging import get_logger
-from gestion_alumnos.models import Registro
+from gestion_alumnos.models import Alumno, Registro
 
 logger = get_logger(__name__)
 

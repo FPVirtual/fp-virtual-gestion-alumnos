@@ -30,7 +30,7 @@ class Alumno(BaseModel):
         ...,
         min_length=5,
         max_length=20,
-        pattern=r"^[A-Z0-9]+$",
+        pattern=r"^[a-zA-Z0-9]+$",
         description="DNI/NIE sin espacios ni guiones",
     )
     nombre: str = Field(..., min_length=1, max_length=100)
