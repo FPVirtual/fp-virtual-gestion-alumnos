@@ -1,0 +1,4 @@
+idAlumno,documento,nombre,apellido1,apellido2,email,codigoCentro,centro,codigoCiclo,ciclo,siglasCiclo,modulos
+16839,78842153Q,Valeria,Torres,Medina,valeria.torres@ejemplo.com,50009348,AVEMPACE,12242301,Educación Infantil,SSC302,"[{ ""idMateria"": 18599, ""modulo"": ""Itinerario personal"", ""siglasModulo"": ""IPPE1"" }]"
+16840,12345678A,Juan,García,López,juan.garcia@ejemplo.com,50009348,AVEMPACE,12242302,DAM,IFC301,"[{ ""idMateria"": 18600, ""modulo"": ""Programación"", ""siglasModulo"": ""PROG"" }]"
+16841,87654321B,María,Rodríguez,Sánchez,maria.rodriguez@ejemplo.com,50009349,CESAR AUGUSTA,12242303,ASIR,IFC302,"[{ ""idMateria"": 18601, ""modulo"": ""Redes"", ""siglasModulo"": ""REDES"" }]"

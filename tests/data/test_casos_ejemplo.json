@@ -1,0 +1,295 @@
+{
+  "fecha": "03/03/2026",
+  "hora": "14:30:00",
+  "comentario": "Casos de test manuales para probar sincronización",
+  "total_casos": 7,
+  "alumnos": [
+    {
+      "idAlumno": 99901,
+      "idTipoDocumento": 1,
+      "documento": "12345678A",
+      "nombre": "Ana",
+      "apellido1": "García",
+      "apellido2": "López",
+      "email": "ana.garcia.nueva@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro Test",
+          "ciclos": [
+            {
+              "idFicha": 101,
+              "codigoCiclo": "IFC301",
+              "ciclo": "DAM - Desarrollo Aplicaciones Multiplataforma",
+              "siglasCiclo": "IFC301",
+              "modulos": [
+                {
+                  "idMateria": 10101,
+                  "modulo": "Programación",
+                  "siglasModulo": "PROG"
+                },
+                {
+                  "idMateria": 10102,
+                  "modulo": "Bases de Datos",
+                  "siglasModulo": "BD"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 1,
+        "descripcion": "NUEVO: No existe en Moodle - Debe crearse",
+        "resultado_esperado": "CREAR_USUARIO",
+        "notas": "Este alumno no está en Moodle, debe crearse usuario nuevo y matricularse"
+      }
+    },
+    {
+      "idAlumno": 99902,
+      "idTipoDocumento": 1,
+      "documento": "23456789B",
+      "nombre": "Carlos",
+      "apellido1": "Martínez",
+      "apellido2": "Ruiz",
+      "email": "carlos.martinez@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro Test",
+          "ciclos": [
+            {
+              "idFicha": 102,
+              "codigoCiclo": "IFC302",
+              "ciclo": "DAW - Desarrollo Aplicaciones Web",
+              "siglasCiclo": "IFC302",
+              "modulos": [
+                {
+                  "idMateria": 10201,
+                  "modulo": "Desarrollo Web Entorno Servidor",
+                  "siglasModulo": "DWES"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 2,
+        "descripcion": "REINCORPORACION: Estaba suspendido en Moodle",
+        "resultado_esperado": "REACTIVAR",
+        "moodle_username_original": "23456789b",
+        "estaba_suspendido": true,
+        "notas": "Usuario existe pero suspendido, debe reactivarse"
+      }
+    },
+    {
+      "idAlumno": 99903,
+      "idTipoDocumento": 1,
+      "documento": "34567890C",
+      "nombre": "Lucía",
+      "apellido1": "Fernández",
+      "apellido2": "Sánchez",
+      "email": "lucia.nuevo.email@cambiado.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro Test",
+          "ciclos": [
+            {
+              "idFicha": 103,
+              "codigoCiclo": "SSC302",
+              "ciclo": "Educación Infantil",
+              "siglasCiclo": "SSC302",
+              "modulos": [
+                {
+                  "idMateria": 10301,
+                  "modulo": "Itinerario Personal Empleabilidad",
+                  "siglasModulo": "IPPE"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 3,
+        "descripcion": "CAMBIO_EMAIL: Email diferente al registrado",
+        "resultado_esperado": "ACTUALIZAR_EMAIL",
+        "moodle_username_original": "34567890c",
+        "moodle_email_original": "lucia.fernandez.antiguo@ejemplo.com",
+        "notas": "Mismo usuario pero cambió email, debe actualizarse"
+      }
+    },
+    {
+      "idAlumno": 99904,
+      "idTipoDocumento": 1,
+      "documento": "45678901D",
+      "nombre": "María Elena",
+      "apellido1": "Rodríguez",
+      "apellido2": "Gómez",
+      "email": "maria.rodriguez@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro Test",
+          "ciclos": [
+            {
+              "idFicha": 104,
+              "codigoCiclo": "IFC303",
+              "ciclo": "ASIR - Administración Sistemas",
+              "siglasCiclo": "IFC303",
+              "modulos": [
+                {
+                  "idMateria": 10401,
+                  "modulo": "Implantación Sistemas Operativos",
+                  "siglasModulo": "ISO"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 4,
+        "descripcion": "CAMBIO_NOMBRE: Nombre modificado",
+        "resultado_esperado": "ACTUALIZAR_NOMBRE",
+        "moodle_username_original": "45678901d",
+        "moodle_nombre_original": "María",
+        "notas": "Cambió de nombre (casó, etc.), debe actualizarse firstname"
+      }
+    },
+    {
+      "idAlumno": 99905,
+      "idTipoDocumento": 1,
+      "documento": "56789012E",
+      "nombre": "Pedro",
+      "apellido1": "López",
+      "apellido2": "Hernández",
+      "email": "pedro.lopez@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro Test",
+          "ciclos": [
+            {
+              "idFicha": 105,
+              "codigoCiclo": "IFC301",
+              "ciclo": "DAM",
+              "siglasCiclo": "IFC301",
+              "modulos": [
+                {
+                  "idMateria": 10501,
+                  "modulo": "Programación",
+                  "siglasModulo": "PROG"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 5,
+        "descripcion": "CAMBIO_NIE_A_DNI: Cambio de documento NIE→DNI",
+        "resultado_esperado": "ACTUALIZAR_USERNAME",
+        "moodle_username_original": "X1234567L",
+        "moodle_documento_original": "X1234567L",
+        "sigad_documento_nuevo": "56789012E",
+        "notas": "Tenía NIE, ahora tiene DNI. Debe cambiar username y documento"
+      }
+    },
+    {
+      "idAlumno": 99906,
+      "idTipoDocumento": 1,
+      "documento": "67890123F",
+      "nombre": "Sofia",
+      "apellido1": "Martín",
+      "apellido2": "Díaz",
+      "email": "sofia.martin@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro Test",
+          "ciclos": [
+            {
+              "idFicha": 106,
+              "codigoCiclo": "IFC301",
+              "ciclo": "DAM",
+              "siglasCiclo": "IFC301",
+              "modulos": [
+                {
+                  "idMateria": 10601,
+                  "modulo": "Programación",
+                  "siglasModulo": "PROG"
+                },
+                {
+                  "idMateria": 10602,
+                  "modulo": "Bases de Datos",
+                  "siglasModulo": "BD"
+                },
+                {
+                  "idMateria": 10603,
+                  "modulo": "Lenguajes de Marcas",
+                  "siglasModulo": "LM"
+                },
+                {
+                  "idMateria": 10604,
+                  "modulo": "Entornos de Desarrollo",
+                  "siglasModulo": "ED"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 6,
+        "descripcion": "NUEVAS_MATRICULAS: Agregó nuevos cursos",
+        "resultado_esperado": "MATRICULAR_NUEVOS",
+        "moodle_username_original": "67890123f",
+        "moodle_cursos_original": "PROG, BD",
+        "sigad_cursos_nuevos": "PROG, BD, LM, ED",
+        "notas": "Ya estaba matriculada en PROG y BD, ahora también en LM y ED"
+      }
+    },
+    {
+      "idAlumno": 99907,
+      "idTipoDocumento": 1,
+      "documento": "78901234G",
+      "nombre": "Javier",
+      "apellido1": "Sánchez",
+      "apellido2": "Moreno",
+      "email": "javier.sanchez@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro Test",
+          "ciclos": [
+            {
+              "idFicha": 107,
+              "codigoCiclo": "IFC301",
+              "ciclo": "DAM",
+              "siglasCiclo": "IFC301",
+              "modulos": [
+                {
+                  "idMateria": 10701,
+                  "modulo": "Programación",
+                  "siglasModulo": "PROG"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 7,
+        "descripcion": "BAJA_PARCIAL: Quitó algunos cursos (no todos)",
+        "resultado_esperado": "DESMATRICULAR_PARCIAL",
+        "moodle_username_original": "78901234g",
+        "moodle_cursos_original": "PROG, BD, LM, ED, SI",
+        "sigad_cursos_actuales": "PROG",
+        "notas": "Se desmatriculó de BD, LM, ED y SI, solo queda en PROG"
+      }
+    }
+  ]
+}

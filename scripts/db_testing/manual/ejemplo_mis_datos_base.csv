@@ -1,0 +1,8 @@
+moodle_userid,documento_actual,nombre,apellido1,apellido2,email_actual,esta_suspendido,fecha_creacion,cursos_actuales
+15234,12345678A,Ana,García,López,ana.garcia@ejemplo.com,0,2023-09-01 10:30:00,IFC301;IFC302
+15235,23456789B,Carlos,Martínez,Ruiz,carlos.martinez@ejemplo.com,0,2023-09-02 11:45:00,IFC302
+15236,34567890C,Lucía,Fernández,Sánchez,lucia.fernandez@ejemplo.com,0,2023-09-03 09:15:00,SSC302
+15237,45678901D,María,Rodríguez,Gómez,maria.rodriguez@ejemplo.com,0,2023-09-04 14:20:00,IFC303
+15238,56789012E,Pedro,López,Hernández,pedro.lopez@ejemplo.com,0,2023-09-05 16:00:00,IFC301
+15239,67890123F,Sofía,Martín,Díaz,sofia.martin@ejemplo.com,0,2023-09-06 08:30:00,PROG;BD
+15240,78901234G,Javier,Sánchez,Moreno,javier.sanchez@ejemplo.com,0,2023-09-07 12:00:00,PROG;BD;LM;ED;SI

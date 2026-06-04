@@ -1,0 +1,336 @@
+{
+  "fecha": "03/03/2026",
+  "hora": "14:24:24",
+  "comentario": "Casos de test generados manualmente desde CSV",
+  "total_casos": 7,
+  "alumnos": [
+    {
+      "idAlumno": 90001,
+      "idTipoDocumento": 1,
+      "documento": "TEST24703325Q",
+      "nombre": "Ana",
+      "apellido1": "García",
+      "apellido2": "López",
+      "email": "ana.garcia@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro de Pruebas",
+          "ciclos": [
+            {
+              "idFicha": 101,
+              "codigoCiclo": "CIC001",
+              "ciclo": "Ciclo caso 1",
+              "siglasCiclo": "IFC301",
+              "modulos": [
+                {
+                  "idMateria": 10000,
+                  "modulo": "Módulo IFC301",
+                  "siglasModulo": "IFC301"
+                },
+                {
+                  "idMateria": 10001,
+                  "modulo": "Módulo IFC302",
+                  "siglasModulo": "IFC302"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 1,
+        "descripcion": "NUEVO - No existe en Moodle",
+        "estaba_suspendido": false,
+        "notas": "Usuario completamente nuevo, no existe en Moodle"
+      }
+    },
+    {
+      "idAlumno": 90002,
+      "idTipoDocumento": 1,
+      "documento": "23456789B",
+      "nombre": "Carlos",
+      "apellido1": "Martínez",
+      "apellido2": "Ruiz",
+      "email": "carlos.martinez@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro de Pruebas",
+          "ciclos": [
+            {
+              "idFicha": 102,
+              "codigoCiclo": "CIC002",
+              "ciclo": "Ciclo caso 2",
+              "siglasCiclo": "IFC302",
+              "modulos": [
+                {
+                  "idMateria": 10000,
+                  "modulo": "Módulo IFC302",
+                  "siglasModulo": "IFC302"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 2,
+        "descripcion": "REINCORPORACION - Estaba suspendido",
+        "moodle_userid_original": 15235,
+        "moodle_username_original": "23456789B",
+        "moodle_nombre_original": "Carlos",
+        "moodle_apellido_original": "Martínez",
+        "moodle_email_original": "carlos.martinez@ejemplo.com",
+        "moodle_cursos_original": "IFC302",
+        "estaba_suspendido": true,
+        "notas": "Usuario existe pero está suspendido (suspended=1)"
+      }
+    },
+    {
+      "idAlumno": 90003,
+      "idTipoDocumento": 1,
+      "documento": "34567890C",
+      "nombre": "Lucía",
+      "apellido1": "Fernández",
+      "apellido2": "Sánchez",
+      "email": "nuevo.email.90003@cambiado.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro de Pruebas",
+          "ciclos": [
+            {
+              "idFicha": 103,
+              "codigoCiclo": "CIC003",
+              "ciclo": "Ciclo caso 3",
+              "siglasCiclo": "SSC302",
+              "modulos": [
+                {
+                  "idMateria": 10000,
+                  "modulo": "Módulo SSC302",
+                  "siglasModulo": "SSC302"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 3,
+        "descripcion": "CAMBIO_EMAIL - Email diferente",
+        "moodle_userid_original": 15236,
+        "moodle_username_original": "34567890C",
+        "moodle_nombre_original": "Lucía",
+        "moodle_apellido_original": "Fernández",
+        "moodle_email_original": "lucia.fernandez@ejemplo.com",
+        "moodle_cursos_original": "SSC302",
+        "estaba_suspendido": false,
+        "notas": "Email en Moodle: lucia.fernandez@ejemplo.com → Email en SIGAD: nuevo.email.90003@cambiado.com"
+      }
+    },
+    {
+      "idAlumno": 90004,
+      "idTipoDocumento": 1,
+      "documento": "45678901D",
+      "nombre": "María Maria",
+      "apellido1": "Rodríguez",
+      "apellido2": "Gómez",
+      "email": "maria.rodriguez@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro de Pruebas",
+          "ciclos": [
+            {
+              "idFicha": 104,
+              "codigoCiclo": "CIC004",
+              "ciclo": "Ciclo caso 4",
+              "siglasCiclo": "IFC303",
+              "modulos": [
+                {
+                  "idMateria": 10000,
+                  "modulo": "Módulo IFC303",
+                  "siglasModulo": "IFC303"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 4,
+        "descripcion": "CAMBIO_NOMBRE - Nombre modificado",
+        "moodle_userid_original": 15237,
+        "moodle_username_original": "45678901D",
+        "moodle_nombre_original": "María",
+        "moodle_apellido_original": "Rodríguez",
+        "moodle_email_original": "maria.rodriguez@ejemplo.com",
+        "moodle_cursos_original": "IFC303",
+        "estaba_suspendido": false,
+        "notas": "Nombre en Moodle: María → Nombre en SIGAD: María Maria"
+      }
+    },
+    {
+      "idAlumno": 90005,
+      "idTipoDocumento": 1,
+      "documento": "56789012E",
+      "nombre": "Pedro",
+      "apellido1": "López",
+      "apellido2": "Hernández",
+      "email": "pedro.lopez@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro de Pruebas",
+          "ciclos": [
+            {
+              "idFicha": 105,
+              "codigoCiclo": "CIC005",
+              "ciclo": "Ciclo caso 5",
+              "siglasCiclo": "IFC301",
+              "modulos": [
+                {
+                  "idMateria": 10000,
+                  "modulo": "Módulo IFC301",
+                  "siglasModulo": "IFC301"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 5,
+        "descripcion": "CAMBIO_NIE_A_DNI - Cambio documento",
+        "moodle_userid_original": 15238,
+        "moodle_username_original": "Z8709440V",
+        "moodle_nombre_original": "Pedro",
+        "moodle_apellido_original": "López",
+        "moodle_email_original": "pedro.lopez@ejemplo.com",
+        "moodle_cursos_original": "IFC301",
+        "estaba_suspendido": false,
+        "notas": "Username en Moodle es NIE (Z8709440V) pero SIGAD tiene DNI (56789012E)"
+      }
+    },
+    {
+      "idAlumno": 90006,
+      "idTipoDocumento": 1,
+      "documento": "67890123F",
+      "nombre": "Sofía",
+      "apellido1": "Martín",
+      "apellido2": "Díaz",
+      "email": "sofia.martin@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro de Pruebas",
+          "ciclos": [
+            {
+              "idFicha": 106,
+              "codigoCiclo": "CIC006",
+              "ciclo": "Ciclo caso 6",
+              "siglasCiclo": "PROG",
+              "modulos": [
+                {
+                  "idMateria": 10000,
+                  "modulo": "Módulo PROG",
+                  "siglasModulo": "PROG"
+                },
+                {
+                  "idMateria": 10001,
+                  "modulo": "Módulo BD",
+                  "siglasModulo": "BD"
+                },
+                {
+                  "idMateria": 10002,
+                  "modulo": "Módulo NUEVO1",
+                  "siglasModulo": "NUEVO1"
+                },
+                {
+                  "idMateria": 10003,
+                  "modulo": "Módulo NUEVO2",
+                  "siglasModulo": "NUEVO2"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 6,
+        "descripcion": "NUEVAS_MATRICULAS - Agregó cursos",
+        "moodle_userid_original": 15239,
+        "moodle_username_original": "67890123F",
+        "moodle_nombre_original": "Sofía",
+        "moodle_apellido_original": "Martín",
+        "moodle_email_original": "sofia.martin@ejemplo.com",
+        "moodle_cursos_original": "PROG;BD",
+        "estaba_suspendido": false,
+        "notas": "Cursos en Moodle: PROG;BD → Cursos en SIGAD: PROG;BD;NUEVO1;NUEVO2"
+      }
+    },
+    {
+      "idAlumno": 90007,
+      "idTipoDocumento": 1,
+      "documento": "78901234G",
+      "nombre": "Javier",
+      "apellido1": "Sánchez",
+      "apellido2": "Moreno",
+      "email": "javier.sanchez@ejemplo.com",
+      "centros": [
+        {
+          "codigoCentro": "50000001",
+          "centro": "Centro de Pruebas",
+          "ciclos": [
+            {
+              "idFicha": 107,
+              "codigoCiclo": "CIC007",
+              "ciclo": "Ciclo caso 7",
+              "siglasCiclo": "PROG",
+              "modulos": [
+                {
+                  "idMateria": 10000,
+                  "modulo": "Módulo PROG",
+                  "siglasModulo": "PROG"
+                },
+                {
+                  "idMateria": 10001,
+                  "modulo": "Módulo BD",
+                  "siglasModulo": "BD"
+                },
+                {
+                  "idMateria": 10002,
+                  "modulo": "Módulo LM",
+                  "siglasModulo": "LM"
+                },
+                {
+                  "idMateria": 10003,
+                  "modulo": "Módulo ED",
+                  "siglasModulo": "ED"
+                },
+                {
+                  "idMateria": 10004,
+                  "modulo": "Módulo SI",
+                  "siglasModulo": "SI"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "_meta_caso": {
+        "caso_id": 7,
+        "descripcion": "BAJA_PARCIAL - Quitó cursos",
+        "moodle_userid_original": 15240,
+        "moodle_username_original": "78901234G",
+        "moodle_nombre_original": "Javier",
+        "moodle_apellido_original": "Sánchez",
+        "moodle_email_original": "javier.sanchez@ejemplo.com",
+        "moodle_cursos_original": "PROG;BD;LM;ED;SI",
+        "estaba_suspendido": false,
+        "notas": "Cursos en Moodle: PROG;BD;LM;ED;SI → Cursos en SIGAD: PROG;BD;LM;ED;SI"
+      }
+    }
+  ]
+}
