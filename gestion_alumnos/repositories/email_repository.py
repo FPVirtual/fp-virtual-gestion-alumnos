@@ -6,6 +6,7 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from importlib import resources
 from pathlib import Path
 
 from gestion_alumnos.core.config import Settings
@@ -28,6 +29,12 @@ class EmailRepositoryImpl:
         self._emails_enviados = 0
         self._emails_no_enviados = 0
         self._limite = 1000 if self._settings.subdomain == "www" else 10
+
+    def _cargar_template(self, template_nombre: str, **kwargs: str) -> str:
+        """Carga una template HTML del paquete y reemplaza placeholders."""
+        template_path = resources.files("gestion_alumnos.templates") / template_nombre
+        contenido = template_path.read_text(encoding="utf-8")
+        return contenido.format(**kwargs)
 
     def _verificar_limite(self) -> None:
         """Verifica que no se haya alcanzado el límite."""
@@ -101,21 +108,19 @@ class EmailRepositoryImpl:
         password: str,
         matriculas: list[str],
     ) -> bool:
-        """Envía email de bienvenida."""
+        """Envía email de bienvenida usando template HTML."""
         asunto = "FP virtual - Aragón - Datos de acceso"
-        matriculas_html = "<ul>" + "".join(
-            f"<li>{m}</li>" for m in matriculas
-        ) + "</ul>"
-        contenido = f"""
-        <h2>Bienvenido a FP Virtual Aragón</h2>
-        <p>Hola {alumno.nombre},</p>
-        <p>Tu cuenta ha sido creada con éxito.</p>
-        <p><strong>Usuario:</strong> {alumno.username_moodle}</p>
-        <p><strong>Contraseña:</strong> {password}</p>
-        <p><strong>Matriculado en:</strong></p>
-        {matriculas_html}
-        <p>Accede en: https://{self._settings.subdomain}.fpvirtualaragon.es</p>
-        """
+        matriculado_en_texto = "<br/>".join(matriculas)
+        contenido = self._cargar_template(
+            "nuevoUsuario.html",
+            nombre=alumno.nombre or "",
+            apellidos=f"{alumno.apellido1 or ''} {alumno.apellido2 or ''}".strip(),
+            subdomain=self._settings.subdomain,
+            usuario=alumno.username_moodle,
+            contrasena=password,
+            matriculado_en_texto=matriculado_en_texto,
+            email=alumno.email or "",
+        )
         return self._enviar(alumno.email, asunto, contenido)
 
     def enviar_actualizacion_usuario(
@@ -123,14 +128,14 @@ class EmailRepositoryImpl:
         alumno: Alumno,
         username_anterior: str,
     ) -> bool:
-        """Envía notificación de cambio de usuario."""
+        """Envía notificación de cambio de usuario usando template HTML."""
         asunto = "FP virtual - Aragón - Usuario actualizado"
-        contenido = f"""
-        <h2>Actualización de cuenta</h2>
-        <p>Tu usuario ha sido actualizado:</p>
-        <p><strong>Anterior:</strong> {username_anterior}</p>
-        <p><strong>Nuevo:</strong> {alumno.username_moodle}</p>
-        """
+        contenido = self._cargar_template(
+            "nombreUsuarioActualizado.html",
+            subdomain=self._settings.subdomain,
+            usuario=alumno.username_moodle,
+            oldUsuario=username_anterior,
+        )
         return self._enviar(alumno.email, asunto, contenido)
 
     def enviar_nuevas_matriculas(
@@ -138,17 +143,16 @@ class EmailRepositoryImpl:
         alumno: Alumno,
         nuevas_matriculas: list[str],
     ) -> bool:
-        """Envía notificación de nuevas matrículas."""
+        """Envía notificación de nuevas matrículas usando template HTML."""
         asunto = "FP virtual - Aragón - Nuevas matrículas"
-        matriculas_html = "<ul>" + "".join(
-            f"<li>{m}</li>" for m in nuevas_matriculas
-        ) + "</ul>"
-        contenido = f"""
-        <h2>Nuevas matrículas</h2>
-        <p>Hola {alumno.nombre},</p>
-        <p>Has sido matriculado en nuevos módulos:</p>
-        {matriculas_html}
-        """
+        matriculado_en_texto = "<br/>".join(nuevas_matriculas)
+        contenido = self._cargar_template(
+            "matriculasAnadidas.html",
+            nombre=alumno.nombre or "",
+            apellidos=f"{alumno.apellido1 or ''} {alumno.apellido2 or ''}".strip(),
+            subdomain=self._settings.subdomain,
+            matriculado_en_texto=matriculado_en_texto,
+        )
         return self._enviar(alumno.email, asunto, contenido)
 
     def enviar_informe(
@@ -169,6 +173,47 @@ class EmailRepositoryImpl:
             except EmailError:
                 resultados.append(False)
         return all(resultados)
+
+    def enviar_informe_automatizado(
+        self,
+        destinatarios: list[str],
+        filename_md: str,
+        filename_csv: str,
+    ) -> bool:
+        """Envía el informe automatizado diario usando template HTML."""
+        asunto = "Informe automatizado gestión automática usuarios moodle"
+        contenido = self._cargar_template(
+            "informeAutomatizado.html",
+            subdomain=self._settings.subdomain,
+            filename_md=filename_md,
+            filename_csv=filename_csv,
+        )
+        return self.enviar_informe(
+            destinatarios, asunto, contenido, [filename_md, filename_csv]
+        )
+
+    def enviar_error_informe(
+        self,
+        destinatarios: list[str],
+        filename_md: str,
+        filename_csv: str,
+        error: str,
+        traceback_str: str,
+    ) -> bool:
+        """Envía notificación de fallo en el informe usando template HTML."""
+        asunto = "FP virtual - Aragón - Ha fallado el informe"
+        contenido = self._cargar_template(
+            "haFalladoElInforme.html",
+            subdomain=self._settings.subdomain,
+            filename_md=filename_md,
+            filename_csv=filename_csv,
+            error=error,
+            traceback=traceback_str,
+            tracebackException=traceback_str,
+        )
+        return self.enviar_informe(
+            destinatarios, asunto, contenido, [filename_md, filename_csv]
+        )
 
     def limite_alcanzado(self) -> bool:
         """Indica si se alcanzó el límite de emails."""
