@@ -233,8 +233,8 @@ docker exec moodle python3 /opt/gestion_alumnos.pyz sync
 ## Próximos Pasos Sugeridos
 
 1. **Desplegar plugin PHP** `local_fparagon` en Moodle (producción + preproducción)
-2. **Tests de integración** para `APICourseBasedMoodleSource` y `APISnapshotMoodleSource`
-3. **Tests end-to-end** del `SyncOrchestrator` con mocks completos
+2. ~~**Tests de integración** para `APICourseBasedMoodleSource` y `APISnapshotMoodleSource`~~ ✅ Completado (`tests/test_moodle_sources.py` — 12 tests)
+3. ~~**Tests end-to-end** del `SyncOrchestrator` con mocks completos~~ ✅ Completado (`tests/test_sync_orchestrator.py` — 10 tests)
 4. **Mejorar `SyncApplier`** con batching de matrículas y reintentos
 5. ~~**Generar informes Markdown**~~ ✅ Completado (`ReportLogger`)
 6. ~~**Cola de emails en CSV**~~ ✅ Completado (`EmailQueueRepository` + `EmailQueueProcessor`)
