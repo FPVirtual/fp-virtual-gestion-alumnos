@@ -497,7 +497,7 @@ Esto permite tener un CSV diferente por entorno (test, preproducción, producci�
 | ReportLogger (informes `.md`) | ✅ **Nuevo** | **6/6** |
 | Zipapp | ✅ | Funcional |
 
-**Total tests: 62/62 ✅**
+**Total tests: 84/84 ✅**
 
 ---
 

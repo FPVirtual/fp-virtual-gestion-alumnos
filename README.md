@@ -7,7 +7,7 @@ Aplicación para la gestión automática del alumnado en **CampusDigitalFP** (Mo
 | Métrica | Valor |
 |---------|-------|
 | Versión | `0.4.1` |
-| Tests | **62/62 ✅** |
+| Tests | **84/84 ✅** |
 | Python | `3.10+` |
 | Distribución | Poetry + zipapp (`.pyz`) |
 
@@ -213,6 +213,8 @@ poetry run pytest tests/test_core_container.py -v
 | `test_sync_analyzer.py` | 6 | Análisis DuckDB (sin red) |
 | `test_core_logging.py` | 6 | ReportLogger (informes markdown) |
 | `test_email_queue.py` | 15 | Cola de emails CSV |
+| `test_moodle_sources.py` | 12 | MoodleSource (API course-based + snapshot) |
+| `test_sync_orchestrator.py` | 10 | E2E SyncOrchestrator con mocks |
 
 ## Operaciones Moodle Soportadas
 

@@ -1,8 +1,8 @@
 # Sistema de Testing
 
 > **Última actualización:** Junio 2026  
-> **Tests totales:** 35  
-> **Estado:** 35/35 ✅
+> **Tests totales:** 84  
+> **Estado:** 84/84 ✅
 
 ---
 
@@ -15,6 +15,11 @@
 - [4. Tests del Repositorio Moosh](#4-tests-del-repositorio-moosh)
 - [5. Tests del Repositorio SIGAD](#5-tests-del-repositorio-sigad)
 - [6. Tests de Integración Moodle API](#6-tests-de-integración-moodle-api)
+- [7. Tests de MoodleSource](#7-tests-de-moodlesource)
+- [8. Tests de SyncAnalyzer](#8-tests-de-syncanalyzer)
+- [9. Tests de Logging](#9-tests-de-logging)
+- [10. Tests de Email Queue](#10-tests-de-email-queue)
+- [11. Tests End-to-End del SyncOrchestrator](#11-tests-end-to-end-del-syncorchestrator)
 - [Fixtures Principales](#fixtures-principales-testsconftestpy)
 - [Comandos Rápidos](#comandos-rápidos)
 
@@ -175,6 +180,138 @@ pytest tests/test_moodle_api_integration.py -v
 
 ---
 
+## 7. Tests de MoodleSource
+
+**Archivo:** `tests/test_moodle_sources.py`  
+**Tests:** 12
+
+Validan `APICourseBasedMoodleSource` y `APISnapshotMoodleSource` con mocks del `APIMoodleRepository`. No requieren red.
+
+### APICourseBasedMoodleSource
+
+| Test | Descripción | Comando |
+|------|-------------|---------|
+| `test_extract_users` | Devuelve lista de usuarios desde el repo | `pytest tests/test_moodle_sources.py::TestAPICourseBasedMoodleSource::test_extract_users -v` |
+| `test_extract_courses` | Devuelve lista de cursos desde el repo | `pytest tests/test_moodle_sources.py::TestAPICourseBasedMoodleSource::test_extract_courses -v` |
+| `test_extract_enrolments` | Itera cursos y acumula matriculaciones | `pytest tests/test_moodle_sources.py::TestAPICourseBasedMoodleSource::test_extract_enrolments -v` |
+| `test_extract_enrolments_skips_empty_course_id` | Salta cursos sin ID válido | `pytest tests/test_moodle_sources.py::TestAPICourseBasedMoodleSource::test_extract_enrolments_skips_empty_course_id -v` |
+| `test_extract_enrolments_ignores_course_errors` | Continúa si un curso lanza excepción | `pytest tests/test_moodle_sources.py::TestAPICourseBasedMoodleSource::test_extract_enrolments_ignores_course_errors -v` |
+| `test_extract_all_returns_snapshot` | Compone `MoodleSnapshot` completo | `pytest tests/test_moodle_sources.py::TestAPICourseBasedMoodleSource::test_extract_all_returns_snapshot -v` |
+
+### APISnapshotMoodleSource
+
+| Test | Descripción | Comando |
+|------|-------------|---------|
+| `test_extract_all_with_plugin` | Parsea respuesta del plugin PHP | `pytest tests/test_moodle_sources.py::TestAPISnapshotMoodleSource::test_extract_all_with_plugin -v` |
+| `test_extract_all_plugin_not_installed` | Error descriptivo si falta el plugin | `pytest tests/test_moodle_sources.py::TestAPISnapshotMoodleSource::test_extract_all_plugin_not_installed -v` |
+| `test_extract_all_unexpected_response` | Maneja respuesta no-dict | `pytest tests/test_moodle_sources.py::TestAPISnapshotMoodleSource::test_extract_all_unexpected_response -v` |
+| `test_extract_enrolments_raises` | `extract_enrolments` lanza `NotImplementedError` | `pytest tests/test_moodle_sources.py::TestAPISnapshotMoodleSource::test_extract_enrolments_raises -v` |
+
+**Ejecutar todos:**
+```bash
+pytest tests/test_moodle_sources.py -v
+```
+
+---
+
+## 8. Tests de SyncAnalyzer
+
+**Archivo:** `tests/test_sync_analyzer.py`  
+**Tests:** 6
+
+Validan la detección de los 7 tipos de delta usando datos fake en DuckDB (sin red).
+
+| Test | Descripción | Comando |
+|------|-------------|---------|
+| `test_new_users_detected` | Detecta alta cuando SIGAD tiene usuario que Moodle no tiene | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_new_users_detected -v` |
+| `test_removed_users_detected` | Detecta baja cuando Moodle tiene usuario que SIGAD no tiene | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_removed_users_detected -v` |
+| `test_email_changes_detected` | Detecta diferencia de email entre SIGAD y Moodle | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_email_changes_detected -v` |
+| `test_new_enrolments_detected` | Detecta matrículas en SIGAD no presentes en Moodle | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_new_enrolments_detected -v` |
+| `test_removed_enrolments_detected` | Detecta matrículas en Moodle no presentes en SIGAD | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_removed_enrolments_detected -v` |
+| `test_report_has_changes` | `has_changes` es `True` cuando hay al menos un delta | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_report_has_changes -v` |
+
+**Ejecutar todos:**
+```bash
+pytest tests/test_sync_analyzer.py -v
+```
+
+---
+
+## 9. Tests de Logging
+
+**Archivo:** `tests/test_core_logging.py`  
+**Tests:** 6
+
+Validan `ReportLogger`: creación de archivos `.md`, encabezados, contenido acumulado y creación de directorios.
+
+| Test | Descripción | Comando |
+|------|-------------|---------|
+| `test_creates_markdown_file` | Crea archivo `informe_test_TIMESTAMP.md` | `pytest tests/test_core_logging.py::TestReportLogger::test_creates_markdown_file -v` |
+| `test_file_contains_header` | Incluye entorno y fecha en el encabezado | `pytest tests/test_core_logging.py::TestReportLogger::test_file_contains_header -v` |
+| `test_appends_content` | Múltiples `write()` acumulan contenido | `pytest tests/test_core_logging.py::TestReportLogger::test_appends_content -v` |
+| `test_creates_logs_dir_if_missing` | Crea directorios anidados si no existen | `pytest tests/test_core_logging.py::TestReportLogger::test_creates_logs_dir_if_missing -v` |
+
+**Ejecutar todos:**
+```bash
+pytest tests/test_core_logging.py -v
+```
+
+---
+
+## 10. Tests de Email Queue
+
+**Archivo:** `tests/test_email_queue.py`  
+**Tests:** 15
+
+Validan `EmailJob`, `EmailQueueRepository` y `EmailQueueProcessor` con mocks.
+
+| Test | Descripción | Comando |
+|------|-------------|---------|
+| `test_csv_roundtrip` | Serialización/deserialización CSV con datos JSON | `pytest tests/test_email_queue.py::TestEmailJob::test_csv_roundtrip -v` |
+| `test_encolar_bienvenida` | `enviar_bienvenida_nuevo_usuario` crea fila en CSV | `pytest tests/test_email_queue.py::TestEmailQueueRepository::test_encolar_bienvenida -v` |
+| `test_actualizar_estado` | Cambia estado de `pending` a `sent` | `pytest tests/test_email_queue.py::TestEmailQueueRepository::test_actualizar_estado -v` |
+| `test_limite_alcanzado` | Detecta cuando hay demasiados pendientes | `pytest tests/test_email_queue.py::TestEmailQueueRepository::test_limite_alcanzado -v` |
+| `test_process_sends_pending` | `EmailQueueProcessor` envía emails pendientes | `pytest tests/test_email_queue.py::TestEmailQueueProcessor::test_process_sends_pending -v` |
+| `test_respects_limit` | Respeta límite diario y salta el resto | `pytest tests/test_email_queue.py::TestEmailQueueProcessor::test_respects_limit -v` |
+
+**Ejecutar todos:**
+```bash
+pytest tests/test_email_queue.py -v
+```
+
+---
+
+## 11. Tests End-to-End del SyncOrchestrator
+
+**Archivo:** `tests/test_sync_orchestrator.py`  
+**Tests:** 10
+
+Validan el flujo completo E2E con mocks de todas las dependencias.
+
+### Dry-run
+
+| Test | Descripción | Comando |
+|------|-------------|---------|
+| `test_returns_sync_report` | Devuelve `SyncReport` con cambios detectados | `pytest tests/test_sync_orchestrator.py::TestSyncOrchestratorDryRun::test_returns_sync_report -v` |
+| `test_does_not_call_sink` | No llama al sink en modo dry-run | `pytest tests/test_sync_orchestrator.py::TestSyncOrchestratorDryRun::test_does_not_call_sink -v` |
+| `test_detects_expected_deltas` | Detecta altas, bajas, emails y matrículas | `pytest tests/test_sync_orchestrator.py::TestSyncOrchestratorDryRun::test_detects_expected_deltas -v` |
+| `test_writes_report_if_logger_provided` | Genera informe `.md` si hay `ReportLogger` | `pytest tests/test_sync_orchestrator.py::TestSyncOrchestratorDryRun::test_writes_report_if_logger_provided -v` |
+
+### Apply
+
+| Test | Descripción | Comando |
+|------|-------------|---------|
+| `test_new_user_created` | Crea usuario nuevo en Moodle | `pytest tests/test_sync_orchestrator.py::TestSyncOrchestratorApply::test_new_user_created -v` |
+| `test_email_updated` | Actualiza email de usuario existente | `pytest tests/test_sync_orchestrator.py::TestSyncOrchestratorApply::test_email_updated -v` |
+| `test_no_changes_when_empty_report` | No aplica cambios cuando datasets coinciden | `pytest tests/test_sync_orchestrator.py::TestSyncOrchestratorApply::test_no_changes_when_empty_report -v` |
+
+**Ejecutar todos:**
+```bash
+pytest tests/test_sync_orchestrator.py -v
+```
+
+---
+
 ## Fixtures Principales (`tests/conftest.py`)
 
 | Fixture | Alcance | Descripción |
@@ -186,6 +323,9 @@ pytest tests/test_moodle_api_integration.py -v
 | `sample_alumno` | función | Instancia de `Alumno` con 1 centro |
 | `sample_registro` | función | Instancia de `Registro` con 1 alumno |
 | `mock_moosh` | función | Mock de `subprocess.run` que simula éxito de moosh |
+| `registro_sigad` | función | Registro de test con 2 alumnos (Juan y Valeria) |
+| `snapshot_moodle` | función | Snapshot de Moodle con 2 usuarios y matriculaciones mixtas |
+| `mock_repo` | función | Mock de `APIMoodleRepository` con respuestas configurables |
 
 ---
 

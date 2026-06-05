@@ -36,7 +36,7 @@
 | 5 — Pipeline de sincronización | ✅ Completa | 6/6 SyncAnalyzer |
 | 6 — Report logging | ✅ Completa | 6/6 ReportLogger |
 | 7 — Cola de emails | ✅ Completa | 15/15 EmailQueue |
-| 8 — Tests | ✅ Completa | 62/62 |
+| 8 — Tests | ✅ Completa | 84/84 |
 | 9 — Zipapp | ✅ Completa | Funcional |
 | 10 — Documentación | ✅ Completa | — |
 
@@ -167,7 +167,7 @@
 | 8.11 | Tests `sync_analyzer.py` | ✅ | `test_sync_analyzer.py` — 6/6 |
 | 8.12 | Tests conformidad Protocols | ✅ | Verificado en `test_core_container.py` |
 
-**Resultado: 62/62 tests pasan** ✅
+**Resultado: 84/84 tests pasan** ✅
 
 ```bash
 pytest tests/ -v
