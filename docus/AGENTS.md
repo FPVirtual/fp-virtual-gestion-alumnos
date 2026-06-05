@@ -1,8 +1,8 @@
 # AGENTS.md — Guía para Agentes de IA (v0.4)
 
-> **Rama:** `v0.4-arquitectura-modular-duckdb`  
-> **Versión:** `0.4.0`  
-> **Tests:** `32/32 ✅`  
+> **Rama:** `v0.3-estructura-paquete-con-logs`  
+> **Versión:** `0.4.1`  
+> **Tests:** `62/62 ✅`  
 > **Propósito:** Paquete Python autocontenido para gestión de alumnos Moodle. Cero SQL directo.  
 > **Arquitectura:** Repository Pattern + Dependency Injection + Pydantic Settings + structlog + DuckDB  
 > **Última actualización:** Junio 2026
@@ -175,6 +175,9 @@ SMTP_USER=...
 SMTP_PASSWORD=...
 SMTP_USE_TLS=true
 
+# Modo de envío de emails
+EMAIL_MODE=direct   # "direct" = SMTP inmediato | "queue" = CSV para procesamiento externo
+
 # Reportes
 REPORT_TO="email1@ejemplo.com email2@ejemplo.com"
 MAX_EMAILS_DIARIOS=10
@@ -287,6 +290,36 @@ class MoodleSink(Protocol):
 
 ## 7. Repositorios y Fuentes
 
+### EmailQueueRepository
+
+Implementa el mismo protocolo `EmailRepository` que `EmailRepositoryImpl`, pero en lugar de enviar emails por SMTP los **encola en un CSV** (`csvs/email_queue.csv`).
+
+```python
+# Modo directo (por defecto)
+EMAIL_MODE=direct  →  EmailRepositoryImpl
+
+# Modo cola
+EMAIL_MODE=queue   →  EmailQueueRepository
+```
+
+Ventajas del modo cola:
+- Evita bloqueos por límites SMTP diarios
+- Permite reejecutar emails fallidos
+- Separa la generación de notificaciones del envío
+
+### EmailQueueProcessor
+
+Servicio que lee el CSV de emails pendientes y los envía usando `EmailRepositoryImpl`:
+
+```python
+from gestion_alumnos.services.email_queue_processor import EmailQueueProcessor
+
+processor = EmailQueueProcessor()
+stats = processor.process_all()  # {"enviados": N, "fallidos": M, "saltados": K}
+```
+
+Responde al comando CLI `process-emails`.
+
 ### SigadRepository (`EstudianteRepository`)
 - `obtener_registro()` — descarga JSON con reintentos o carga desde `tests/data/`
 - `buscar_por_documento(documento)` — búsqueda en registro
@@ -318,6 +351,22 @@ Ambos repositorios (`APIMoodleRepository`, `MooshMoodleRepository`) implementan 
 | `enrol_user_to_course` | `moosh course-enrol` | `enrol_manual_enrol_users` | ✅ |
 | `suspend_enrolment` | ❌ No soportado | ❌ No soportado | Requiere plugin PHP |
 | `remove_user_from_cohort` | ❌ Parcial | ❌ Parcial | Requiere plugin PHP |
+
+### EmailQueueRepository
+
+Métodos adicionales (no en el protocolo base):
+
+| Método | Descripción |
+|--------|-------------|
+| `obtener_pendientes()` | Lista de `EmailJob` con status `pending` |
+| `actualizar_estado(id, status, error)` | Actualiza estado en el CSV |
+| `obtener_estadisticas()` | Conteos de pending/sent/failed |
+
+Formato del CSV (`csvs/email_queue.csv`):
+```csv
+id,template_name,recipient,subject,template_data,status,created_at,sent_at,error
+uuid-1,nuevoUsuario.html,juan@ejemplo.com,FP virtual...,{"nombre":"Juan",...},pending,2026-06-05T10:00:00,,
+```
 
 ---
 
@@ -427,25 +476,28 @@ Esto permite tener un CSV diferente por entorno (test, preproducción, producci�
 
 ---
 
-## 12. Estado Actual (v0.4.0)
+## 12. Estado Actual (v0.4.1)
 
 | Componente | Estado | Tests |
 |-----------|--------|-------|
-| Core (config, logging, DI) | ✅ | 6/6 |
+| Core (config, logging, DI) | ✅ | 9/9 |
 | Modelos Pydantic | ✅ | 10/10 |
 | SIGAD Repository | ✅ | 6/6 |
 | Moosh Repository | ✅ | 3/3 |
 | API Repository | ✅ Implementado | Pendiente tests de integración |
-| Email Repository | ✅ Implementado | Pendiente tests |
-| **SyncAnalyzer (DuckDB)** | ✅ **Nuevo** | **6/6** |
-| MoodleSource (API Course-based) | ✅ **Nuevo** | — |
-| MoodleSource (API Snapshot) | ✅ **Nuevo** | Requiere plugin PHP |
+| Email Repository (SMTP directo) | ✅ Implementado | Pendiente tests |
+| **EmailQueueRepository (CSV)** | ✅ **Nuevo** | **15/15** |
+| **EmailQueueProcessor** | ✅ **Nuevo** | Incluido en tests de cola |
+| **SyncAnalyzer (DuckDB)** | ✅ | **6/6** |
+| MoodleSource (API Course-based) | ✅ | — |
+| MoodleSource (API Snapshot) | ✅ | Requiere plugin PHP |
 | SyncApplier | 🟡 Implementado | Pendiente tests |
-| SyncOrchestrator | ✅ **Nuevo** | — |
-| CLI (`--apply`, `--source-strategy`) | ✅ **Nuevo** | — |
+| SyncOrchestrator | ✅ | — |
+| CLI (`--apply`, `--source-strategy`, `report`, `process-emails`) | ✅ | — |
+| ReportLogger (informes `.md`) | ✅ **Nuevo** | **6/6** |
 | Zipapp | ✅ | Funcional |
 
-**Total tests: 32/32 ✅**
+**Total tests: 62/62 ✅**
 
 ---
 
@@ -455,8 +507,9 @@ Esto permite tener un CSV diferente por entorno (test, preproducción, producci�
 2. **Tests de integración** para `APICourseBasedMoodleSource` y `APISnapshotMoodleSource`
 3. **Tests end-to-end** del `SyncOrchestrator` con mocks completos
 4. **Mejorar `SyncApplier`** con batching de matrículas y reintentos
-5. **Generar informes Markdown** del `SyncReport` (como hacía `archive/main.py`)
-6. **Tag `v0.4.0`** y merge a `main`
+5. ~~**Generar informes Markdown** del `SyncReport`~~ ✅ Completado (`ReportLogger` + `SyncReport.to_markdown()`)
+6. ~~**Cola de emails en CSV**~~ ✅ Completado (`EmailQueueRepository` + `EmailQueueProcessor`)
+7. **Tag `v0.4.1`** y merge a `main`
 
 ---
 

@@ -4,7 +4,7 @@ v0.3.0 — Arquitectura con Repository Pattern, DI, y soporte dual
 moosh / API REST.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.1"
 
 from gestion_alumnos.core.config import Settings, get_settings
 from gestion_alumnos.core.container import DIContainer, create_container, get_container

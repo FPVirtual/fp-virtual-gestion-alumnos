@@ -1,9 +1,9 @@
-# Tareas y Roadmap — v0.3 Estructura Paquete con Logs
+# Tareas y Roadmap — v0.4.1
 
 > **Rama:** `v0.3-estructura-paquete-con-logs`  
-> **Versión actual:** `0.3.0`  
-> **Tests:** `26/26 ✅`  
-> **Zipapp:** `dist/gestion_alumnos.pyz (79.8 KB) ✅`
+> **Versión actual:** `0.4.1`  
+> **Tests:** `62/62 ✅`  
+> **Zipapp:** `dist/gestion_alumnos.pyz ✅`
 
 ---
 
@@ -30,13 +30,15 @@
 |------|--------|-------|
 | 0 — Análisis | ✅ Completa | — |
 | 1 — Infraestructura | ✅ Completa | — |
-| 2 — Core (logging, config, DI) | ✅ Completa | 3/3 |
+| 2 — Core (logging, config, DI) | ✅ Completa | 9/9 |
 | 3 — Modelos Pydantic | ✅ Completa | 10/10 |
 | 4 — Repositorios | ✅ Completa | 6/6 SIGAD + 3/3 Moosh |
-| 5 — Servicio de Gestión | 🟡 Stub funcional | Pendiente integración completa |
-| 6 — Tests | ✅ Completa | 26/26 |
-| 7 — Zipapp | ✅ Completa | Funcional |
-| 8 — Documentación | ✅ Completa | — |
+| 5 — Pipeline de sincronización | ✅ Completa | 6/6 SyncAnalyzer |
+| 6 — Report logging | ✅ Completa | 6/6 ReportLogger |
+| 7 — Cola de emails | ✅ Completa | 15/15 EmailQueue |
+| 8 — Tests | ✅ Completa | 62/62 |
+| 9 — Zipapp | ✅ Completa | Funcional |
+| 10 — Documentación | ✅ Completa | — |
 
 ---
 
@@ -116,41 +118,56 @@
 
 ---
 
-## Fase 5 — Servicio de Gestión 🟡 Stub
+## Fase 5 — Pipeline de Sincronización ✅
 
 | # | Tarea | Estado | Detalle |
 |---|-------|--------|---------|
-| 5.1 | `gestion_service.py` | 🟡 | Orquestador con DI, flujo básico implementado |
-| 5.2 | Descargar SIGAD → parsear → comparar | 🟡 | Stub funcional |
-| 5.3 | Crear usuarios nuevos | 🟡 | Genera password, crea via repo, envía email |
-| 5.4 | Matricular en cursos | 🟡 | Itera módulos del alumno |
-| 5.5 | Suspender bajas | 🟡 | Compara Moodle vs SIGAD |
-| 5.6 | Reactivar usuarios | ⬜ | Pendiente lógica completa |
-| 5.7 | Actualizar emails/username | ⬜ | Pendiente comparación de cambios |
-| 5.8 | Limpieza de agosto | ⬜ | Pendiente |
-| 5.9 | Generar informe Markdown + CSV | 🟡 | `ResultadoSync.to_markdown()` |
-| 5.10 | Enviar emails de notificación | 🟡 | Integrado con `EmailRepository` |
-| 5.11 | `cli.py` con argparse | ✅ | `sync`, `extract`, `report`, `--driver` |
-| 5.12 | `__main__.py` | ✅ | `python -m gestion_alumnos` |
+| 5.1 | `SyncOrchestrator` | ✅ | Orquesta 4 capas: SIGAD → MoodleSource → SyncAnalyzer → SyncApplier |
+| 5.2 | `SyncAnalyzer` (DuckDB) | ✅ | 7 deltas detectados vía SQL JOINs |
+| 5.3 | `SyncApplier` | ✅ | Aplica cambios en MoodleSink con manejo de errores |
+| 5.4 | Protocolos MoodleSource / MoodleSink | ✅ | Separación lectura/escritura |
+| 5.5 | `cli.py` con argparse | ✅ | `sync`, `report`, `extract`, `process-emails`, `--apply`, `--driver`, `--source-strategy` |
+
+## Fase 6 — Report Logging ✅
+
+| # | Tarea | Estado | Detalle |
+|---|-------|--------|---------|
+| 6.1 | `ReportLogger` | ✅ | Escribe informes `.md` con timestamp en `logs/` |
+| 6.2 | `SyncReport.to_markdown()` | ✅ | Resumen + detalle de cada delta |
+| 6.3 | Integración en `SyncOrchestrator` | ✅ | Informe automático al finalizar sync |
+| 6.4 | Tests `test_core_logging.py` | ✅ | 6/6 |
+
+## Fase 7 — Cola de Emails ✅
+
+| # | Tarea | Estado | Detalle |
+|---|-------|--------|---------|
+| 7.1 | `EmailJob` (modelo) | ✅ | Serialización CSV con Pydantic |
+| 7.2 | `EmailQueueRepository` | ✅ | Implementa `EmailRepository` encolando en CSV |
+| 7.3 | `EmailQueueProcessor` | ✅ | Lee CSV y envía por SMTP respetando límites |
+| 7.4 | `email_mode` en config | ✅ | `direct` o `queue` |
+| 7.5 | Comando CLI `process-emails` | ✅ | `python -m gestion_alumnos process-emails` |
+| 7.6 | Tests `test_email_queue.py` | ✅ | 15/15 |
 
 ---
 
-## Fase 6 — Tests ✅
+## Fase 8 — Tests ✅
 
 | # | Tarea | Estado | Tests |
 |---|-------|--------|-------|
-| 6.1 | `pytest` en `pyproject.toml` | ✅ | Configurado |
-| 6.2 | `tests/conftest.py` | ✅ | Fixtures: `settings_test`, `sample_*`, `mock_moosh` |
-| 6.3 | Tests `core/config.py` | ✅ | `test_core_config.py` — 3/3 |
-| 6.4 | Tests `core/container.py` | ✅ | `test_core_container.py` — 3/3 |
-| 6.5 | Tests `moodle_moosh_repository.py` | ✅ | `test_repositories_moosh.py` — 3/3 |
-| 6.6 | Tests `moodle_api_repository.py` | ⬜ | Pendiente |
-| 6.7 | Tests `sigad_repository.py` | ✅ | `test_repositories_sigad.py` — 6/6 |
-| 6.8 | Tests `email_repository.py` | ⬜ | Pendiente |
-| 6.9 | Tests `gestion_service.py` | ⬜ | Pendiente integración completa |
-| 6.10 | Tests conformidad Protocols | ✅ | Verificado en `test_core_container.py` |
+| 8.1 | `pytest` en `pyproject.toml` | ✅ | Configurado |
+| 8.2 | `tests/conftest.py` | ✅ | Fixtures: `settings_test`, `sample_*`, `mock_moosh` |
+| 8.3 | Tests `core/config.py` | ✅ | `test_core_config.py` — 3/3 |
+| 8.4 | Tests `core/container.py` | ✅ | `test_core_container.py` — 3/3 |
+| 8.5 | Tests `core/logging.py` | ✅ | `test_core_logging.py` — 6/6 |
+| 8.6 | Tests `moodle_moosh_repository.py` | ✅ | `test_repositories_moosh.py` — 3/3 |
+| 8.7 | Tests `moodle_api_repository.py` | ⬜ | Pendiente |
+| 8.8 | Tests `sigad_repository.py` | ✅ | `test_repositories_sigad.py` — 6/6 |
+| 8.9 | Tests `email_repository.py` | ⬜ | Pendiente |
+| 8.10 | Tests `email_queue` | ✅ | `test_email_queue.py` — 15/15 |
+| 8.11 | Tests `sync_analyzer.py` | ✅ | `test_sync_analyzer.py` — 6/6 |
+| 8.12 | Tests conformidad Protocols | ✅ | Verificado en `test_core_container.py` |
 
-**Resultado: 26/26 tests pasan** ✅
+**Resultado: 62/62 tests pasan** ✅
 
 ```bash
 pytest tests/ -v
@@ -158,7 +175,7 @@ pytest tests/ -v
 
 ---
 
-## Fase 7 — Zipapp y Distribución ✅
+## Fase 9 — Zipapp y Distribución ✅
 
 | # | Tarea | Estado | Detalle |
 |---|-------|--------|---------|
@@ -185,15 +202,18 @@ docker exec moodle python3 /opt/gestion_alumnos.pyz sync
 
 ---
 
-## Fase 8 — Documentación ✅
+## Fase 10 — Documentación ✅
 
 | # | Tarea | Estado | Detalle |
 |---|-------|--------|---------|
-| 8.1 | `README.md` | ✅ | Instalación, uso, arquitectura, zipapp |
-| 8.2 | `docus/AGENTS.md` | ✅ | Convenciones, estructura, DI, Protocols |
-| 8.3 | `.env.example` | ✅ | Sin credenciales BD, con `MOODLE_DRIVER` |
-| 8.4 | Limpiar código legacy | ✅ | `main.py`, `Util.py`, `Conexion.py`, `classes/` y `templates/` raíz movidos a `archive/`; `Dockerfile` y `requirements.txt` actualizados |
-| 8.5 | Tag `v0.3.0` | ⬜ | Pendiente release |
+| 10.1 | `README.md` | ✅ | Instalación, uso, arquitectura, zipapp, email queue |
+| 10.2 | `docus/AGENTS.md` | ✅ | Convenciones, estructura, DI, Protocols |
+| 10.3 | `docus/flujos.md` | ✅ | Diagramas Mermaid de todos los flujos |
+| 10.4 | `docus/sync_analyzer.md` | ✅ | Análisis de deltas con queries SQL y ejemplos |
+| 10.5 | `docus/tareas-y-roadmap.md` | ✅ | Estado de fases y próximos pasos |
+| 10.6 | `.env.example` | ✅ | Sin credenciales BD, con `MOODLE_DRIVER` y `EMAIL_MODE` |
+| 10.7 | Limpiar código legacy | ✅ | `main.py`, `Util.py`, `Conexion.py`, `classes/` y `templates/` raíz movidos a `archive/` |
+| 10.8 | Tag `v0.4.1` | ⬜ | Pendiente release |
 
 ---
 
@@ -212,20 +232,13 @@ docker exec moodle python3 /opt/gestion_alumnos.pyz sync
 
 ## Próximos Pasos Sugeridos
 
-1. **Completar lógica de negocio** en `gestion_service.py`:
-   - Reactivar usuarios que vuelven a SIGAD
-   - Actualizar emails/username cuando cambian
-   - Limpieza de agosto (eliminar matrículas suspendidas)
-
-2. **Añadir tests de integración** para `GestionAlumnosService` con mocks de todos los repos.
-
-3. **Implementar carga de templates** con `importlib.resources` en `email_repository.py`.
-
-4. **Crear tests para `APIMoodleRepository`** usando `requests_mock`.
-
-5. ~~**Limpiar código legacy** de la raíz (`main.py`, `Util.py`, `Conexion.py`, `classes/`).~~ ✅ Completado.
-
-6. **Tag `v0.3.0`** y merge a `main`.
+1. **Desplegar plugin PHP** `local_fparagon` en Moodle (producción + preproducción)
+2. **Tests de integración** para `APICourseBasedMoodleSource` y `APISnapshotMoodleSource`
+3. **Tests end-to-end** del `SyncOrchestrator` con mocks completos
+4. **Mejorar `SyncApplier`** con batching de matrículas y reintentos
+5. ~~**Generar informes Markdown**~~ ✅ Completado (`ReportLogger`)
+6. ~~**Cola de emails en CSV**~~ ✅ Completado (`EmailQueueRepository` + `EmailQueueProcessor`)
+7. **Tag `v0.4.1`** y merge a `main`
 
 ---
 

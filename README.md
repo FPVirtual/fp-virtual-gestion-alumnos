@@ -1,4 +1,4 @@
-# Gestion Alumnos v0.4.0
+# Gestion Alumnos v0.4.1
 
 Aplicación para la gestión automática del alumnado en **CampusDigitalFP** (Moodle).
 
@@ -6,8 +6,8 @@ Aplicación para la gestión automática del alumnado en **CampusDigitalFP** (Mo
 
 | Métrica | Valor |
 |---------|-------|
-| Versión | `0.4.0` |
-| Tests | **32/32 ✅** |
+| Versión | `0.4.1` |
+| Tests | **62/62 ✅** |
 | Python | `3.10+` |
 | Distribución | Poetry + zipapp (`.pyz`) |
 
@@ -22,6 +22,8 @@ Aplicación para la gestión automática del alumnado en **CampusDigitalFP** (Mo
 - **Dual estrategia de extracción**: `api-course-based` (itera cursos) o `api-snapshot` (plugin PHP)
 - **Dry-run por defecto**: `sync` solo analiza; `sync --apply` escribe en Moodle
 - **Usuarios protegidos desde CSV**: configurable por entorno
+- **Cola de emails en CSV**: envío diferido vía `process-emails` para evitar límites SMTP
+- **Report logging**: informes markdown con timestamp en `logs/`
 - **Zero SQL directo**
 - **Tests con mocks** (requests-mock, monkeypatch)
 
@@ -134,6 +136,9 @@ SMTP_PORT=587
 SMTP_USER=xxx
 SMTP_PASSWORD=xxx
 
+# Modo de envío de emails: direct (SMTP inmediato) o queue (CSV para procesamiento externo)
+EMAIL_MODE=direct
+
 # Usuarios protegidos (configurable por entorno)
 USUARIOS_PROTEGIDOS_CSV=gestion_alumnos/data/usuarios_protegidos.csv
 ```
@@ -151,6 +156,9 @@ poetry run python -m gestion_alumnos sync --driver moosh --apply
 
 # Generar informe
 poetry run python -m gestion_alumnos report
+
+# Procesar cola de emails pendientes
+poetry run python -m gestion_alumnos process-emails
 
 # Verbose
 poetry run python -m gestion_alumnos sync -v
@@ -192,7 +200,7 @@ poetry run pytest tests/test_core_container.py -v
 ### Resultado actual
 
 ```
-32 passed in 6.5s
+62 passed in 7.5s
 ```
 
 | Suite | Tests | Descripción |
@@ -203,6 +211,8 @@ poetry run pytest tests/test_core_container.py -v
 | `test_repositories_moosh.py` | 3 | Operaciones moosh con mocks |
 | `test_repositories_sigad.py` | 6 | API SIGAD con requests-mock |
 | `test_sync_analyzer.py` | 6 | Análisis DuckDB (sin red) |
+| `test_core_logging.py` | 6 | ReportLogger (informes markdown) |
+| `test_email_queue.py` | 15 | Cola de emails CSV |
 
 ## Operaciones Moodle Soportadas
 
@@ -228,10 +238,10 @@ cp -r moodle_plugin/local_fparagon /ruta/a/moodle/local/
 
 Expone `local_fparagon_get_snapshot` que devuelve usuarios + matriculaciones en una sola llamada.
 
-## Logging
+## Logging e Informes
 
 ```python
-from gestion_alumnos.core.logging import get_logger
+from gestion_alumnos.core.logging import get_logger, ReportLogger
 
 logger = get_logger(__name__)
 logger.info("Procesando alumno", alumno_id=12345, documento="12345678A")
@@ -241,6 +251,26 @@ logger.markdown("## Informe de sincronización", creados=5)
 - Desarrollo: logs legibles con colores
 - Producción: logs en formato JSON
 - Nivel MARKDOWN (25): entradas para informes `.md`
+- `ReportLogger`: genera archivos `logs/informe_{entorno}_{timestamp}.md` con detalle de cada delta
+
+## Cola de Emails
+
+Cuando `EMAIL_MODE=queue`, los emails no se envían inmediatamente sino que se encolan en `csvs/email_queue.csv`:
+
+```bash
+# 1. Sincronización encola emails
+EMAIL_MODE=queue poetry run python -m gestion_alumnos sync --apply
+
+# 2. Procesar la cola externamente (respeta límite diario)
+poetry run python -m gestion_alumnos process-emails
+```
+
+Cada fila del CSV contiene: `id`, `template_name`, `recipient`, `subject`, `template_data`, `status`, `created_at`, `sent_at`, `error`.
+
+Esto permite:
+- Evitar bloqueos por límites SMTP diarios
+- Recuperar emails fallidos reejecutando `process-emails`
+- Procesar la cola en un horario diferente a la sincronización
 
 ## Licencia
 

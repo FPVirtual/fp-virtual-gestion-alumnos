@@ -1,4 +1,4 @@
-# Flujos de la Aplicación: Gestión de Alumnos v0.4
+# Flujos de la Aplicación: Gestión de Alumnos v0.4.1
 
 Documento que describe los flujos principales del sistema de gestión automática de alumnos entre SIGAD y Moodle.
 
@@ -37,6 +37,7 @@ flowchart TD
         E --> E1[EstudianteRepository<br/>SIGADRepository]
         E --> E2[MoodleSource<br/>API Course-based o Snapshot]
         E --> E3[MoodleSink<br/>API o Moosh]
+        E --> E4[EmailRepository<br/>Directo o Queue]
         E --> F[SyncOrchestrator]
     end
 
@@ -65,7 +66,7 @@ flowchart TD
 
     subgraph OUT["Salida"]
         J & K4 --> L[Generar SyncReport Markdown]
-        L --> M[Log resumen]
+        L --> M[Log resumen + Informe .md]
         M --> N[Retornar código<br/>de salida 0/1]
     end
 
@@ -108,6 +109,7 @@ flowchart TB
         REP2["MoodleSource<br/>APICourseBased / APISnapshot"]
         REP3["MoodleSink<br/>APIMoodleRepository / MooshMoodleRepository"]
         REP4["EmailRepositoryImpl"]
+        REP5["EmailQueueRepository"]
     end
 
     subgraph CapaCore["Capa Core (Transversal)"]
@@ -125,6 +127,7 @@ flowchart TB
     ORC --> REP1
     ORC --> REP2
     ORC --> REP4
+    ORC --> REP5
 
     ANA --> MOD1
     ANA --> MOD2
@@ -338,7 +341,57 @@ flowchart TD
 
 ## 8. Flujo de Envío de Emails
 
-Sin cambios respecto a v0.3.
+### Modo Directo (SMTP inmediato)
+
+```mermaid
+flowchart TD
+    A[enviar_bienvenida_nuevo_usuario] --> B[_cargar_template<br/>nuevoUsuario.html]
+    B --> C[Reemplazar placeholders<br/>nombre, apellidos, usuario, contraseña, módulos]
+
+    C --> D[_enviar destinatario, asunto, contenido]
+    D --> E[_verificar_limite]
+    E --> F{¿emails_enviados<br/>>= limite?}
+    F -->|Sí| G[Lanzar EmailLimitExceeded]
+    F -->|No| H[_get_destinatario]
+
+    H --> I{¿subdomain == www?}
+    I -->|Sí| J[Usar email_real]
+    I -->|No| K[Redirigir a<br/>gestion@fpvirtualaragon.es]
+
+    J --> L[Crear MIMEMultipart HTML]
+    K --> L
+    L --> M[Conectar SMTP<br/>starttls + login]
+    M --> N[send_message]
+    N --> O[Incrementar emails_enviados]
+    O --> P[Log info]
+    P --> Q[Retornar True]
+
+    G --> R[No enviar]
+    M -->|Error| S[Incrementar emails_no_enviados]
+    S --> T[Lanzar EmailError]
+
+    style A fill:#e3f2fd
+    style Q fill:#c8e6c9
+    style G fill:#ffcdd2
+    style T fill:#ffcdd2
+```
+
+Cuando `EMAIL_MODE=queue`, los emails no se envían por SMTP inmediatamente. En su lugar se escriben en `csvs/email_queue.csv` y se procesan posteriormente con el comando `process-emails`.
+
+```mermaid
+flowchart TD
+    A[enviar_bienvenida_nuevo_usuario] --> B[_cargar_template<br/>nuevoUsuario.html]
+    B --> C[Reemplazar placeholders]
+    C --> D[Crear EmailJob]
+    D --> E[Serializar a CSV<br/>csvs/email_queue.csv]
+    E --> F[Log: Email encolado]
+    F --> G[Retornar True]
+
+    style A fill:#e3f2fd
+    style G fill:#c8e6c9
+```
+
+### Modo Cola (CSV para procesamiento externo)
 
 ```mermaid
 flowchart TD
@@ -375,6 +428,39 @@ flowchart TD
 
 ---
 
+### Flujo de Procesamiento de Cola (process-emails)
+
+```mermaid
+flowchart TD
+    A[process-emails CLI] --> B[EmailQueueProcessor]
+    B --> C[obtener_pendientes]
+    C --> D{¿Hay pendientes?}
+    D -->|No| E[Log: cola vacía]
+    D -->|Sí| F[Iterar EmailJobs]
+
+    F --> G{¿limite alcanzado?}
+    G -->|Sí| H[Skip resto<br/>saltados++]
+    G -->|No| I[Cargar template HTML]
+    I --> J[Renderizar con datos]
+    J --> K[EmailRepositoryImpl._enviar]
+    K --> L{¿Éxito?}
+    L -->|Sí| M[actualizar_estado → sent]
+    L -->|No| N[actualizar_estado → failed]
+
+    M --> O[enviados++]
+    N --> P[fallidos++]
+    H --> Q[Fin iteración]
+    O --> Q
+    P --> Q
+
+    Q --> R[Log estadísticas]
+
+    style A fill:#e3f2fd
+    style R fill:#c8e6c9
+    style M fill:#c8e6c9
+    style N fill:#ffcdd2
+```
+
 ## 9. Diagrama de Dependencias entre Módulos
 
 ```mermaid
@@ -398,7 +484,8 @@ graph LR
         C2[MoodleSource]
         C3[MoodleSink]
         C4[EmailRepositoryImpl]
-        C5[Protocols]
+        C5[EmailQueueRepository]
+        C6[Protocols]
     end
 
     subgraph Services
@@ -416,6 +503,7 @@ graph LR
     C2 --> A3
     C3 --> A1
     C4 --> A1
+    C5 --> A1
 
     D2 --> A2
     D2 --> A3
@@ -436,6 +524,7 @@ graph LR
     B2 --> C2
     B2 --> C3
     B2 --> C4
+    B2 --> C5
     B2 --> D1
 
     style Models fill:#fff8e1
@@ -455,6 +544,7 @@ graph LR
 | `sync --apply` | Aplicar cambios en Moodle | ✅ v0.4 |
 | `sync --source-strategy api-snapshot` | Usar plugin PHP para extracción | ✅ v0.4 |
 | `report` | Generar informe sin modificar datos | ✅ v0.4 |
+| `process-emails` | Enviar emails pendientes de la cola CSV | ✅ v0.4.1 |
 | `extract` | Extraer alumnado a CSV | Pendiente |
 
 ---
