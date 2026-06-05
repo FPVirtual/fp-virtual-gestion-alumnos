@@ -149,7 +149,7 @@ pytest tests/ -v
 | 7.2 | `scripts/build_zipapp.py` | ✅ | Automatizado |
 | 7.3 | Probar zipapp `--help` | ✅ | `python dist/gestion_alumnos.pyz --help` |
 | 7.4 | Documentar despliegue | ✅ | En README.md |
-| 7.5 | `Dockerfile` mínimo | ⬜ | Opcional |
+| 7.5 | `Dockerfile` | ❌ Descartado | Se movió a `archive/`; el despliegue es via zipapp, no imagen Docker |
 
 ### Generar y usar zipapp
 
