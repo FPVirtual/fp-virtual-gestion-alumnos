@@ -42,7 +42,10 @@ class APICourseBasedMoodleSource(BaseMoodleSource):
 
         enrolments: list[dict] = []
         for idx, curso in enumerate(cursos, 1):
-            course_id = str(curso.get("id"))
+            course_id_raw = curso.get("id")
+            if course_id_raw is None:
+                continue
+            course_id = str(course_id_raw)
             shortname = curso.get("shortname", "")
             if not course_id:
                 continue

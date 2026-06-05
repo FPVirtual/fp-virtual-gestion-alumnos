@@ -108,7 +108,7 @@ class SyncReport(BaseModel):
             lines.extend(["", "## Altas: nuevos usuarios en SIGAD", ""])
             for delta in self.new_users:
                 a = delta.alumno
-                mods = [m.siglas for c in a.centros for m in c.modulos]
+                mods = [m.siglas for centro in a.centros for ciclo in centro.ciclos for m in ciclo.modulos]
                 lines.append(f"- `{a.documento}` — {a.nombre} {a.apellido1} {a.apellido2 or ''} — cursos: {', '.join(mods)}")
 
         # Bajas
