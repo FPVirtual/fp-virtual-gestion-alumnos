@@ -3,6 +3,7 @@
 Implementan los protocols definidos en protocols.py.
 """
 
+from gestion_alumnos.repositories.email_queue_repository import EmailQueueRepository
 from gestion_alumnos.repositories.email_repository import EmailRepositoryImpl
 from gestion_alumnos.repositories.moodle_api_repository import APIMoodleRepository
 from gestion_alumnos.repositories.moodle_moosh_repository import MooshMoodleRepository
@@ -13,4 +14,5 @@ __all__ = [
     "MooshMoodleRepository",
     "APIMoodleRepository",
     "EmailRepositoryImpl",
+    "EmailQueueRepository",
 ]

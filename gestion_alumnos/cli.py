@@ -69,6 +69,9 @@ def crear_parser() -> argparse.ArgumentParser:
     # report
     subparsers.add_parser("report", help="Generar informe sin modificar datos")
 
+    # process-emails
+    subparsers.add_parser("process-emails", help="Procesar cola de emails pendientes")
+
     return parser
 
 
@@ -143,6 +146,14 @@ def main(args: list[str] | None = None) -> int:
             print(report.to_markdown())
             if orchestrator._report_logger and orchestrator._report_logger.filename:
                 print(f"\n📄 Informe guardado en: {orchestrator._report_logger.filename}")
+            return 0
+
+        elif ns.comando == "process-emails":
+            from gestion_alumnos.services.email_queue_processor import EmailQueueProcessor
+
+            processor = EmailQueueProcessor()
+            stats = processor.process_all()
+            print(f"\n📧 Emails procesados: {stats['enviados']} enviados, {stats['fallidos']} fallidos, {stats['saltados']} saltados")
             return 0
 
         else:

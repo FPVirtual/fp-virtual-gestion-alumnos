@@ -67,11 +67,21 @@ class DIContainer:
         return self._moodle_repo
 
     def email_repository(self) -> "EmailRepository | None":
-        """Obtiene el repositorio de emails (lazy loading)."""
+        """Obtiene el repositorio de emails (lazy loading).
+
+        Según email_mode devuelve:
+        - 'direct': EmailRepositoryImpl (envía por SMTP)
+        - 'queue': EmailQueueRepository (encola en CSV)
+        """
         if self._email_repo is None:
-            if self._settings.smtp_host and self._settings.smtp_user:
+            if self._settings.email_mode == "queue":
+                from gestion_alumnos.repositories.email_queue_repository import EmailQueueRepository
+                self._email_repo = EmailQueueRepository(self._settings)
+                logger.info("Email configurado en modo cola (CSV)")
+            elif self._settings.smtp_host and self._settings.smtp_user:
                 from gestion_alumnos.repositories.email_repository import EmailRepositoryImpl
                 self._email_repo = EmailRepositoryImpl(self._settings)
+                logger.info("Email configurado en modo directo (SMTP)")
             else:
                 logger.warning(
                     "Email no configurado, las notificaciones estarán deshabilitadas"

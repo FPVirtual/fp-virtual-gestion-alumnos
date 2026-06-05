@@ -120,6 +120,12 @@ class Settings(BaseSettings):
                     "'api-course-based' (itera cursos) o 'api-snapshot' (plugin PHP)"
     )
 
+    email_mode: Literal["direct", "queue"] = Field(
+        default="direct",
+        description="Modo de envío de emails: 'direct' (envía por SMTP inmediatamente) "
+                    "o 'queue' (encola en CSV para procesamiento externo)"
+    )
+
     usuarios_protegidos_csv: Path = Field(
         default=Path("gestion_alumnos/data/usuarios_protegidos.csv"),
         description="Ruta al CSV con IDs de usuarios protegidos de Moodle"

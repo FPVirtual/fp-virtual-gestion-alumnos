@@ -11,6 +11,7 @@ from gestion_alumnos.models.moodle_snapshot import (
     MoodleSnapshot,
     MoodleUserRecord,
 )
+from gestion_alumnos.models.email_queue import EmailJob
 from gestion_alumnos.models.sync_report import (
     EmailChangeDelta,
     EnrolmentDelta,
@@ -31,6 +32,7 @@ __all__ = [
     "MoodleEnrolmentRecord",
     "MoodleSnapshot",
     "MoodleUserRecord",
+    "EmailJob",
     "EmailChangeDelta",
     "EnrolmentDelta",
     "NameChangeDelta",
