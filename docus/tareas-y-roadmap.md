@@ -7,6 +7,23 @@
 
 ---
 
+## Índice de Contenidos
+
+- [Estado General](#estado-general)
+- [Fase 0 — Análisis y Preparación](#fase-0--análisis-y-preparación)
+- [Fase 1 — Infraestructura del Paquete](#fase-1--infraestructura-del-paquete)
+- [Fase 2 — Core](#fase-2--core)
+- [Fase 3 — Modelos Pydantic](#fase-3--modelos-pydantic)
+- [Fase 4 — Repositorios](#fase-4--repositorios)
+- [Fase 5 — Servicio de Gestión](#fase-5--servicio-de-gestión)
+- [Fase 6 — Tests](#fase-6--tests)
+- [Fase 7 — Zipapp y Distribución](#fase-7--zipapp-y-distribución)
+- [Fase 8 — Documentación](#fase-8--documentación)
+- [Principios de Diseño](#principios-de-diseño)
+- [Próximos Pasos Sugeridos](#próximos-pasos-sugeridos)
+
+---
+
 ## Estado General
 
 | Fase | Estado | Tests |

@@ -9,6 +9,23 @@
 
 ---
 
+## Índice de Contenidos
+
+- [1. Visión General](#1-visión-general)
+- [2. Stack Tecnológico](#2-stack-tecnológico)
+- [3. Estructura del Proyecto](#3-estructura-del-proyecto)
+- [4. Configuración](#4-configuración)
+- [5. Convenciones de Código](#5-convenciones-de-código)
+- [6. Arquitectura del Sistema](#6-arquitectura-del-sistema)
+- [7. Repositorios](#7-repositorios)
+- [8. Testing](#8-testing)
+- [9. Zipapp y Distribución](#9-zipapp-y-distribución)
+- [10. Seguridad](#10-seguridad)
+- [11. Estado Actual (v0.3.0)](#11-estado-actual-v030)
+- [12. Próximos Pasos Sugeridos](#12-próximos-pasos-sugeridos)
+
+---
+
 ## 1. Visión General
 
 **Nombre:** `gestion-alumnos` v0.3.0

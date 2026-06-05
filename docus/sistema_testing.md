@@ -6,15 +6,17 @@
 
 ---
 
-## Índice
+## Índice de Contenidos
 
 - [Ejecutar todos los tests](#ejecutar-todos-los-tests)
-- [1. Tests de Configuración (`test_core_config.py`)](#1-tests-de-configuración)
-- [2. Tests del DI Container (`test_core_container.py`)](#2-tests-del-di-container)
-- [3. Tests de Modelos (`test_models.py`)](#3-tests-de-modelos)
-- [4. Tests del Repositorio Moosh (`test_repositories_moosh.py`)](#4-tests-del-repositorio-moosh)
-- [5. Tests del Repositorio SIGAD (`test_repositories_sigad.py`)](#5-tests-del-repositorio-sigad)
-- [6. Tests de Integración Moodle API (`test_moodle_api_integration.py`)](#6-tests-de-integración-moodle-api)
+- [1. Tests de Configuración](#1-tests-de-configuración)
+- [2. Tests del DI Container](#2-tests-del-di-container)
+- [3. Tests de Modelos](#3-tests-de-modelos)
+- [4. Tests del Repositorio Moosh](#4-tests-del-repositorio-moosh)
+- [5. Tests del Repositorio SIGAD](#5-tests-del-repositorio-sigad)
+- [6. Tests de Integración Moodle API](#6-tests-de-integración-moodle-api)
+- [Fixtures Principales](#fixtures-principales-testsconftestpy)
+- [Comandos Rápidos](#comandos-rápidos)
 
 ---
 
