@@ -213,3 +213,119 @@ class MooshMoodleRepository(MoodleRepository):
             return None
         except MoodleError:
             return None
+
+    def obtener_todos_cursos(self) -> list[dict]:
+        """Obtiene todos los cursos de Moodle."""
+        try:
+            salida = self._run(["course-list"])
+            lineas = salida.strip().splitlines()
+            cursos = []
+            for linea in lineas:
+                if not linea.strip():
+                    continue
+                try:
+                    cursos.append(json.loads(linea))
+                except json.JSONDecodeError:
+                    # Formato plano: id,category,shortname,fullname,visible
+                    partes = linea.split(",")
+                    if len(partes) >= 3:
+                        cursos.append({
+                            "id": partes[0].strip().strip('"'),
+                            "category": partes[1].strip().strip('"') if len(partes) > 1 else "",
+                            "shortname": partes[2].strip().strip('"') if len(partes) > 2 else "",
+                            "fullname": partes[3].strip().strip('"') if len(partes) > 3 else "",
+                            "visible": partes[4].strip().strip('"') if len(partes) > 4 else "1",
+                        })
+            return cursos
+        except MoodleError:
+            return []
+
+    def obtener_usuarios_matriculados_en_curso(self, curso_id: str) -> list[dict]:
+        """Obtiene los usuarios matriculados en un curso concreto."""
+        try:
+            salida = self._run(["user-list", "--course", curso_id])
+            lineas = salida.strip().splitlines()
+            usuarios = []
+            for linea in lineas:
+                if not linea.strip():
+                    continue
+                try:
+                    usuarios.append(json.loads(linea))
+                except json.JSONDecodeError:
+                    # Formato plano: username (id), email, ...
+                    partes = linea.split(",")
+                    if len(partes) >= 2:
+                        usuarios.append({
+                            "username": partes[0].strip(),
+                            "id": partes[1].strip().replace("(", "").replace(")", ""),
+                            "email": partes[2].strip() if len(partes) > 2 else "",
+                        })
+            return usuarios
+        except MoodleError:
+            return []
+
+    # ------------------------------------------------------------------
+    # MoodleSink interface
+    # ------------------------------------------------------------------
+    def create_user(
+        self,
+        username: str,
+        email: str,
+        nombre: str,
+        apellido: str,
+        password: str | None = None,
+    ) -> int:
+        """MoodleSink alias."""
+        return self.crear_usuario(username, email, nombre, apellido, password)
+
+    def update_user(self, username: str, **campos) -> bool:
+        """Actualiza campos arbitrarios de un usuario."""
+        return self.actualizar_usuario(username, **campos)
+
+    def update_user_email(self, username: str, email: str) -> bool:
+        """Actualiza el email de un usuario."""
+        return self.actualizar_usuario(username, email=email)
+
+    def update_user_username(self, old_username: str, new_username: str) -> bool:
+        """Cambia el username de un usuario."""
+        return self.actualizar_usuario(old_username, username=new_username)
+
+    def enrol_user_to_course(self, username: str, course_id: str) -> bool:
+        """MoodleSink alias."""
+        return self.matricular_en_curso(username, course_id)
+
+    def suspend_enrolment(self, username: str, course_id: str) -> bool:
+        """Suspende una matrícula individual.
+
+        ⚠️ Moosh no expone un comando nativo para suspender matrículas
+        sin usar SQL directo.
+        """
+        raise NotImplementedError(
+            "suspend_enrolment no está implementado para driver=moosh. "
+            "Requiere plugin local_fparagon o SQL directo."
+        )
+
+    def reactivate_enrolment(self, username: str, course_id: str) -> bool:
+        """Reactiva una matrícula suspendida.
+
+        ⚠️ Moosh no expone un comando nativo para reactivar matrículas
+        sin usar SQL directo.
+        """
+        raise NotImplementedError(
+            "reactivate_enrolment no está implementado para driver=moosh. "
+            "Requiere plugin local_fparagon o SQL directo."
+        )
+
+    def remove_user_from_cohort(self, username: str, cohort_name: str) -> bool:
+        """Elimina un usuario de una cohorte.
+
+        ⚠️ Moosh no tiene comando nativo `cohort-unenrol` en todas las versiones.
+        """
+        try:
+            self._run(["cohort-unenrol", cohort_name, username])
+            return True
+        except MoodleError as e:
+            raise NotImplementedError(
+                "cohort-unenrol no disponible en esta versión de moosh. "
+                "Requiere plugin local_fparagon."
+            ) from e

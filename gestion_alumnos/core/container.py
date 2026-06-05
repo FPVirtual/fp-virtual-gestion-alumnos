@@ -8,13 +8,15 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from gestion_alumnos.core.config import Settings, get_settings
-from gestion_alumnos.core.logging import get_logger
+from gestion_alumnos.core.logging import ReportLogger, get_logger
 
 if TYPE_CHECKING:
     from gestion_alumnos.repositories.protocols import (
         EmailRepository,
         EstudianteRepository,
         MoodleRepository,
+        MoodleSink,
+        MoodleSource,
     )
 
 logger = get_logger(__name__)
@@ -37,6 +39,9 @@ class DIContainer:
         self._estudiante_repo: "EstudianteRepository | None" = None
         self._moodle_repo: "MoodleRepository | None" = None
         self._email_repo: "EmailRepository | None" = None
+        self._moodle_source: "MoodleSource | None" = None
+        self._moodle_sink: "MoodleSink | None" = None
+        self._report_logger: ReportLogger | None = None
 
     @property
     def settings(self) -> Settings:
@@ -84,6 +89,47 @@ class DIContainer:
             settings=self._settings,
         )
 
+    def moodle_source(self) -> "MoodleSource":
+        """Obtiene la fuente de datos de Moodle según configuración."""
+        if self._moodle_source is None:
+            strategy = getattr(self._settings, "moodle_source_strategy", "api-course-based")
+            if strategy == "api-snapshot":
+                from gestion_alumnos.repositories.moodle_sources import APISnapshotMoodleSource
+                self._moodle_source = APISnapshotMoodleSource(settings=self._settings)
+            else:
+                from gestion_alumnos.repositories.moodle_sources import APICourseBasedMoodleSource
+                self._moodle_source = APICourseBasedMoodleSource(settings=self._settings)
+        return self._moodle_source
+
+    def moodle_sink(self) -> "MoodleSink":
+        """Obtiene el sink de Moodle (mismo driver que el repo legacy)."""
+        if self._moodle_sink is None:
+            # El sink reutiliza la implementación del repositorio unificado
+            self._moodle_sink = self.moodle_repository()
+        return self._moodle_sink
+
+    def report_logger(self) -> ReportLogger:
+        """Obtiene el logger de informes markdown."""
+        if self._report_logger is None:
+            self._report_logger = ReportLogger(
+                logs_dir=self._settings.logs_dir,
+                environment=self._settings.environment,
+            )
+        return self._report_logger
+
+    def sync_orchestrator(self, dry_run: bool = True):
+        """Obtiene el orquestador de sincronización completa."""
+        from gestion_alumnos.services.sync_orchestrator import SyncOrchestrator
+
+        return SyncOrchestrator(
+            sigad_repo=self.estudiante_repository(),
+            moodle_source=self.moodle_source(),
+            moodle_sink=self.moodle_sink(),
+            settings=self._settings,
+            dry_run=dry_run,
+            report_logger=self.report_logger(),
+        )
+
     # ==========================================
     # Métodos para testing (inyectar mocks)
     # ==========================================
@@ -110,6 +156,30 @@ class DIContainer:
     ) -> "DIContainer":
         """Reemplaza el repositorio de emails (útil para tests)."""
         self._email_repo = repo
+        return self
+
+    def override_moodle_source(
+        self,
+        source: "MoodleSource"
+    ) -> "DIContainer":
+        """Reemplaza la fuente de Moodle (útil para tests)."""
+        self._moodle_source = source
+        return self
+
+    def override_moodle_sink(
+        self,
+        sink: "MoodleSink"
+    ) -> "DIContainer":
+        """Reemplaza el sink de Moodle (útil para tests)."""
+        self._moodle_sink = sink
+        return self
+
+    def override_report_logger(
+        self,
+        report_logger: ReportLogger | None
+    ) -> "DIContainer":
+        """Reemplaza el logger de informes (útil para tests)."""
+        self._report_logger = report_logger
         return self
 
 

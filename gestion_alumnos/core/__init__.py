@@ -17,7 +17,7 @@ from gestion_alumnos.core.exceptions import (
     RepositorioError,
     ValidacionError,
 )
-from gestion_alumnos.core.logging import configure_logging, get_logger
+from gestion_alumnos.core.logging import ReportLogger, configure_logging, get_logger
 
 __all__ = [
     "Settings",
@@ -25,6 +25,7 @@ __all__ = [
     "DIContainer",
     "create_container",
     "get_container",
+    "ReportLogger",
     "configure_logging",
     "get_logger",
     "GestionAlumnosError",

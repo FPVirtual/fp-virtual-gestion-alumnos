@@ -1,10 +1,10 @@
-# AGENTS.md — Guía para Agentes de IA (v0.3)
+# AGENTS.md — Guía para Agentes de IA (v0.4)
 
-> **Rama:** `v0.3-estructura-paquete-con-logs`  
-> **Versión:** `0.3.0`  
-> **Tests:** `26/26 ✅`  
+> **Rama:** `v0.4-arquitectura-modular-duckdb`  
+> **Versión:** `0.4.0`  
+> **Tests:** `32/32 ✅`  
 > **Propósito:** Paquete Python autocontenido para gestión de alumnos Moodle. Cero SQL directo.  
-> **Arquitectura:** Repository Pattern + Dependency Injection + Pydantic Settings + structlog  
+> **Arquitectura:** Repository Pattern + Dependency Injection + Pydantic Settings + structlog + DuckDB  
 > **Última actualización:** Junio 2026
 
 ---
@@ -17,24 +17,30 @@
 - [4. Configuración](#4-configuración)
 - [5. Convenciones de Código](#5-convenciones-de-código)
 - [6. Arquitectura del Sistema](#6-arquitectura-del-sistema)
-- [7. Repositorios](#7-repositorios)
-- [8. Testing](#8-testing)
-- [9. Zipapp y Distribución](#9-zipapp-y-distribución)
-- [10. Seguridad](#10-seguridad)
-- [11. Estado Actual (v0.3.0)](#11-estado-actual-v030)
-- [12. Próximos Pasos Sugeridos](#12-próximos-pasos-sugeridos)
+- [7. Repositorios y Fuentes](#7-repositorios-y-fuentes)
+- [8. Motor de Análisis (DuckDB)](#8-motor-de-análisis-duckdb)
+- [9. Testing](#9-testing)
+- [10. Zipapp y Distribución](#10-zipapp-y-distribución)
+- [11. Seguridad](#11-seguridad)
+- [12. Estado Actual (v0.4.0)](#12-estado-actual-v040)
+- [13. Próximos Pasos Sugeridos](#13-próximos-pasos-sugeridos)
 
 ---
 
 ## 1. Visión General
 
-**Nombre:** `gestion-alumnos` v0.3.0
+**Nombre:** `gestion-alumnos` v0.4.0
 
-**Propósito:** Sincronizar alumnos entre SIGAD (Sistema de Información de Aragón) y Moodle (CampusDigitalFP). El acceso a Moodle se abstrae mediante el protocolo `MoodleRepository`, con dos implementaciones intercambiables:
-- **`MooshMoodleRepository`** — usa `moosh` vía subprocess (para ejecución local o dentro del contenedor Moodle).
-- **`APIMoodleRepository`** — usa la API REST de Moodle vía `requests` (para ejecución remota).
+**Propósito:** Sincronizar alumnos entre SIGAD (Sistema de Información de Aragón) y Moodle (CampusDigitalFP). La arquitectura se ha modularizado en **cuatro capas independientes**:
 
-El orquestador (`GestionService`) **no sabe** cuál implementación usa; la recibe inyectada por el `DIContainer` según la configuración (`moodle_driver`).
+1. **Extracción SIGAD** (`EstudianteRepository`) — API REST real, 100% funcional.
+2. **Extracción Moodle** (`MoodleSource`) — abstracta, múltiples implementaciones:
+   - `APICourseBasedMoodleSource` — itera ~1000 cursos vía API REST
+   - `APISnapshotMoodleSource` — consume plugin PHP `local_fparagon` (1 llamada)
+3. **Análisis** (`SyncAnalyzer`) — puro, sin dependencias de red. Usa DuckDB in-memory para comparar datasets y detectar deltas.
+4. **Carga Moodle** (`MoodleSink`) — abstracta, implementada por `APIMoodleRepository` y `MooshMoodleRepository`.
+
+El orquestador (`SyncOrchestrator`) **no sabe** qué implementaciones usa; las recibe inyectadas por el `DIContainer`.
 
 **Idioma:** Español (código, comentarios, docstrings, nombres de funciones/variables).
 
@@ -46,15 +52,20 @@ El orquestador (`GestionService`) **no sabe** cuál implementación usa; la reci
 - **Poetry** — gestión de dependencias y empaquetado
 - **zipapp** — distribución como archivo `.pyz` autocontenido
 - **Pydantic v2 + pydantic-settings** — modelos y configuración con validación automática
-- **structlog** — logging estructurado (traído de v0.2)
+- **structlog** — logging estructurado
 - **requests** — llamadas HTTP a API SIGAD y API REST Moodle
 - **smtplib** — envío de emails
+- **DuckDB + pandas** — motor analítico in-memory para comparación de datasets
 - **pytest + requests-mock** — testing
 
-**Dependencias prohibidas en esta versión:**
+**Dependencias prohibidas:**
 - ❌ `pymysql` — no hay acceso directo a BD
 - ❌ `sqlalchemy` — no hay ORM ni SQL
-- ❌ Comandos `mysql` vía `subprocess` — todo pasa por moosh o API REST
+- ❌ Comandos `mysql` vía `subprocess` — todo pasa por moosh, API REST o plugin PHP
+
+**Dependencias nuevas en v0.4:**
+- ✅ `duckdb>=1.1.0` — análisis de deltas
+- ✅ `pandas>=2.0.0` — carga de datos en DuckDB
 
 ---
 
@@ -64,39 +75,63 @@ El orquestador (`GestionService`) **no sabe** cuál implementación usa; la reci
 gestion_alumnos/
 ├── __init__.py            # __version__, exports públicos
 ├── __main__.py            # python -m gestion_alumnos
-├── cli.py                 # argparse: sync, extract, report, --driver
-├── core/                  # Componentes fundamentales (traídos de v0.2)
+├── cli.py                 # argparse: sync, extract, report, --driver, --apply
+├── core/                  # Componentes fundamentales
 │   ├── __init__.py
 │   ├── config.py          # Pydantic Settings centralizada
 │   ├── container.py       # DI Container: resuelve implementaciones
 │   ├── exceptions.py      # Jerarquía de excepciones
 │   └── logging.py         # structlog + nivel MARKDOWN (25)
-├── models/                # Modelos Pydantic (basados en v0.2)
+├── models/                # Modelos Pydantic
 │   ├── __init__.py
 │   ├── alumno.py
 │   ├── centro.py
 │   ├── ciclo.py
 │   ├── modulo.py
-│   └── registro.py
-├── repositories/          # Repository Pattern (basado en v0.2)
+│   ├── registro.py
+│   ├── moodle_snapshot.py    # MoodleUserRecord, MoodleEnrolmentRecord, MoodleSnapshot
+│   └── sync_report.py        # SyncReport, NewUserDelta, EmailChangeDelta, ...
+├── repositories/          # Repository Pattern
 │   ├── __init__.py
-│   ├── protocols.py       # Protocols: EstudianteRepository, MoodleRepository, EmailRepository
+│   ├── protocols.py       # Protocols: EstudianteRepository, MoodleRepository, MoodleSource, MoodleSink, EmailRepository
 │   ├── sigad_repository.py
-│   ├── moodle_moosh_repository.py   # Implementación via moosh
-│   ├── moodle_api_repository.py     # Implementación via API REST
-│   └── email_repository.py
+│   ├── moodle_moosh_repository.py
+│   ├── moodle_api_repository.py
+│   ├── email_repository.py
+│   └── moodle_sources/    # Implementaciones de MoodleSource (solo lectura)
+│       ├── __init__.py
+│       ├── base.py
+│       ├── api_course_based_source.py
+│       └── api_snapshot_source.py
 ├── services/              # Lógica de negocio
 │   ├── __init__.py
-│   └── gestion_service.py # Orquestador puro con DI
-├── templates/             # HTML empaquetados (importlib.resources)
+│   ├── gestion_service.py # LEGACY — orquestador antiguo (deprecado)
+│   ├── sync_analyzer.py   # Motor de comparación DuckDB
+│   ├── sync_applier.py    # Aplicador de cambios sobre MoodleSink
+│   └── sync_orchestrator.py  # Orquestador de las 4 capas
+├── templates/             # HTML empaquetados
 │   ├── haFalladoElInforme.html
 │   ├── informeAutomatizado.html
 │   ├── matriculasAnadidas.html
 │   ├── nombreUsuarioActualizado.html
 │   └── nuevoUsuario.html
-└── utils/
-    ├── __init__.py
-    └── helpers.py         # Funciones puras
+├── utils/
+│   ├── __init__.py
+│   └── helpers.py
+└── data/
+    └── usuarios_protegidos.csv   # IDs de usuarios no borrables (configurable por entorno)
+
+moodle_plugin/             # Especificación del plugin PHP local_fparagon
+└── local_fparagon/
+    ├── db/
+    │   └── services.php
+    ├── classes/
+    │   └── external/
+    │       └── get_snapshot.php
+    ├── version.php
+    └── lang/
+        └── en/
+            └── local_fparagon.php
 
 archive/                   # Código legacy v0.2 (main.py, Util.py, Conexion.py, classes/)
 ```
@@ -112,8 +147,11 @@ archive/                   # Código legacy v0.2 (main.py, Util.py, Conexion.py,
 ENVIRONMENT=dev|test|preproduccion|produccion
 SUBDOMAIN=test|preproduccion|www
 
-# Driver de Moodle (determina implementación inyectada)
+# Driver de Moodle (determina implementación de SINK)
 MOODLE_DRIVER=moosh          # o "api"
+
+# Estrategia de extracción de Moodle (determina implementación de SOURCE)
+MOODLE_SOURCE_STRATEGY=api-course-based   # o "api-snapshot" (requiere plugin PHP)
 
 # API SIGAD
 API_BASE_URL=https://aplicaciones.aragon.es/pcrpe/services/alumnosFPDistancia
@@ -123,8 +161,8 @@ API_TIMEOUT=30
 API_MAX_RETRIES=5
 
 # Moosh (solo si MOODLE_DRIVER=moosh)
-MOOSH_PATH=moosh             # o ruta absoluta
-DOCKER_CONTAINER=            # nombre del contenedor si moosh está dentro de uno
+MOOSH_PATH=moosh
+DOCKER_CONTAINER=
 
 # API REST Moodle (solo si MOODLE_DRIVER=api)
 MOODLE_API_URL=https://.../webservice/rest/server.php
@@ -139,25 +177,16 @@ SMTP_USE_TLS=true
 
 # Reportes
 REPORT_TO="email1@ejemplo.com email2@ejemplo.com"
-MAX_EMAILS_DIARIOS=10        # 1000 en producción
+MAX_EMAILS_DIARIOS=10
+
+# Seguridad — CSV de usuarios protegidos (uno por entorno si es necesario)
+USUARIOS_PROTEGIDOS_CSV=gestion_alumnos/data/usuarios_protegidos.csv
 
 # Rutas
 BASE_PATH=/var/fp-distancia-gestion-usuarios-automatica/
 ```
 
 **No hay variables de base de datos.** No se usa MySQL.
-
-### Pydantic Settings (`core/config.py`)
-
-```python
-from gestion_alumnos.core.config import Settings
-
-settings = Settings()
-print(settings.environment)      # "dev", "test", "preproduccion", "produccion"
-print(settings.is_produccion)    # bool
-print(settings.moodle_driver)    # "moosh" o "api"
-print(settings.email_limit)      # 1000 (prod) o 10 (otros)
-```
 
 ---
 
@@ -176,7 +205,6 @@ def suspender_matriculas(): ...
 # Clases: PascalCase
 class Alumno: ...
 class MooshMoodleRepository: ...
-class APIMoodleRepository: ...
 
 # Variables: snake_case
 alumnos_sigad = []
@@ -184,20 +212,6 @@ nombre_fichero = ""
 
 # Constantes: MAYÚSCULAS
 BASE_URL = "..."
-USUARIOS_PROTEGIDOS = frozenset({1, 2, 3, ...})
-```
-
-### Docstrings
-```python
-def funcion(param: str) -> int:
-    """Breve descripción en español.
-
-    Args:
-        param: Descripción del parámetro.
-
-    Returns:
-        Descripción del retorno.
-    """
 ```
 
 ### Logging con structlog
@@ -205,16 +219,7 @@ def funcion(param: str) -> int:
 from gestion_alumnos.core.logging import get_logger
 
 logger = get_logger(__name__)
-
-# Logs con contexto estructurado
-logger.info(
-    "Procesando alumno",
-    alumno_id=12345,
-    documento="12345678A",
-    operacion="crear"
-)
-
-# Nivel MARKDOWN para informes
+logger.info("Procesando alumno", alumno_id=12345, documento="12345678A")
 logger.markdown("## Sección de informe", alumnos_creados=5)
 ```
 
@@ -236,129 +241,118 @@ except MoodleError as e:
 
 ## 6. Arquitectura del Sistema
 
-### Repository Pattern + Dependency Injection
+### Capas modulares (v0.4)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        SyncOrchestrator                          │
+│  (coordina: SIGAD → MoodleSource → SyncAnalyzer → SyncApplier)  │
+└─────────────────────────────────────────────────────────────────┘
+         │              │                │              │
+         ▼              ▼                ▼              ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│   SIGAD      │ │ MoodleSource │ │ SyncAnalyzer │ │ MoodleSink   │
+│ Repository   │ │ (abstracto)  │ │   (DuckDB)   │ │ (abstracto)  │
+└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
+                        ▲                                    ▲
+         ┌──────────────┴──────────────┐        ┌────────────┴────────────┐
+         │                             │        │                         │
+┌─────────────────┐   ┌─────────────────┐  ┌──────────┐          ┌──────────┐
+│ APICourseBased  │   │  APISnapshot    │  │   API    │          │  Moosh   │
+│ MoodleSource    │   │  MoodleSource   │  │  Sink    │          │  Sink    │
+└─────────────────┘   └─────────────────┘  └──────────┘          └──────────┘
+```
+
+### Protocolos separados
 
 ```python
-# 1. Definir el protocolo (en repositories/protocols.py)
-class MoodleRepository(Protocol):
-    def crear_usuario(self, username: str, email: str, ...) -> int: ...
-    def suspender_usuario(self, username: str) -> bool: ...
+# SOURCE: solo lectura
+class MoodleSource(Protocol):
+    def extract_users(self) -> list[dict]: ...
+    def extract_courses(self) -> list[dict]: ...
+    def extract_enrolments(self) -> list[dict]: ...
+    def extract_all(self) -> MoodleSnapshot: ...
+
+# SINK: solo escritura
+class MoodleSink(Protocol):
+    def create_user(self, username, email, nombre, apellido, password) -> int: ...
+    def update_user(self, username, **campos) -> bool: ...
+    def suspend_user(self, username) -> bool: ...
+    def enrol_user_to_course(self, username, course_id) -> bool: ...
+    def suspend_enrolment(self, username, course_id) -> bool: ...
     # ...
-
-# 2. Implementar con moosh
-class MooshMoodleRepository:
-    def crear_usuario(self, username, email, ...):
-        subprocess.run(["moosh", "user-create", ...])
-
-# 3. Implementar con API
-class APIMoodleRepository:
-    def crear_usuario(self, username, email, ...):
-        requests.post(f"{self.api_url}?wstoken=...&wsfunction=core_user_create_users", ...)
-
-# 4. El orquestador no sabe cuál usa
-class GestionService:
-    def __init__(
-        self,
-        sigad_repo: EstudianteRepository,
-        moodle_repo: MoodleRepository,
-        email_repo: EmailRepository,
-    ):
-        self._sigad = sigad_repo
-        self._moodle = moodle_repo
-        self._email = email_repo
-
-# 5. El container inyecta la implementación correcta
-from gestion_alumnos.core.container import get_container
-
-container = get_container()  # Lee settings.moodle_driver y crea la implementación adecuada
-service = container.gestion_service()
-```
-
-### Cambio de implementación en runtime
-
-```python
-from gestion_alumnos.core.container import create_container
-from gestion_alumnos.repositories.moodle_api_repository import APIMoodleRepository
-
-container = create_container()
-container.override_moodle_repository(APIMoodleRepository())
-service = container.gestion_service()
-```
-
-### Flujo Principal
-
-```
-┌─────────────┐     HTTP      ┌─────────────────────┐
-│ API SIGAD   │ ────────────> │ sigad_repository.py │
-└─────────────┘               └──────────┬──────────┘
-                                         │
-                                         ▼
-                              ┌─────────────────────┐
-                              │ data/estudiantes_*.json│
-                              └──────────┬──────────┘
-                                         │
-                                         ▼
-                              ┌─────────────────────┐
-                              │ models/Registro     │
-                              └──────────┬──────────┘
-                                         │
-                    ┌────────────────────┼────────────────────┐
-                    │                    │                    │
-                    ▼                    ▼                    ▼
-            ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-            │ Crear users  │   │ Matricular   │   │ Suspender    │
-            │ (moosh/api)  │   │ (moosh/api)  │   │ (moosh/api)  │
-            └──────────────┘   └──────────────┘   └──────────────┘
 ```
 
 ---
 
-## 7. Repositorios
+## 7. Repositorios y Fuentes
 
 ### SigadRepository (`EstudianteRepository`)
 - `obtener_registro()` — descarga JSON con reintentos o carga desde `tests/data/`
 - `buscar_por_documento(documento)` — búsqueda en registro
 - Modo test: bypass de API, carga desde archivo local
 
-### MooshMoodleRepository (`MoodleRepository`)
-Ejecuta `moosh` como subprocess. Si `docker_container` está configurado, usa `docker exec {container} moosh ...`.
+### MoodleSource implementations
 
-```python
-result = subprocess.run(
-    ["moosh", "user-create", "--password", password, "--email", email, username],
-    capture_output=True,
-    text=True,
-    timeout=30
-)
-```
+#### `APICourseBasedMoodleSource`
+- `extract_users()` → `core_user_get_users` (1 llamada)
+- `extract_courses()` → `core_course_get_courses` (1 llamada)
+- `extract_enrolments()` → `core_enrol_get_enrolled_users` × N cursos (~1000 llamadas)
+- **Pros:** Funciona en cualquier Moodle con API REST
+- **Contras:** Lento para muchos cursos
 
-### APIMoodleRepository (`MoodleRepository`)
-Usa `requests` contra la API REST de Moodle.
+#### `APISnapshotMoodleSource` (requiere plugin PHP)
+- `extract_all()` → `local_fparagon_get_snapshot` (1 llamada)
+- **Pros:** Instantáneo, una sola llamada
+- **Contras:** Requiere instalar plugin `local_fparagon` en Moodle
 
-```python
-params = {
-    "wstoken": self._token,
-    "wsfunction": "core_user_create_users",
-    "moodlewsrestformat": "json",
-    "users[0][username]": username,
-    # ...
-}
-response = self._session.post(self._api_url, params=params)
-```
+### MoodleSink implementations
 
-### EmailRepository (`EmailRepository`)
-- Templates HTML cargados con `importlib.resources`
-- Límites diarios: 1000 en producción, 10 en otros entornos
-- Redirección automática en entornos no productivos
+Ambos repositorios (`APIMoodleRepository`, `MooshMoodleRepository`) implementan `MoodleSink`.
+
+| Operación | Moosh | API REST | Notas |
+|-----------|-------|----------|-------|
+| `create_user` | `moosh user-create` | `core_user_create_users` | ✅ |
+| `update_user` | `moosh user-mod` | `core_user_update_users` | ✅ |
+| `suspend_user` | `moosh user-mod --suspend 1` | `core_user_update_users suspended=1` | ✅ |
+| `enrol_user_to_course` | `moosh course-enrol` | `enrol_manual_enrol_users` | ✅ |
+| `suspend_enrolment` | ❌ No soportado | ❌ No soportado | Requiere plugin PHP |
+| `remove_user_from_cohort` | ❌ Parcial | ❌ Parcial | Requiere plugin PHP |
 
 ---
 
-## 8. Testing
+## 8. Motor de Análisis (DuckDB)
+
+`SyncAnalyzer` recibe `Registro` (SIGAD) + `MoodleSnapshot` y devuelve `SyncReport`.
+
+### Tablas DuckDB internas
+```sql
+sigad_users(documento, id_tipo_documento, nombre, apellido1, apellido2, email)
+sigad_enrolments(documento, codigo_centro, siglas_ciclo, id_materia, siglas_modulo)
+
+moodle_users(id, username, email, firstname, lastname, suspended)
+moodle_enrolments(username, course_id, shortname, status)
+```
+
+### Deltas detectados
+| Delta | SQL Pattern |
+|-------|-------------|
+| Altas | `LEFT JOIN moodle_users ON lower(username)=documento WHERE moodle.id IS NULL` |
+| Bajas | `LEFT JOIN sigad_users ON documento=lower(username) WHERE sigad.documento IS NULL` |
+| Cambio email | `JOIN ... WHERE lower(sigad.email) <> lower(moodle.email)` |
+| Cambio nombre | `JOIN ... WHERE sigad.nombre <> moodle.firstname ...` |
+| Cambio username | `JOIN por email WHERE username cambia` (NIE→DNI) |
+| Nueva matrícula | `LEFT JOIN sigad_enrolments → moodle_enrolments WHERE moodle.course IS NULL` |
+| Matrícula eliminada | `LEFT JOIN moodle_enrolments → sigad_enrolments WHERE sigad.modulo IS NULL` |
+
+---
+
+## 9. Testing
 
 ### Estrategia
-- **Unitarios:** Cada servicio aislado con mocks.
-- **Integración:** Flujo completo con mocks de todos los repos.
-- **Conformidad de Protocols:** Verificar que ambas implementaciones cumplen `MoodleRepository`.
+- **Unitarios:** `SyncAnalyzer` con datos fake en DuckDB (sin red).
+- **Integración:** Fuentes de Moodle con mocks de requests.
+- **Conformidad de Protocols:** Verificar que implementaciones cumplen `MoodleSource`/`MoodleSink`.
 
 ### Ejecutar tests
 
@@ -366,36 +360,11 @@ response = self._session.post(self._api_url, params=params)
 # Todos
 pytest tests/ -v
 
-# Solo SIGAD
-pytest tests/test_repositories_sigad.py -v
+# Solo analizador (puro, sin red)
+pytest tests/test_sync_analyzer.py -v
 
 # Solo modelos
 pytest tests/test_models.py -v
-```
-
-### Mock de moosh en tests
-
-```python
-@pytest.fixture
-def mock_moosh(monkeypatch):
-    def fake_run(cmd, **kwargs):
-        class FakeResult:
-            returncode = 0
-            stdout = "mocked output"
-            stderr = ""
-        return FakeResult()
-    monkeypatch.setattr(subprocess, "run", fake_run)
-```
-
-### Mock de API Moodle en tests
-
-```python
-@pytest.fixture
-def mock_moodle_api(requests_mock):
-    requests_mock.post(
-        "https://test.moodle/webservice/rest/server.php",
-        json=[{"id": 123, "username": "testuser"}]
-    )
 ```
 
 ### Fixtures principales (`conftest.py`)
@@ -405,40 +374,29 @@ def mock_moodle_api(requests_mock):
 
 ---
 
-## 9. Zipapp y Distribución
+## 10. Zipapp y Distribución
 
 ### Generar zipapp
 
 ```bash
-# Script automatizado
 python scripts/build_zipapp.py
-
-# Resultado
-dist/gestion_alumnos.pyz
+# Resultado: dist/gestion_alumnos.pyz
 ```
 
 ### Ejecutar zipapp
 
 ```bash
 # Local
-python3 dist/gestion_alumnos.pyz --env-file .env.produccion sync
+python3 dist/gestion_alumnos.pyz --env-file .env.produccion sync --apply
 
 # Dentro del contenedor Moodle
 docker cp dist/gestion_alumnos.pyz moodle:/opt/
-docker exec moodle python3 /opt/gestion_alumnos.pyz sync
-```
-
-### Recursos dentro del zipapp
-
-Los templates HTML se cargan con `importlib.resources`:
-```python
-from importlib import resources
-template = resources.files("gestion_alumnos.templates") / "nuevoUsuario.html"
+docker exec moodle python3 /opt/gestion_alumnos.pyz sync --apply
 ```
 
 ---
 
-## 10. Seguridad
+## 11. Seguridad
 
 ### Credenciales
 - **NUNCA** commitear `.env` con credenciales reales.
@@ -446,15 +404,21 @@ template = resources.files("gestion_alumnos.templates") / "nuevoUsuario.html"
 - En producción, usar variables de entorno del sistema o Docker secrets.
 
 ### Usuarios protegidos
-Lista hardcodeada de IDs no borrables (admin, cuentas de sistema):
-```python
-USUARIOS_PROTEGIDOS = frozenset({
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
-    29, 30, 31, 32, 33, 3725, 3729, 3730, 7152, 7490,
-    7491, 11720, 12270, 12272
-})
+Ya no están hardcodeados. Se cargan desde un **CSV configurable**:
+```bash
+USUARIOS_PROTEGIDOS_CSV=gestion_alumnos/data/usuarios_protegidos.csv
 ```
+
+Formato del CSV:
+```csv
+user_id
+1
+2
+3
+...
+```
+
+Esto permite tener un CSV diferente por entorno (test, preproducción, producción).
 
 ### Validación de inputs
 - `documento` (DNI/NIE): regex `[0-9]{8}[A-Z]` o `[XYZ][0-9]{7}[A-Z]`
@@ -463,7 +427,7 @@ USUARIOS_PROTEGIDOS = frozenset({
 
 ---
 
-## 11. Estado Actual (v0.3.0)
+## 12. Estado Actual (v0.4.0)
 
 | Componente | Estado | Tests |
 |-----------|--------|-------|
@@ -471,26 +435,31 @@ USUARIOS_PROTEGIDOS = frozenset({
 | Modelos Pydantic | ✅ | 10/10 |
 | SIGAD Repository | ✅ | 6/6 |
 | Moosh Repository | ✅ | 3/3 |
-| API Repository | ✅ Implementado | Pendiente tests |
+| API Repository | ✅ Implementado | Pendiente tests de integración |
 | Email Repository | ✅ Implementado | Pendiente tests |
-| Gestion Service | 🟡 Stub | Pendiente integración |
-| CLI | ✅ | — |
+| **SyncAnalyzer (DuckDB)** | ✅ **Nuevo** | **6/6** |
+| MoodleSource (API Course-based) | ✅ **Nuevo** | — |
+| MoodleSource (API Snapshot) | ✅ **Nuevo** | Requiere plugin PHP |
+| SyncApplier | 🟡 Implementado | Pendiente tests |
+| SyncOrchestrator | ✅ **Nuevo** | — |
+| CLI (`--apply`, `--source-strategy`) | ✅ **Nuevo** | — |
 | Zipapp | ✅ | Funcional |
 
-**Total tests: 26/26 ✅**
+**Total tests: 32/32 ✅**
 
 ---
 
-## 12. Próximos Pasos Sugeridos
+## 13. Próximos Pasos Sugeridos
 
-1. **Completar lógica de negocio** en `gestion_service.py`
-2. **Tests de integración** para `GestionAlumnosService`
-3. **Tests para `APIMoodleRepository`**
-4. ~~**Limpiar código legacy** (`main.py`, `Util.py`, `Conexion.py`, `classes/`)~~ ✅ Movido a `archive/`
-5. **Tag `v0.3.0`** y merge a `main`
+1. **Desplegar plugin PHP** `local_fparagon` en Moodle (producción + preproducción)
+2. **Tests de integración** para `APICourseBasedMoodleSource` y `APISnapshotMoodleSource`
+3. **Tests end-to-end** del `SyncOrchestrator` con mocks completos
+4. **Mejorar `SyncApplier`** con batching de matrículas y reintentos
+5. **Generar informes Markdown** del `SyncReport` (como hacía `archive/main.py`)
+6. **Tag `v0.4.0`** y merge a `main`
 
 ---
 
 **Autor:** Agente IA  
-**Rama:** `v0.3-estructura-paquete-con-logs`  
-**Commit:** `2fd963c`
+**Rama:** `v0.4-arquitectura-modular-duckdb`  
+**Commit:** `TBD`

@@ -1,4 +1,4 @@
-# Flujos de la Aplicación: Gestión de Alumnos
+# Flujos de la Aplicación: Gestión de Alumnos v0.4
 
 Documento que describe los flujos principales del sistema de gestión automática de alumnos entre SIGAD y Moodle.
 
@@ -6,20 +6,21 @@ Documento que describe los flujos principales del sistema de gestión automátic
 
 ## Índice de Contenidos
 
-- [1. Flujo General de Sincronización](#1-flujo-general-de-sincronización)
+- [1. Flujo General de Sincronización (v0.4)](#1-flujo-general-de-sincronización-v04)
 - [2. Arquitectura de Capas](#2-arquitectura-de-capas)
 - [3. Flujo de Obtención de Datos SIGAD](#3-flujo-de-obtención-de-datos-sigad)
-- [4. Flujo de Procesamiento de un Alumno](#4-flujo-de-procesamiento-de-un-alumno)
-- [5. Flujo de Selección del Driver Moodle](#5-flujo-de-selección-del-driver-moodle)
-- [6. Flujo de Envío de Emails](#6-flujo-de-envío-de-emails)
-- [7. Flujo de Suspensión de Bajas](#7-flujo-de-suspensión-de-bajas)
-- [8. Diagrama de Dependencias entre Módulos](#8-diagrama-de-dependencias-entre-módulos)
+- [4. Flujo de Obtención de Datos Moodle](#4-flujo-de-obtención-de-datos-moodle)
+- [5. Flujo de Análisis con DuckDB](#5-flujo-de-análisis-con-duckdb)
+- [6. Flujo de Aplicación de Cambios](#6-flujo-de-aplicación-de-cambios)
+- [7. Flujo de Selección del Driver Moodle](#7-flujo-de-selección-del-driver-moodle)
+- [8. Flujo de Envío de Emails](#8-flujo-de-envío-de-emails)
+- [9. Diagrama de Dependencias entre Módulos](#9-diagrama-de-dependencias-entre-módulos)
 - [Resumen de Comandos CLI](#resumen-de-comandos-cli)
-- [Estados del ResultadoSync](#estados-del-resultadosync)
+- [Estados del SyncReport](#estados-del-syncreport)
 
 ---
 
-## 1. Flujo General de Sincronización
+## 1. Flujo General de Sincronización (v0.4)
 
 Flujo completo desde la invocación CLI hasta la generación del informe final.
 
@@ -34,37 +35,46 @@ flowchart TD
     subgraph DI["Dependency Injection"]
         D --> E[DIContainer]
         E --> E1[EstudianteRepository<br/>SIGADRepository]
-        E --> E2[MoodleRepository<br/>API o Moosh]
-        E --> E3[EmailRepository<br/>SMTP opcional]
-        E --> F[GestionAlumnosService]
+        E --> E2[MoodleSource<br/>API Course-based o Snapshot]
+        E --> E3[MoodleSink<br/>API o Moosh]
+        E --> F[SyncOrchestrator]
     end
 
-    subgraph SYNC["Sincronización"]
+    subgraph EXTRACT["Extracción"]
         F --> G1[Obtener Registro SIGAD]
-        G1 --> G2[Obtener Usuarios Moodle]
-        G2 --> H{Por cada alumno}
-        H --> I{¿Usuario existe<br/>en Moodle?}
-        I -->|No| J[Crear Usuario]
-        I -->|Sí| K[Actualizar Usuario]
-        J --> L[Matricular en Cursos]
-        K --> L
-        L --> M[Matricular en Cohorte<br/>alumnado]
-        J --> N{¿Email config<br/>y límite ok?}
-        N -->|Sí| O[Enviar email<br/>de bienvenida]
-        N -->|No| P[Skip email]
-        H --> Q[Suspender bajas]
+        F --> G2[Obtener Snapshot Moodle<br/>via MoodleSource.extract_all]
+    end
+
+    subgraph ANALYZE["Análisis (DuckDB)"]
+        G1 & G2 --> H[SyncAnalyzer]
+        H --> H1[Cargar SIGAD en tabla sigad_users]
+        H --> H2[Cargar Moodle en tabla moodle_users]
+        H1 & H2 --> H3[Ejecutar queries SQL<br/>JOINs / LEFT JOINs]
+        H3 --> H4[Generar SyncReport]
+    end
+
+    subgraph APPLY["Aplicación (opcional)"]
+        H4 --> I{¿dry-run?}
+        I -->|Sí| J[Skip aplicación]
+        I -->|No| K[SyncApplier]
+        K --> K1[Crear usuarios nuevos]
+        K --> K2[Actualizar emails/nombres]
+        K --> K3[Matricular/desmatricular]
+        K --> K4[Suspender bajas]
     end
 
     subgraph OUT["Salida"]
-        Q --> R[Generar ResultadoSync]
-        R --> S[Log resumen Markdown]
-        S --> T[Retornar código<br/>de salida 0/1]
+        J & K4 --> L[Generar SyncReport Markdown]
+        L --> M[Log resumen]
+        M --> N[Retornar código<br/>de salida 0/1]
     end
 
     style CLI fill:#e1f5fe
     style DI fill:#fff3e0
-    style SYNC fill:#e8f5e9
-    style OUT fill:#fce4ec
+    style EXTRACT fill:#e8f5e9
+    style ANALYZE fill:#fff8e1
+    style APPLY fill:#fce4ec
+    style OUT fill:#f3e5f5
 ```
 
 ---
@@ -80,21 +90,24 @@ flowchart TB
     end
 
     subgraph CapaAplicacion["Capa de Aplicación (Servicios)"]
-        SVC["GestionAlumnosService<br/>Orquesta sincronización"]
-        RES["ResultadoSync<br/>Métricas y resumen"]
+        ORC["SyncOrchestrator<br/>Coordina 4 capas"]
+        ANA["SyncAnalyzer<br/>DuckDB in-memory"]
+        APP["SyncApplier<br/>Aplica cambios"]
+        RES["SyncReport<br/>Deltas detectados"]
     end
 
     subgraph CapaDominio["Capa de Dominio (Modelos)"]
-        MOD1["Alumno"]
-        MOD2["Registro"]
-        MOD3["Centro / Ciclo / Modulo"]
+        MOD1["Alumno / Registro"]
+        MOD2["MoodleSnapshot"]
+        MOD3["MoodleUserRecord / MoodleEnrolmentRecord"]
+        MOD4["SyncReport / Deltas"]
     end
 
     subgraph CapaInfraestructura["Capa de Infraestructura (Repositories)"]
-        REP1["SIGADRepository<br/>API REST + cache"]
-        REP2["APIMoodleRepository<br/>Moodle REST API"]
-        REP3["MooshMoodleRepository<br/>Comandos moosh"]
-        REP4["EmailRepositoryImpl<br/>SMTP + templates HTML"]
+        REP1["SIGADRepository"]
+        REP2["MoodleSource<br/>APICourseBased / APISnapshot"]
+        REP3["MoodleSink<br/>APIMoodleRepository / MooshMoodleRepository"]
+        REP4["EmailRepositoryImpl"]
     end
 
     subgraph CapaCore["Capa Core (Transversal)"]
@@ -104,26 +117,25 @@ flowchart TB
         CON["DIContainer"]
     end
 
-    CLI_MOD --> SVC
-    SVC --> MOD1
-    SVC --> MOD2
-    SVC --> REP1
-    SVC --> REP2
-    SVC --> REP3
-    SVC --> REP4
-    SVC --> RES
+    CLI_MOD --> ORC
+    ORC --> ANA
+    ORC --> APP
+    ANA --> MOD4
+    APP --> REP3
+    ORC --> REP1
+    ORC --> REP2
+    ORC --> REP4
 
-    REP1 --> MOD2
-    REP2 --> MOD1
-    REP3 --> MOD1
-    REP4 --> MOD1
+    ANA --> MOD1
+    ANA --> MOD2
+    ANA --> MOD3
 
     CON --> CFG
     CON --> REP1
     CON --> REP2
     CON --> REP3
     CON --> REP4
-    CON --> SVC
+    CON --> ORC
 
     CLI_MOD --> CON
     CLI_MOD --> CFG
@@ -194,110 +206,139 @@ flowchart TD
 
 ---
 
-## 4. Flujo de Procesamiento de un Alumno
+## 4. Flujo de Obtención de Datos Moodle
 
-Decisiones tomadas para cada alumno durante la sincronización.
+### Opción A: API Course-based (~1000 llamadas)
 
 ```mermaid
 flowchart TD
-    A[_procesar_alumno<br/>alumno] --> B[username = alumno.documento.lower]
-    B --> C{moodle_repo<br/>.usuario_existe?}
+    A[MoodleSource.extract_all] --> B[extract_users]
+    A --> C[extract_courses]
+    A --> D[extract_enrolments]
 
-    C -->|No| D[_crear_usuario]
-    C -->|Sí| E[_actualizar_usuario]
+    B --> B1[core_user_get_users<br/>1 llamada]
+    C --> C1[core_course_get_courses<br/>1 llamada]
+    D --> D1[Por cada curso]
+    D1 --> D2[core_enrol_get_enrolled_users<br/>~1000 llamadas]
+    D2 --> D3[Acumular en lista<br/>de matriculaciones]
 
-    D --> D1[Generar password<br/>aleatorio 10 chars]
-    D1 --> D2[moodle_repo.crear_usuario<br/>username, email, nombre, apellido, password]
-    D2 --> D3{¿Éxito?}
-    D3 -->|Sí| D4[Incrementar nuevos_creados]
-    D3 -->|No| D5[Registrar error]
-    D4 --> D6[Matricular en cohorte<br/>alumnado]
-    D6 --> D7{¿Email repo<br/>y límite ok?}
-    D7 -->|Sí| D8[email_repo.enviar_bienvenida_nuevo_usuario<br/>alumno, password, modulos]
-    D8 --> D9{¿Éxito?}
-    D9 -->|Sí| D10[Incrementar emails_enviados]
-    D9 -->|No| D11[Incrementar emails_fallidos]
-    D7 -->|No| D12[Skip email]
-
-    E --> E1[Comparar campos<br/>SIGAD vs Moodle]
-    E1 --> E2{¿Cambios?}
-    E2 -->|Sí| E3[Actualizar campos<br/>email, username, etc.]
-    E2 -->|No| E4[Skip actualización]
-
-    D12 --> F
-    D10 --> F
-    D11 --> F
-    D5 --> F
-    E3 --> F
-    E4 --> F
-
-    F[Por cada módulo del alumno] --> G[moodle_repo.matricular_en_curso<br/>username, modulo.siglas]
-    G --> H{¿Éxito?}
-    H -->|Sí| I[Incrementar matriculas_creadas]
-    H -->|No| J[Log warning]
+    B1 & C1 & D3 --> E[Construir MoodleSnapshot]
 
     style A fill:#e3f2fd
-    style D fill:#e8f5e9
-    style E fill:#fff8e1
-    style D10 fill:#c8e6c9
-    style D11 fill:#ffcdd2
-    style D5 fill:#ffcdd2
+    style E fill:#c8e6c9
+    style D1 fill:#fff8e1
 ```
 
----
-
-## 5. Flujo de Selección del Driver Moodle
-
-El sistema soporta dos drivers para Moodle: API REST y Moosh. Este flujo muestra cómo se selecciona e instancia el repositorio adecuado.
+### Opción B: API Snapshot (1 llamada, requiere plugin)
 
 ```mermaid
 flowchart TD
-    A[DIContainer.moodle_repository] --> B{¿_moodle_repo<br/>ya existe?}
-    B -->|Sí| C[Retornar instancia cacheada]
-    B -->|No| D{settings<br/>.moodle_driver}
+    A[MoodleSource.extract_all] --> B[local_fparagon_get_snapshot<br/>1 llamada]
+    B --> C{¿Plugin instalado?}
+    C -->|Sí| D[Parsear JSON<br/>usuarios + matriculas]
+    C -->|No| E[Lanzar MoodleError]
+    D --> F[Construir MoodleSnapshot]
 
-    D -->|api| E[Crear APIMoodleRepository]
-    D -->|moosh| F[Crear MooshMoodleRepository]
-
-    E --> E1{¿URL y Token<br/>configurados?}
-    E1 -->|No| E2[Lanzar MoodleError]
-    E1 -->|Sí| E3[Instanciar con requests.Session]
-    E3 --> C
-
-    F --> F1[Instanciar con<br/>settings.moosh_path]
-    F1 --> C
-
-    subgraph APIMoodle["APIMoodleRepository"]
-        API1["_call wsfunction<br/>POST wstoken + wsfunction"]
-        API2["usuario_existe<br/>get_users_by_field / get_users"]
-        API3["crear_usuario<br/>core_user_create_users"]
-        API4["suspender_usuario<br/>core_user_update_users suspended=1"]
-        API5["matricular_en_curso<br/>enrol_manual_enrol_users"]
-        API6["matricular_en_cohorte<br/>cohort_add_cohort_members"]
-    end
-
-    subgraph MooshMoodle["MooshMoodleRepository"]
-        MOO1["_run comando<br/>subprocess moosh / docker exec"]
-        MOO2["usuario_existe<br/>user-get username"]
-        MOO3["crear_usuario<br/>user-create --username ..."]
-        MOO4["suspender_usuario<br/>user-mod --suspend 1"]
-        MOO5["matricular_en_curso<br/>course-enrol --user ..."]
-        MOO6["matricular_en_cohorte<br/>cohort-enrol cohorte username"]
-    end
-
-    E3 --> APIMoodle
-    F1 --> MooshMoodle
-
-    style APIMoodle fill:#e8f5e9
-    style MooshMoodle fill:#fff8e1
-    style E2 fill:#ffcdd2
+    style A fill:#e3f2fd
+    style F fill:#c8e6c9
+    style E fill:#ffcdd2
 ```
 
 ---
 
-## 6. Flujo de Envío de Emails
+## 5. Flujo de Análisis con DuckDB
 
-Proceso de notificación a los usuarios recién creados, con control de límites y templates HTML.
+```mermaid
+flowchart TD
+    A[SyncAnalyzer.__init__] --> B[_cargar_sigad]
+    A --> C[_cargar_moodle]
+
+    B --> B1[Crear DataFrame<br/>sigad_users + sigad_enrolments]
+    B1 --> B2[CREATE TABLE ... AS SELECT * FROM df]
+
+    C --> C1[Crear DataFrame<br/>moodle_users + moodle_enrolments]
+    C1 --> C2[CREATE TABLE ... AS SELECT * FROM df]
+
+    B2 & C2 --> D[analyze]
+
+    D --> E1[_find_new_users<br/>LEFT JOIN WHERE moodle.id IS NULL]
+    D --> E2[_find_removed_users<br/>LEFT JOIN WHERE sigad.documento IS NULL]
+    D --> E3[_find_email_changes<br/>JOIN WHERE email difiere]
+    D --> E4[_find_name_changes<br/>JOIN WHERE nombre difiere]
+    D --> E5[_find_username_changes<br/>JOIN por email WHERE username cambia]
+    D --> E6[_find_new_enrolments<br/>LEFT JOIN WHERE moodle.course IS NULL]
+    D --> E7[_find_removed_enrolments<br/>LEFT JOIN WHERE sigad.modulo IS NULL]
+
+    E1 & E2 & E3 & E4 & E5 & E6 & E7 --> F[Construir SyncReport]
+
+    style A fill:#e3f2fd
+    style F fill:#c8e6c9
+    style D fill:#fff8e1
+```
+
+---
+
+## 6. Flujo de Aplicación de Cambios
+
+```mermaid
+flowchart TD
+    A[SyncApplier.apply] --> B[_apply_new_users]
+    B --> B1[Crear usuario en Moodle<br/>generar password aleatorio]
+    B1 --> B2[Matricular en cohorte alumnado]
+
+    B2 --> C[_apply_email_changes]
+    C --> C1[update_user_email]
+
+    C1 --> D[_apply_name_changes]
+    D --> D1[update_user<br/>firstname + lastname]
+
+    D1 --> E[_apply_username_changes]
+    E --> E1[update_user_username<br/>NIE → DNI]
+
+    E1 --> F[_apply_new_enrolments]
+    F --> F1[enrol_user_to_course<br/>usar mapping shortname→course_id]
+
+    F1 --> G[_apply_removed_enrolments]
+    G --> G1[suspend_enrolment<br/>o desmatricular si no disponible]
+
+    G1 --> H[_apply_removed_users]
+    H --> H1[suspend_user]
+
+    style A fill:#e3f2fd
+    style B fill:#e8f5e9
+    style F fill:#e8f5e9
+    style G fill:#fff8e1
+    style H fill:#ffcdd2
+```
+
+---
+
+## 7. Flujo de Selección del Driver Moodle
+
+```mermaid
+flowchart TD
+    A[DIContainer] --> B{settings.moodle_driver}
+    B -->|api| C[APIMoodleRepository]
+    B -->|moosh| D[MooshMoodleRepository]
+
+    A --> E{settings.moodle_source_strategy}
+    E -->|api-course-based| F[APICourseBasedMoodleSource]
+    E -->|api-snapshot| G[APISnapshotMoodleSource]
+
+    C & F & G --> H[SyncOrchestrator]
+
+    style A fill:#e3f2fd
+    style C fill:#e8f5e9
+    style D fill:#e8f5e9
+    style F fill:#fff8e1
+    style G fill:#fff8e1
+```
+
+---
+
+## 8. Flujo de Envío de Emails
+
+Sin cambios respecto a v0.3.
 
 ```mermaid
 flowchart TD
@@ -334,51 +375,15 @@ flowchart TD
 
 ---
 
-## 7. Flujo de Suspensión de Bajas
-
-Al finalizar la sincronización, se suspenden los usuarios de Moodle que ya no están en SIGAD.
-
-```mermaid
-flowchart TD
-    A[_suspender_bajas<br/>registro, usuarios_moodle] --> B[documentos_sigad =<br/>set de alumno.documento.lower]
-
-    B --> C[Por cada usuario en Moodle]
-    C --> D{user_id en<br/>USUARIOS_PROTEGIDOS?}
-    D -->|Sí| E[Skip usuario protegido]
-    D -->|No| F{username en<br/>documentos_sigad?}
-
-    F -->|Sí| G[Usuario activo,<br/>no hacer nada]
-    F -->|No| H[moodle_repo<br/>.suspender_usuario]
-    H --> I{¿Éxito?}
-    I -->|Sí| J[Incrementar suspendidos]
-    I -->|No| K[Log warning]
-
-    E --> C
-    G --> C
-    J --> C
-    K --> C
-
-    C --> L[Fin del loop]
-
-    style A fill:#e3f2fd
-    style J fill:#c8e6c9
-    style K fill:#ffcdd2
-```
-
----
-
-## 8. Diagrama de Dependencias entre Módulos
-
-Vista general de imports y relaciones entre los paquetes Python.
+## 9. Diagrama de Dependencias entre Módulos
 
 ```mermaid
 graph LR
     subgraph Models
         A1[Alumno]
         A2[Registro]
-        A3[Centro]
-        A4[Ciclo]
-        A5[Modulo]
+        A3[MoodleSnapshot]
+        A4[SyncReport]
     end
 
     subgraph Core
@@ -390,15 +395,17 @@ graph LR
 
     subgraph Repositories
         C1[SIGADRepository]
-        C2[APIMoodleRepository]
-        C3[MooshMoodleRepository]
+        C2[MoodleSource]
+        C3[MoodleSink]
         C4[EmailRepositoryImpl]
         C5[Protocols]
     end
 
     subgraph Services
-        D1[GestionAlumnosService]
-        D2[ResultadoSync]
+        D1[SyncOrchestrator]
+        D2[SyncAnalyzer]
+        D3[SyncApplier]
+        D4[GestionAlumnosService]
     end
 
     subgraph CLI
@@ -406,48 +413,30 @@ graph LR
     end
 
     C1 --> A2
-    C1 --> B1
-    C1 --> B3
-    C1 --> B4
-
-    C2 --> B1
-    C2 --> B3
-    C2 --> B4
-    C2 --> C5
-
-    C3 --> B1
-    C3 --> B3
-    C3 --> B4
-    C3 --> C5
-
+    C2 --> A3
+    C3 --> A1
     C4 --> A1
-    C4 --> B1
-    C4 --> B3
-    C4 --> B4
 
-    D1 --> A1
-    D1 --> A2
-    D1 --> C5
-    D1 --> B1
-    D1 --> B3
+    D2 --> A2
+    D2 --> A3
+    D2 --> A4
+    D3 --> A4
+    D3 --> C3
+
+    D1 --> C1
+    D1 --> C2
     D1 --> D2
+    D1 --> D3
 
     E1 --> B1
     E1 --> B2
-    E1 --> B3
     E1 --> D1
 
-    B2 --> B1
     B2 --> C1
     B2 --> C2
     B2 --> C3
     B2 --> C4
     B2 --> D1
-
-    A2 --> A1
-    A1 --> A3
-    A3 --> A4
-    A4 --> A5
 
     style Models fill:#fff8e1
     style Core fill:#f3e5f5
@@ -462,26 +451,22 @@ graph LR
 
 | Comando | Descripción | Estado |
 |---------|-------------|--------|
-| `sync` | Sincronización completa SIGAD → Moodle | Implementado |
-| `sync --desde-fichero` | Sincronización desde JSON local | Implementado |
+| `sync` | Analizar diferencias (dry-run por defecto) | ✅ v0.4 |
+| `sync --apply` | Aplicar cambios en Moodle | ✅ v0.4 |
+| `sync --source-strategy api-snapshot` | Usar plugin PHP para extracción | ✅ v0.4 |
+| `report` | Generar informe sin modificar datos | ✅ v0.4 |
 | `extract` | Extraer alumnado a CSV | Pendiente |
-| `report` | Generar informe sin modificar datos | Pendiente |
 
 ---
 
-## Estados del ResultadoSync
+## Estados del SyncReport
 
-| Métrica | Descripción |
-|---------|-------------|
-| `alumnos_sigad` | Total de alumnos en el registro SIGAD |
-| `alumnos_moodle` | Total de usuarios existentes en Moodle |
-| `nuevos_creados` | Usuarios nuevos creados en Moodle |
-| `suspendidos` | Usuarios suspendidos (bajas) |
-| `reactivados` | Usuarios reactivados |
-| `emails_actualizados` | Emails modificados |
-| `usernames_actualizados` | Usernames modificados |
-| `matriculas_creadas` | Matrículas en cursos realizadas |
-| `matriculas_suspendidas` | Matrículas suspendidas |
-| `emails_enviados` | Emails de bienvenida enviados |
-| `emails_fallidos` | Emails que fallaron |
-| `errores` | Lista de mensajes de error |
+| Delta | Descripción |
+|-------|-------------|
+| `new_users` | Alumnos en SIGAD que no existen en Moodle (altas) |
+| `removed_users` | Usuarios en Moodle que no están en SIGAD (bajas) |
+| `email_changes` | Emails diferentes entre SIGAD y Moodle |
+| `name_changes` | Nombre o apellidos diferentes |
+| `username_changes` | Cambio de documento/username (ej: NIE→DNI) |
+| `new_enrolments` | Matrículas en SIGAD no presentes en Moodle |
+| `removed_enrolments` | Matrículas en Moodle no presentes en SIGAD |

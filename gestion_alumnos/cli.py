@@ -30,6 +30,12 @@ def crear_parser() -> argparse.ArgumentParser:
         help="Driver de Moodle (sobrescribe MOODLE_DRIVER)",
     )
     parser.add_argument(
+        "--source-strategy",
+        choices=["api-course-based", "api-snapshot"],
+        default=None,
+        help="Estrategia de extracción de Moodle (sobrescribe MOODLE_SOURCE_STRATEGY)",
+    )
+    parser.add_argument(
         "--subdomain",
         choices=["test", "preproduccion", "www"],
         default=None,
@@ -50,6 +56,11 @@ def crear_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help="Procesar desde un JSON local en lugar de la API",
+    )
+    sync_parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Aplicar cambios en Moodle (por defecto solo analiza en dry-run)",
     )
 
     # extract
@@ -84,6 +95,11 @@ def main(args: list[str] | None = None) -> int:
         import os
         os.environ["MOODLE_DRIVER"] = ns.driver
 
+    # Sobrescribir source strategy si se proporciona
+    if ns.source_strategy:
+        import os
+        os.environ["MOODLE_SOURCE_STRATEGY"] = ns.source_strategy
+
     # Sobrescribir subdomain si se proporciona
     if ns.subdomain:
         import os
@@ -102,16 +118,18 @@ def main(args: list[str] | None = None) -> int:
         version="0.3.0",
         entorno=settings.environment,
         driver=settings.moodle_driver,
+        source_strategy=settings.moodle_source_strategy,
         subdomain=settings.subdomain,
     )
 
     try:
         container = get_container()
-        service = container.gestion_service()
 
         if ns.comando == "sync":
-            resultado = service.ejecutar_sincronizacion_completa()
-            logger.info("Sincronización completada", nuevos=resultado.nuevos_creados)
+            dry_run = not ns.apply
+            orchestrator = container.sync_orchestrator(dry_run=dry_run)
+            report = orchestrator.run()
+            logger.info("Sincronización completada", changes=report.has_changes, dry_run=dry_run)
             return 0
 
         elif ns.comando == "extract":
@@ -119,7 +137,12 @@ def main(args: list[str] | None = None) -> int:
             return 0
 
         elif ns.comando == "report":
-            logger.info("Informe aún no implementado")
+            orchestrator = container.sync_orchestrator(dry_run=True)
+            report = orchestrator.run()
+            logger.info("Informe generado", changes=report.has_changes)
+            print(report.to_markdown())
+            if orchestrator._report_logger and orchestrator._report_logger.filename:
+                print(f"\n📄 Informe guardado en: {orchestrator._report_logger.filename}")
             return 0
 
         else:

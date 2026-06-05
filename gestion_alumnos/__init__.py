@@ -8,7 +8,7 @@ __version__ = "0.3.0"
 
 from gestion_alumnos.core.config import Settings, get_settings
 from gestion_alumnos.core.container import DIContainer, create_container, get_container
-from gestion_alumnos.core.logging import configure_logging, get_logger
+from gestion_alumnos.core.logging import ReportLogger, configure_logging, get_logger
 
 __all__ = [
     "__version__",
@@ -17,6 +17,7 @@ __all__ = [
     "DIContainer",
     "create_container",
     "get_container",
+    "ReportLogger",
     "configure_logging",
     "get_logger",
 ]

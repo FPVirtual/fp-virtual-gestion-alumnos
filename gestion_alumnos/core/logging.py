@@ -100,7 +100,7 @@ def get_logger(nombre: str | None = None) -> structlog.stdlib.BoundLogger:
 def markdown(self, message: str, **kwargs: Any) -> None:
     """
     Nivel de log para entradas de informe markdown.
-    
+
     Permite separar los logs normales de las entradas
     que van al informe markdown.
     """
@@ -109,3 +109,54 @@ def markdown(self, message: str, **kwargs: Any) -> None:
 
 # Registrar el nuevo nivel
 structlog.stdlib.BoundLogger.markdown = markdown  # type: ignore
+
+
+class ReportLogger:
+    """Servicio dedicado para generar informes markdown con timestamp.
+
+    Escribe informes detallados en archivos ``.md`` separados del log
+    general de la aplicación, manteniendo el historial de ejecuciones.
+    """
+
+    def __init__(self, logs_dir: Path, environment: str) -> None:
+        self.logs_dir = logs_dir
+        self.environment = environment
+        self._file: Any = None
+        self.filename: Path | None = None
+
+    def _ensure_open(self) -> Any:
+        if self._file is None:
+            from datetime import datetime
+
+            timestamp = datetime.now().strftime("%d-%m-%Y_%H%M%S")
+            self.logs_dir.mkdir(parents=True, exist_ok=True)
+            self.filename = self.logs_dir / f"informe_{self.environment}_{timestamp}.md"
+            self._file = open(self.filename, "w", encoding="utf-8")
+            self._write_header()
+        return self._file
+
+    def _write_header(self) -> None:
+        from datetime import datetime
+
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self._file.write("# Informe de Sincronización\n\n")
+        self._file.write(f"- **Entorno:** {self.environment}\n")
+        self._file.write(f"- **Fecha:** {now}\n\n")
+        self._file.write("---\n\n")
+        self._file.flush()
+
+    def write(self, markdown: str) -> None:
+        """Escribe contenido markdown en el informe actual.
+
+        Args:
+            markdown: Texto en formato Markdown.
+        """
+        self._ensure_open()
+        self._file.write(markdown + "\n\n")
+        self._file.flush()
+
+    def close(self) -> None:
+        """Cierra el archivo de informe."""
+        if self._file is not None:
+            self._file.close()
+            self._file = None

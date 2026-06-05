@@ -253,3 +253,113 @@ class APIMoodleRepository(MoodleRepository):
         if isinstance(result, list) and len(result) > 0:
             return result[0]
         return None
+
+    def obtener_todos_cursos(self) -> list[dict]:
+        """Obtiene todos los cursos visibles de Moodle."""
+        result = self._call("core_course_get_courses")
+        if isinstance(result, list):
+            return result
+        return []
+
+    def obtener_usuarios_matriculados_en_curso(self, curso_id: str) -> list[dict]:
+        """Obtiene los usuarios matriculados en un curso concreto."""
+        result = self._call(
+            "core_enrol_get_enrolled_users",
+            {"courseid": curso_id},
+        )
+        if isinstance(result, list):
+            return result
+        return []
+
+    # ------------------------------------------------------------------
+    # MoodleSink interface
+    # ------------------------------------------------------------------
+    def create_user(
+        self,
+        username: str,
+        email: str,
+        nombre: str,
+        apellido: str,
+        password: str | None = None,
+    ) -> int:
+        """MoodleSink alias."""
+        return self.crear_usuario(username, email, nombre, apellido, password)
+
+    def update_user(self, username: str, **campos) -> bool:
+        """Actualiza campos arbitrarios de un usuario."""
+        return self.actualizar_usuario(username, **campos)
+
+    def update_user_email(self, username: str, email: str) -> bool:
+        """Actualiza el email de un usuario."""
+        return self.actualizar_usuario(username, email=email)
+
+    def update_user_username(self, old_username: str, new_username: str) -> bool:
+        """Cambia el username de un usuario."""
+        return self.actualizar_usuario(old_username, username=new_username)
+
+    def enrol_user_to_course(self, username: str, course_id: str) -> bool:
+        """MoodleSink alias."""
+        return self.matricular_en_curso(username, course_id)
+
+    def suspend_enrolment(self, username: str, course_id: str) -> bool:
+        """Suspende una matrícula individual.
+
+        ⚠️ La API REST estándar de Moodle NO expone esta operación.
+        Requiere plugin PHP custom o acceso directo a BD.
+        """
+        raise NotImplementedError(
+            "suspend_enrolment requiere plugin local_fparagon o SQL directo. "
+            "La API REST estándar no soporta suspender matrículas individuales."
+        )
+
+    def reactivate_enrolment(self, username: str, course_id: str) -> bool:
+        """Reactiva una matrícula suspendida.
+
+        ⚠️ La API REST estándar de Moodle NO expone esta operación.
+        Requiere plugin PHP custom o acceso directo a BD.
+        """
+        raise NotImplementedError(
+            "reactivate_enrolment requiere plugin local_fparagon o SQL directo. "
+            "La API REST estándar no soporta reactivar matrículas individuales."
+        )
+
+    def remove_user_from_cohort(self, username: str, cohort_name: str) -> bool:
+        """Elimina un usuario de una cohorte.
+
+        ⚠️ La API REST estándar de Moodle no siempre expone
+        `core_cohort_delete_cohort_members`. Requiere verificación.
+        """
+        users = self._call(
+            "core_user_get_users_by_field",
+            {"field": "username", "values[0]": username},
+        )
+        if not users:
+            raise MoodleError(mensaje=f"Usuario no encontrado: {username}")
+        user_id = users[0]["id"]
+
+        cohorts = self._call("core_cohort_search_cohorts", {"query": cohort_name})
+        cohort_id = None
+        if isinstance(cohorts, dict) and "cohorts" in cohorts:
+            for c in cohorts["cohorts"]:
+                if c.get("name") == cohort_name or c.get("idnumber") == cohort_name:
+                    cohort_id = c["id"]
+                    break
+        if not cohort_id:
+            raise MoodleError(mensaje=f"Cohorte no encontrada: {cohort_name}")
+
+        try:
+            self._call(
+                "core_cohort_delete_cohort_members",
+                {
+                    "members[0][cohortid]": cohort_id,
+                    "members[0][userid]": user_id,
+                },
+            )
+            return True
+        except MoodleError as e:
+            if "functionnotavailable" in str(e).lower() or "invalidparameter" in str(e).lower():
+                raise NotImplementedError(
+                    "core_cohort_delete_cohort_members no disponible en este Moodle. "
+                    "Requiere plugin local_fparagon o moosh."
+                ) from e
+            raise

@@ -114,6 +114,17 @@ class Settings(BaseSettings):
         description="Driver para operaciones Moodle: 'moosh' (local) o 'api' (remoto)"
     )
 
+    moodle_source_strategy: Literal["api-course-based", "api-snapshot"] = Field(
+        default="api-course-based",
+        description="Estrategia de extracción de datos de Moodle: "
+                    "'api-course-based' (itera cursos) o 'api-snapshot' (plugin PHP)"
+    )
+
+    usuarios_protegidos_csv: Path = Field(
+        default=Path("gestion_alumnos/data/usuarios_protegidos.csv"),
+        description="Ruta al CSV con IDs de usuarios protegidos de Moodle"
+    )
+
     # ==========================================
     # Configuración Moosh (solo si moodle_driver == "moosh")
     # ==========================================
