@@ -97,14 +97,16 @@ def snapshot_moodle() -> MoodleSnapshot:
     """Snapshot de Moodle con 2 usuarios y matriculaciones mixtas."""
     return MoodleSnapshot(
         users=[
-            # Usuario 1: coincide con SIGAD, email cambiado
+            # Usuario 1: coincide con SIGAD, email personal cambiado
             MoodleUserRecord(
                 id=101,
                 username="78842153q",
-                email="valeria.torres@ejemplo.com",  # cambiado
+                email="78842153q@fpvirtualaragon.es",  # institucional
                 firstname="Valeria",
                 lastname="Torres Medina",
                 suspended=0,
+                id_sigad=16839,
+                email_sigad="valeria.torres@ejemplo.com",  # cambiado
             ),
             # Usuario 2: está en Moodle pero no en SIGAD (baja)
             MoodleUserRecord(
@@ -152,7 +154,7 @@ class TestSyncAnalyzer:
         assert report.removed_users[0].user.username == "99999999z"
 
     def test_email_changes_detected(self, registro_sigad, snapshot_moodle):
-        """Valeria tiene email diferente entre SIGAD y Moodle."""
+        """Valeria tiene email personal de SIGAD diferente al custom field emailsigad de Moodle."""
         analyzer = SyncAnalyzer(registro_sigad, snapshot_moodle)
         report = analyzer.analyze()
 
@@ -185,3 +187,54 @@ class TestSyncAnalyzer:
         analyzer = SyncAnalyzer(registro_sigad, snapshot_moodle)
         report = analyzer.analyze()
         assert report.has_changes is True
+
+    def test_username_change_detected_by_idsigad(self):
+        """Cambio de DNI/NIE detectado por IdSIGAD, no por email."""
+        registro = Registro.model_validate({
+            "fecha": "15/12/2025",
+            "hora": "11:42:28",
+            "alumnos": [
+                {
+                    "idAlumno": 99999,
+                    "idTipoDocumento": 1,
+                    "documento": "NEW12345Z",
+                    "nombre": "Pepe",
+                    "apellido1": "Viyuela",
+                    "apellido2": "",
+                    "email": "nuevo@ejemplo.com",
+                    "centros": [],
+                }
+            ],
+        })
+        snapshot = MoodleSnapshot(
+            users=[
+                MoodleUserRecord(
+                    id=201,
+                    username="old12345z",
+                    email="old12345z@fpvirtualaragon.es",
+                    firstname="Pepe",
+                    lastname="Viyuela",
+                    suspended=0,
+                    id_sigad=99999,
+                    email_sigad="viejo@ejemplo.com",
+                ),
+            ],
+            courses=[],
+            enrolments=[],
+        )
+
+        analyzer = SyncAnalyzer(registro, snapshot)
+        report = analyzer.analyze()
+
+        assert len(report.username_changes) == 1
+        delta = report.username_changes[0]
+        assert delta.old_username == "old12345z"
+        assert delta.new_documento == "NEW12345Z"
+
+    def test_username_change_not_detected_when_idsigad_matches(self, registro_sigad, snapshot_moodle):
+        """Si IdSIGAD coincide y el username ya es correcto, no hay delta 5."""
+        snapshot_moodle.users[0].username = "78842153q"
+        snapshot_moodle.users[0].email = "valeria.torres.medina@ejemplo.com"
+        analyzer = SyncAnalyzer(registro_sigad, snapshot_moodle)
+        report = analyzer.analyze()
+        assert report.username_changes == []

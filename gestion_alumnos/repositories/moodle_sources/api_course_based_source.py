@@ -15,7 +15,11 @@ from gestion_alumnos.core.config import Settings
 from gestion_alumnos.core.logging import get_logger
 from gestion_alumnos.models import MoodleSnapshot
 from gestion_alumnos.repositories.moodle_api_repository import APIMoodleRepository
-from gestion_alumnos.repositories.moodle_sources.base import BaseMoodleSource
+from gestion_alumnos.repositories.moodle_sources.base import (
+    BaseMoodleSource,
+    _extract_email_sigad,
+    _extract_id_sigad,
+)
 
 logger = get_logger(__name__)
 
@@ -87,6 +91,8 @@ class APICourseBasedMoodleSource(BaseMoodleSource):
                     firstname=u.get("firstname"),
                     lastname=u.get("lastname"),
                     suspended=u.get("suspended", 0),
+                    id_sigad=_extract_id_sigad(u),
+                    email_sigad=_extract_email_sigad(u),
                 )
                 for u in users_raw
             ],

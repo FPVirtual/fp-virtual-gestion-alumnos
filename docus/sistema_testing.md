@@ -119,6 +119,8 @@ Validan `MooshMoodleRepository` usando mocks de `subprocess.run`. No requieren M
 |------|-------------|---------|
 | `test_moosh_usuario_existe` | `usuario_existe` devuelve `True` cuando moosh encuentra el usuario | `pytest tests/test_repositories_moosh.py::test_moosh_usuario_existe -v` |
 | `test_moosh_crear_usuario` | `crear_usuario` devuelve el ID parseado de la salida de moosh | `pytest tests/test_repositories_moosh.py::test_moosh_crear_usuario -v` |
+| `test_moosh_crear_usuario_con_customfields` | `crear_usuario` aplica custom fields con `user-mod --profile_field_*` | `pytest tests/test_repositories_moosh.py::test_moosh_crear_usuario_con_customfields -v` |
+| `test_moosh_actualizar_usuario_con_customfields` | `actualizar_usuario` aplica custom fields con `user-mod --profile_field_*` | `pytest tests/test_repositories_moosh.py::test_moosh_actualizar_usuario_con_customfields -v` |
 | `test_moosh_error_comando` | `MoodleError` se lanza cuando moosh retorna código de error != 0 | `pytest tests/test_repositories_moosh.py::test_moosh_error_comando -v` |
 
 **Ejecutar todos:**
@@ -229,6 +231,8 @@ Validan la detección de los 7 tipos de delta usando datos fake en DuckDB (sin r
 | `test_new_enrolments_detected` | Detecta matrículas en SIGAD no presentes en Moodle | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_new_enrolments_detected -v` |
 | `test_removed_enrolments_detected` | Detecta matrículas en Moodle no presentes en SIGAD | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_removed_enrolments_detected -v` |
 | `test_report_has_changes` | `has_changes` es `True` cuando hay al menos un delta | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_report_has_changes -v` |
+| `test_username_change_detected_by_idsigad` | Detecta cambio de DNI/NIE cruzando por IdSIGAD | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_username_change_detected_by_idsigad -v` |
+| `test_username_change_not_detected_when_idsigad_matches` | No genera delta 5 si username coincide con documento | `pytest tests/test_sync_analyzer.py::TestSyncAnalyzer::test_username_change_not_detected_when_idsigad_matches -v` |
 
 **Ejecutar todos:**
 ```bash

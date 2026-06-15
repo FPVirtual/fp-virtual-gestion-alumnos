@@ -268,7 +268,7 @@ flowchart TD
     D --> E2[_find_removed_users<br/>LEFT JOIN WHERE sigad.documento IS NULL]
     D --> E3[_find_email_changes<br/>JOIN WHERE email difiere]
     D --> E4[_find_name_changes<br/>JOIN WHERE nombre difiere]
-    D --> E5[_find_username_changes<br/>JOIN por email WHERE username cambia]
+    D --> E5[_find_username_changes<br/>JOIN por IdSIGAD WHERE username cambia]
     D --> E6[_find_new_enrolments<br/>LEFT JOIN WHERE moodle.course IS NULL]
     D --> E7[_find_removed_enrolments<br/>LEFT JOIN WHERE sigad.modulo IS NULL]
 
@@ -286,7 +286,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[SyncApplier.apply] --> B[_apply_new_users]
-    B --> B1[Crear usuario en Moodle<br/>generar password aleatorio]
+    B --> B1[Crear usuario en Moodle<br/>generar password aleatorio + customfields<br/>IdSIGAD, tipoDocumento, emailsigad, consentimientoCDD]
     B1 --> B2[Matricular en cohorte alumnado]
 
     B2 --> C[_apply_email_changes]

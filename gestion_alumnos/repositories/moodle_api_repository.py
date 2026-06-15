@@ -26,6 +26,13 @@ class APIMoodleRepository(MoodleRepository):
         7491, 11720, 12270, 12272,
     })
 
+    CUSTOMFIELD_TYPES: dict[str, str] = {
+        "IdSIGAD": "text",
+        "consentimientoCDD": "checkbox",
+        "tipoDocumento": "text",
+        "emailsigad": "text",
+    }
+
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or Settings()
         self._session = requests.Session()
@@ -109,8 +116,13 @@ class APIMoodleRepository(MoodleRepository):
         nombre: str,
         apellido: str,
         password: str | None = None,
+        customfields: dict[str, str] | None = None,
     ) -> int:
         """Crea un usuario en Moodle.
+
+        Args:
+            customfields: Diccionario shortname -> valor con los campos
+                personalizados de Moodle.
 
         Returns:
             ID del usuario creado.
@@ -124,13 +136,30 @@ class APIMoodleRepository(MoodleRepository):
         }
         if password:
             params["users[0][password]"] = password
+        if customfields:
+            for idx, (shortname, value) in enumerate(customfields.items()):
+                field_type = self.CUSTOMFIELD_TYPES.get(shortname, "text")
+                prefix = f"users[0][customfields][{idx}]"
+                params[f"{prefix}[type]"] = field_type
+                params[f"{prefix}[value]"] = str(value)
+                params[f"{prefix}[shortname]"] = shortname
         result = self._call("core_user_create_users", params)
         if isinstance(result, list) and len(result) > 0:
             return result[0].get("id", 0)
         return 0
 
-    def actualizar_usuario(self, username: str, **campos) -> bool:
-        """Actualiza campos de un usuario."""
+    def actualizar_usuario(
+        self,
+        username: str,
+        customfields: dict[str, str] | None = None,
+        **campos,
+    ) -> bool:
+        """Actualiza campos de un usuario.
+
+        Args:
+            customfields: Diccionario shortname -> valor con campos
+                personalizados de Moodle a actualizar.
+        """
         # Primero obtenemos el ID por username
         users = self._call(
             "core_user_get_users_by_field",
@@ -140,8 +169,15 @@ class APIMoodleRepository(MoodleRepository):
             raise MoodleError(mensaje=f"Usuario no encontrado: {username}")
         user_id = users[0]["id"]
         params = {"users[0][id]": user_id}
-        for idx, (campo, valor) in enumerate(campos.items()):
+        for campo, valor in campos.items():
             params[f"users[0][{campo}]"] = str(valor)
+        if customfields:
+            for idx, (shortname, value) in enumerate(customfields.items()):
+                field_type = self.CUSTOMFIELD_TYPES.get(shortname, "text")
+                prefix = f"users[0][customfields][{idx}]"
+                params[f"{prefix}[type]"] = field_type
+                params[f"{prefix}[value]"] = str(value)
+                params[f"{prefix}[shortname]"] = shortname
         self._call("core_user_update_users", params)
         return True
 
@@ -281,13 +317,19 @@ class APIMoodleRepository(MoodleRepository):
         nombre: str,
         apellido: str,
         password: str | None = None,
+        customfields: dict[str, str] | None = None,
     ) -> int:
         """MoodleSink alias."""
-        return self.crear_usuario(username, email, nombre, apellido, password)
+        return self.crear_usuario(username, email, nombre, apellido, password, customfields)
 
-    def update_user(self, username: str, **campos) -> bool:
+    def update_user(
+        self,
+        username: str,
+        customfields: dict[str, str] | None = None,
+        **campos,
+    ) -> bool:
         """Actualiza campos arbitrarios de un usuario."""
-        return self.actualizar_usuario(username, **campos)
+        return self.actualizar_usuario(username, customfields, **campos)
 
     def update_user_email(self, username: str, email: str) -> bool:
         """Actualiza el email de un usuario."""

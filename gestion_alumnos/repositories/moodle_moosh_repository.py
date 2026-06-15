@@ -94,8 +94,13 @@ class MooshMoodleRepository(MoodleRepository):
         nombre: str,
         apellido: str,
         password: str | None = None,
+        customfields: dict[str, str] | None = None,
     ) -> int:
         """Crea un usuario en Moodle.
+
+        Args:
+            customfields: Diccionario shortname -> valor con los campos
+                personalizados de Moodle.
 
         Returns:
             ID del usuario creado (parseado de la salida de moosh).
@@ -112,16 +117,42 @@ class MooshMoodleRepository(MoodleRepository):
         salida = self._run(args)
         # moosh user-create imprime el ID del usuario creado
         try:
-            return int(salida.strip().splitlines()[-1].strip())
+            user_id = int(salida.strip().splitlines()[-1].strip())
         except (ValueError, IndexError):
             logger.warning(f"No se pudo parsear ID del usuario creado: {salida}")
-            return 0
+            user_id = 0
 
-    def actualizar_usuario(self, username: str, **campos) -> bool:
-        """Actualiza campos de un usuario."""
+        # moosh user-create no siempre soporta custom fields; los aplicamos
+        # con user-mod tras la creación.
+        if customfields:
+            mod_args = ["user-mod", "--username", username]
+            for shortname, value in customfields.items():
+                mod_args.extend([f"--profile_field_{shortname}", str(value)])
+            try:
+                self._run(mod_args)
+            except MoodleError as e:
+                logger.warning(f"No se pudieron aplicar custom fields a {username}: {e}")
+
+        return user_id
+
+    def actualizar_usuario(
+        self,
+        username: str,
+        customfields: dict[str, str] | None = None,
+        **campos,
+    ) -> bool:
+        """Actualiza campos de un usuario.
+
+        Args:
+            customfields: Diccionario shortname -> valor con campos
+                personalizados de Moodle a actualizar.
+        """
         args = ["user-mod", "--username", username]
         for campo, valor in campos.items():
             args.extend([f"--{campo}", str(valor)])
+        if customfields:
+            for shortname, value in customfields.items():
+                args.extend([f"--profile_field_{shortname}", str(value)])
         self._run(args)
         return True
 
@@ -274,13 +305,19 @@ class MooshMoodleRepository(MoodleRepository):
         nombre: str,
         apellido: str,
         password: str | None = None,
+        customfields: dict[str, str] | None = None,
     ) -> int:
         """MoodleSink alias."""
-        return self.crear_usuario(username, email, nombre, apellido, password)
+        return self.crear_usuario(username, email, nombre, apellido, password, customfields)
 
-    def update_user(self, username: str, **campos) -> bool:
+    def update_user(
+        self,
+        username: str,
+        customfields: dict[str, str] | None = None,
+        **campos,
+    ) -> bool:
         """Actualiza campos arbitrarios de un usuario."""
-        return self.actualizar_usuario(username, **campos)
+        return self.actualizar_usuario(username, customfields, **campos)
 
     def update_user_email(self, username: str, email: str) -> bool:
         """Actualiza el email de un usuario."""

@@ -16,6 +16,34 @@ from gestion_alumnos.repositories.protocols import MoodleSink
 logger = get_logger(__name__)
 
 
+def default_customfields(
+    id_sigad: int | None,
+    id_tipo_documento: int | None = None,
+    email_sigad: str | None = None,
+) -> dict[str, str]:
+    """Custom fields por defecto para nuevos usuarios en Moodle.
+
+    Args:
+        id_sigad: Identificador de SIGAD (IdSIGAD). Si es None se omite.
+        id_tipo_documento: Tipo de documento de SIGAD (idTipoDocumento).
+            1=DNI, 2=NIE, etc. Si es None se omite.
+        email_sigad: Email personal de SIGAD (emailsigad). Si es None se omite.
+
+    Returns:
+        Diccionario shortname -> valor. Los tipos se infieren por shortname.
+    """
+    fields: dict[str, str] = {
+        "consentimientoCDD": "0",
+    }
+    if id_sigad is not None:
+        fields["IdSIGAD"] = str(id_sigad)
+    if id_tipo_documento is not None:
+        fields["tipoDocumento"] = str(id_tipo_documento)
+    if email_sigad is not None:
+        fields["emailsigad"] = email_sigad
+    return fields
+
+
 class SyncApplier:
     """Aplica un SyncReport sobre Moodle mediante un MoodleSink.
 
@@ -72,6 +100,11 @@ class SyncApplier:
             password = "".join(
                 secrets.choice(string.ascii_letters + string.digits) for _ in range(10)
             )
+            customfields = default_customfields(
+                id_sigad=alumno.id_alumno or None,
+                id_tipo_documento=alumno.id_tipo_documento or None,
+                email_sigad=alumno.email or None,
+            )
             try:
                 self._sink.create_user(
                     username=alumno.username_moodle,
@@ -79,9 +112,14 @@ class SyncApplier:
                     nombre=alumno.nombre or "",
                     apellido=alumno.nombre_completo.replace(alumno.nombre or "", "").strip(),
                     password=password,
+                    customfields=customfields,
                 )
                 stats["users_created"] += 1
-                logger.info("Usuario creado", username=alumno.username_moodle)
+                logger.info(
+                    "Usuario creado",
+                    username=alumno.username_moodle,
+                    id_sigad=alumno.id_alumno,
+                )
             except Exception as e:
                 stats["users_created_errors"].append(
                     f"{alumno.username_moodle}: {e}"
@@ -89,19 +127,29 @@ class SyncApplier:
                 logger.error(f"Error creando usuario: {e}", username=alumno.username_moodle)
 
     def _apply_email_changes(self, stats: dict) -> None:
+        """Actualiza el email personal de SIGAD (custom field emailsigad).
+
+        El email principal/institucional de Moodle no se modifica.
+        """
         for delta in self._report.email_changes:
             if not delta.email_sigad:
                 continue
             try:
-                self._sink.update_user_email(
+                self._sink.update_user(
                     delta.documento.lower(),
-                    delta.email_sigad,
+                    customfields={"emailsigad": delta.email_sigad},
                 )
                 stats["emails_updated"] += 1
-                logger.info("Email actualizado", username=delta.documento)
+                logger.info(
+                    "Email SIGAD actualizado",
+                    username=delta.documento,
+                    email_sigad=delta.email_sigad,
+                )
             except Exception as e:
                 stats["emails_updated_errors"].append(f"{delta.documento}: {e}")
-                logger.error(f"Error actualizando email: {e}", username=delta.documento)
+                logger.error(
+                    f"Error actualizando email SIGAD: {e}", username=delta.documento
+                )
 
     def _apply_name_changes(self, stats: dict) -> None:
         # Nota: Moodle tiene firstname + lastname, SIGAD tiene nombre + apellido1 + apellido2

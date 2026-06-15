@@ -11,6 +11,41 @@ from gestion_alumnos.models import MoodleCourseRecord, MoodleEnrolmentRecord, Mo
 from gestion_alumnos.repositories.protocols import MoodleSource
 
 
+def _extract_customfield(user_dict: dict, shortname: str) -> str | None:
+    """Extrae el valor de un custom field por su shortname.
+
+    Args:
+        user_dict: Diccionario devuelto por Moodle (puede contener
+            `customfields`).
+        shortname: Shortname del campo personalizado.
+
+    Returns:
+        El valor del campo como string, o None si no está disponible.
+    """
+    customfields = user_dict.get("customfields") or []
+    for field in customfields:
+        if field.get("shortname") == shortname:
+            value = field.get("value")
+            return str(value) if value is not None else None
+    return None
+
+
+def _extract_id_sigad(user_dict: dict) -> int | None:
+    """Extrae el valor numérico del custom field IdSIGAD de un usuario."""
+    value = _extract_customfield(user_dict, "IdSIGAD")
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def _extract_email_sigad(user_dict: dict) -> str | None:
+    """Extrae el valor del custom field emailsigad de un usuario."""
+    return _extract_customfield(user_dict, "emailsigad")
+
+
 class BaseMoodleSource(MoodleSource):
     """Base con implementación por defecto de `extract_all()`."""
 
@@ -33,6 +68,8 @@ class BaseMoodleSource(MoodleSource):
                     firstname=u.get("firstname"),
                     lastname=u.get("lastname"),
                     suspended=u.get("suspended", 0),
+                    id_sigad=_extract_id_sigad(u),
+                    email_sigad=_extract_email_sigad(u),
                 )
                 for u in users_raw
             ],

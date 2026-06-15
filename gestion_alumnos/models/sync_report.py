@@ -43,7 +43,8 @@ class NameChangeDelta(BaseModel):
 class UsernameChangeDelta(BaseModel):
     """Cambio de documento/username (ej: NIE → DNI).
 
-    Se detecta cruzando por email cuando el username no coincide.
+    Se detecta cruzando por IdSIGAD (campo inmutable) cuando el username
+    no coincide con el documento actual de SIGAD.
     """
 
     old_username: str

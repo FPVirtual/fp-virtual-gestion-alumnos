@@ -89,6 +89,7 @@ class SyncAnalyzer:
                 continue
             usuarios.append({
                 "documento": alumno.documento.upper(),
+                "id_alumno": alumno.id_alumno,
                 "id_tipo_documento": alumno.id_tipo_documento,
                 "nombre": alumno.nombre,
                 "apellido1": alumno.apellido1,
@@ -107,7 +108,19 @@ class SyncAnalyzer:
                             "siglas_modulo": modulo.siglas,
                         })
         df_users = pd.DataFrame(usuarios)
-        df_enrol = pd.DataFrame(matriculas)
+        if matriculas:
+            df_enrol = pd.DataFrame(matriculas)
+        else:
+            df_enrol = pd.DataFrame(
+                columns=["documento", "codigo_centro", "nombre_centro", "siglas_ciclo", "id_materia", "siglas_modulo"]
+            ).astype({
+                "documento": "string",
+                "codigo_centro": "string",
+                "nombre_centro": "string",
+                "siglas_ciclo": "string",
+                "id_materia": "Int64",
+                "siglas_modulo": "string",
+            })
         self._con.execute("CREATE OR REPLACE TABLE sigad_users AS SELECT * FROM df_users")
         self._con.execute("CREATE OR REPLACE TABLE sigad_enrolments AS SELECT * FROM df_enrol")
         logger.debug(
@@ -124,6 +137,8 @@ class SyncAnalyzer:
                 "firstname": u.firstname,
                 "lastname": u.lastname,
                 "suspended": u.suspended,
+                "id_sigad": u.id_sigad,
+                "email_sigad": u.email_sigad,
             }
             for u in self._snapshot.users
         ]
@@ -138,8 +153,22 @@ class SyncAnalyzer:
             }
             for e in self._snapshot.enrolments
         ]
-        df_users = pd.DataFrame(users)
-        df_enrol = pd.DataFrame(enrolments)
+        df_users = pd.DataFrame(users).astype({
+            "id_sigad": "Int64",
+            "email_sigad": "string",
+        })
+        if enrolments:
+            df_enrol = pd.DataFrame(enrolments)
+        else:
+            df_enrol = pd.DataFrame(
+                columns=["user_id", "username", "course_id", "shortname", "status"]
+            ).astype({
+                "user_id": "Int64",
+                "username": "string",
+                "course_id": "Int64",
+                "shortname": "string",
+                "status": "Int64",
+            })
         self._con.execute("CREATE OR REPLACE TABLE moodle_users AS SELECT * FROM df_users")
         self._con.execute(
             "CREATE OR REPLACE TABLE moodle_enrolments AS SELECT * FROM df_enrol"
@@ -152,12 +181,17 @@ class SyncAnalyzer:
     # Queries de delta
     # ------------------------------------------------------------------
     def _find_new_users(self) -> list[NewUserDelta]:
-        """Altas: en SIGAD, no en Moodle."""
+        """Altas: en SIGAD, no en Moodle.
+
+        Se considera alta si no existe ni por username/documento ni por
+        IdSIGAD (para cubrir cambios de documento previos a la sincronización).
+        """
         df = self._con.execute("""
             SELECT s.documento
             FROM sigad_users s
             LEFT JOIN moodle_users m ON m.username = lower(s.documento)
-            WHERE m.id IS NULL
+            LEFT JOIN moodle_users m2 ON m2.id_sigad = s.id_alumno AND s.id_alumno IS NOT NULL
+            WHERE m.id IS NULL AND m2.id IS NULL
         """).fetchdf()
 
         documentos = df["documento"].tolist() if not df.empty else []
@@ -168,13 +202,19 @@ class SyncAnalyzer:
         ]
 
     def _find_removed_users(self) -> list[RemovedUserDelta]:
-        """Bajas: en Moodle, no en SIGAD."""
+        """Bajas: en Moodle, no en SIGAD.
+
+        Se considera baja si no existe ni por username/documento ni por
+        IdSIGAD (el usuario podría haber cambiado de documento pero seguir
+        estando en SIGAD con el mismo IdSIGAD).
+        """
         protegidos = ",".join(str(i) for i in self._usuarios_protegidos) if self._usuarios_protegidos else "-1"
         df = self._con.execute(f"""
             SELECT m.id, m.username, m.email, m.firstname, m.lastname, m.suspended
             FROM moodle_users m
             LEFT JOIN sigad_users s ON lower(s.documento) = m.username
-            WHERE s.documento IS NULL
+            LEFT JOIN sigad_users s2 ON s2.id_alumno = m.id_sigad AND m.id_sigad IS NOT NULL
+            WHERE s.documento IS NULL AND s2.id_alumno IS NULL
               AND m.id NOT IN ({protegidos})
         """).fetchdf()
 
@@ -195,17 +235,22 @@ class SyncAnalyzer:
         ]
 
     def _find_email_changes(self) -> list[EmailChangeDelta]:
-        """Emails diferentes entre SIGAD y Moodle."""
+        """Cambios en el email personal de SIGAD (custom field emailsigad).
+
+        El email principal de Moodle (institucional) no se sincroniza desde
+        SIGAD; solo se compara el custom field `emailsigad` con el campo
+        `email` del JSON de SIGAD.
+        """
         df = self._con.execute("""
             SELECT
                 s.documento,
                 s.email AS email_sigad,
-                m.email AS email_moodle
+                m.email_sigad AS email_moodle
             FROM sigad_users s
             JOIN moodle_users m ON lower(s.documento) = m.username
-            WHERE lower(s.email) <> lower(m.email)
-               OR (s.email IS NOT NULL AND m.email IS NULL)
-               OR (s.email IS NULL AND m.email IS NOT NULL)
+            WHERE lower(s.email) <> lower(m.email_sigad)
+               OR (s.email IS NOT NULL AND m.email_sigad IS NULL)
+               OR (s.email IS NULL AND m.email_sigad IS NOT NULL)
         """).fetchdf()
 
         if df.empty:
@@ -253,10 +298,11 @@ class SyncAnalyzer:
         ]
 
     def _find_username_changes(self) -> list[UsernameChangeDelta]:
-        """Cambio de username (ej: NIE → DNI) detectado por coincidencia de email.
+        """Cambio de username (ej: NIE → DNI) detectado por IdSIGAD.
 
-        Buscamos pares donde el email coincida pero el username de Moodle
-        no coincida con el documento de SIGAD.
+        Buscamos pares donde el IdSIGAD coincida pero el username de Moodle
+        no coincida con el documento actual de SIGAD. El IdSIGAD es inmutable
+        y permite detectar cambios de DNI/NIE/pasaporte.
         """
         df = self._con.execute("""
             SELECT
@@ -264,8 +310,9 @@ class SyncAnalyzer:
                 s.documento AS new_documento,
                 s.email AS email
             FROM moodle_users m
-            JOIN sigad_users s ON lower(s.email) = lower(m.email)
+            JOIN sigad_users s ON s.id_alumno = m.id_sigad
             WHERE m.username <> lower(s.documento)
+              AND m.id_sigad IS NOT NULL
         """).fetchdf()
 
         if df.empty:

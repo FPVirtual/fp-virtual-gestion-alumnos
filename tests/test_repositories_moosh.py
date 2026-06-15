@@ -20,6 +20,29 @@ def test_moosh_crear_usuario(mock_moosh, settings_test):
     assert user_id == 123
 
 
+def test_moosh_crear_usuario_con_customfields(mock_moosh, settings_test):
+    repo = MooshMoodleRepository(settings_test)
+    customfields = {
+        "IdSIGAD": "99999",
+        "tipoDocumento": "1",
+        "consentimientoCDD": "0",
+    }
+    user_id = repo.crear_usuario(
+        "testuser", "test@test.com", "Nombre", "Apellido",
+        customfields=customfields,
+    )
+    assert user_id == 123
+
+
+def test_moosh_actualizar_usuario_con_customfields(mock_moosh, settings_test):
+    repo = MooshMoodleRepository(settings_test)
+    result = repo.actualizar_usuario(
+        "testuser",
+        customfields={"emailsigad": "nuevo@ejemplo.com"},
+    )
+    assert result is True
+
+
 def test_moosh_error_comando(monkeypatch, settings_test):
     def fake_run(cmd, **kwargs):
         class FakeResult:

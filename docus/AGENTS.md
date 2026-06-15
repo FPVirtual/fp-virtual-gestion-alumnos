@@ -278,7 +278,7 @@ class MoodleSource(Protocol):
 
 # SINK: solo escritura
 class MoodleSink(Protocol):
-    def create_user(self, username, email, nombre, apellido, password) -> int: ...
+    def create_user(self, username, email, nombre, apellido, password, customfields=None) -> int: ...
     def update_user(self, username, **campos) -> bool: ...
     def suspend_user(self, username) -> bool: ...
     def enrol_user_to_course(self, username, course_id) -> bool: ...
@@ -345,7 +345,7 @@ Ambos repositorios (`APIMoodleRepository`, `MooshMoodleRepository`) implementan 
 
 | Operación | Moosh | API REST | Notas |
 |-----------|-------|----------|-------|
-| `create_user` | `moosh user-create` | `core_user_create_users` | ✅ |
+| `create_user` | `moosh user-create` (+ `user-mod --profile_field_*`) | `core_user_create_users` (con `customfields`) | ✅ Rellena IdSIGAD, tipoDocumento, emailsigad y consentimientoCDD |
 | `update_user` | `moosh user-mod` | `core_user_update_users` | ✅ |
 | `suspend_user` | `moosh user-mod --suspend 1` | `core_user_update_users suspended=1` | ✅ |
 | `enrol_user_to_course` | `moosh course-enrol` | `enrol_manual_enrol_users` | ✅ |
@@ -376,21 +376,21 @@ uuid-1,nuevoUsuario.html,juan@ejemplo.com,FP virtual...,{"nombre":"Juan",...},pe
 
 ### Tablas DuckDB internas
 ```sql
-sigad_users(documento, id_tipo_documento, nombre, apellido1, apellido2, email)
+sigad_users(documento, id_alumno, id_tipo_documento, nombre, apellido1, apellido2, email)
 sigad_enrolments(documento, codigo_centro, siglas_ciclo, id_materia, siglas_modulo)
 
-moodle_users(id, username, email, firstname, lastname, suspended)
+moodle_users(id, username, email, firstname, lastname, suspended, id_sigad, email_sigad)
 moodle_enrolments(username, course_id, shortname, status)
 ```
 
 ### Deltas detectados
 | Delta | SQL Pattern |
 |-------|-------------|
-| Altas | `LEFT JOIN moodle_users ON lower(username)=documento WHERE moodle.id IS NULL` |
-| Bajas | `LEFT JOIN sigad_users ON documento=lower(username) WHERE sigad.documento IS NULL` |
-| Cambio email | `JOIN ... WHERE lower(sigad.email) <> lower(moodle.email)` |
+| Altas | `LEFT JOIN moodle_users ON lower(username)=documento` (también por `id_sigad=id_alumno`) `WHERE moodle.id IS NULL` |
+| Bajas | `LEFT JOIN sigad_users ON documento=lower(username)` (también por `id_sigad=id_alumno`) `WHERE sigad.documento IS NULL` |
+| Cambio email | `JOIN ... WHERE lower(sigad.email) <> lower(moodle.email_sigad)` (custom field emailsigad) |
 | Cambio nombre | `JOIN ... WHERE sigad.nombre <> moodle.firstname ...` |
-| Cambio username | `JOIN por email WHERE username cambia` (NIE→DNI) |
+| Cambio username | `JOIN por IdSIGAD WHERE username cambia` (NIE→DNI) |
 | Nueva matrícula | `LEFT JOIN sigad_enrolments → moodle_enrolments WHERE moodle.course IS NULL` |
 | Matrícula eliminada | `LEFT JOIN moodle_enrolments → sigad_enrolments WHERE sigad.modulo IS NULL` |
 

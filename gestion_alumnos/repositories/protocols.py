@@ -65,6 +65,7 @@ class MoodleRepository(Protocol):
         nombre: str,
         apellido: str,
         password: str | None = None,
+        customfields: dict[str, str] | None = None,
     ) -> int:
         """Crea un usuario en Moodle.
 
@@ -73,8 +74,18 @@ class MoodleRepository(Protocol):
         """
         ...
 
-    def actualizar_usuario(self, username: str, **campos) -> bool:
-        """Actualiza campos de un usuario."""
+    def actualizar_usuario(
+        self,
+        username: str,
+        customfields: dict[str, str] | None = None,
+        **campos,
+    ) -> bool:
+        """Actualiza campos de un usuario.
+
+        Args:
+            customfields: Diccionario shortname -> valor con campos
+                personalizados de Moodle a actualizar.
+        """
         ...
 
     def suspender_usuario(self, username: str) -> bool:
@@ -161,12 +172,28 @@ class MoodleSink(Protocol):
         nombre: str,
         apellido: str,
         password: str | None = None,
+        customfields: dict[str, str] | None = None,
     ) -> int:
-        """Crea un usuario. Devuelve el ID."""
+        """Crea un usuario. Devuelve el ID.
+
+        Args:
+            customfields: Diccionario shortname -> valor con los campos
+                personalizados de Moodle (p. ej. IdSIGAD).
+        """
         ...
 
-    def update_user(self, username: str, **campos) -> bool:
-        """Actualiza campos arbitrarios de un usuario."""
+    def update_user(
+        self,
+        username: str,
+        customfields: dict[str, str] | None = None,
+        **campos,
+    ) -> bool:
+        """Actualiza campos arbitrarios de un usuario.
+
+        Args:
+            customfields: Diccionario shortname -> valor con campos
+                personalizados de Moodle a actualizar.
+        """
         ...
 
     def update_user_email(self, username: str, email: str) -> bool:

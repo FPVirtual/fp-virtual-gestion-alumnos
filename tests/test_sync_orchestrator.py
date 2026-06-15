@@ -96,10 +96,12 @@ def snapshot_moodle():
             MoodleUserRecord(
                 id=101,
                 username="78842153q",
-                email="valeria.torres@ejemplo.com",  # cambiado
+                email="78842153q@fpvirtualaragon.es",  # institucional
                 firstname="Valeria",
                 lastname="Torres Medina",
                 suspended=0,
+                id_sigad=16839,
+                email_sigad="valeria.torres@ejemplo.com",  # personal cambiado
             ),
             MoodleUserRecord(
                 id=102,
@@ -245,7 +247,7 @@ class TestSyncOrchestratorApply:
 
         assert report.has_changes is True
         mock_moodle_sink.create_user.assert_called_once()
-        mock_moodle_sink.update_user_email.assert_called_once()
+        mock_moodle_sink.update_user.assert_called_once()
         mock_moodle_sink.suspend_user.assert_called_once()
 
     def test_new_user_created(self, mock_sigad_repo, mock_moodle_source, mock_moodle_sink):
@@ -262,6 +264,9 @@ class TestSyncOrchestratorApply:
         assert len(create_calls) == 1
         kwargs = create_calls[0].kwargs
         assert kwargs["username"] == "12345678a"
+        assert kwargs["customfields"]["IdSIGAD"] == "16840"
+        assert kwargs["customfields"]["tipoDocumento"] == "1"
+        assert kwargs["customfields"]["consentimientoCDD"] == "0"
 
     def test_email_updated(self, mock_sigad_repo, mock_moodle_source, mock_moodle_sink):
         orchestrator = SyncOrchestrator(
@@ -272,10 +277,12 @@ class TestSyncOrchestratorApply:
         )
         orchestrator.run()
 
-        update_calls = mock_moodle_sink.update_user_email.call_args_list
+        update_calls = mock_moodle_sink.update_user.call_args_list
         assert len(update_calls) == 1
         args = update_calls[0].args
+        kwargs = update_calls[0].kwargs
         assert args[0] == "78842153q"
+        assert kwargs["customfields"]["emailsigad"] == "valeria.torres.medina@ejemplo.com"
 
     def test_enrolments_applied(self, mock_sigad_repo, mock_moodle_source, mock_moodle_sink):
         # Nota: las nuevas matrículas no se aplican porque los shortnames
@@ -298,8 +305,8 @@ class TestSyncOrchestratorApply:
         # Snapshot idéntico a SIGAD
         snapshot = MoodleSnapshot(
             users=[
-                MoodleUserRecord(id=101, username="78842153q", email="valeria.torres.medina@ejemplo.com", firstname="Valeria", lastname="Torres Medina", suspended=0),
-                MoodleUserRecord(id=102, username="12345678a", email="juan.perez@ejemplo.com", firstname="Juan", lastname="Pérez García", suspended=0),
+                MoodleUserRecord(id=101, username="78842153q", email="78842153q@fpvirtualaragon.es", firstname="Valeria", lastname="Torres Medina", suspended=0, id_sigad=16839, email_sigad="valeria.torres.medina@ejemplo.com"),
+                MoodleUserRecord(id=102, username="12345678a", email="12345678a@fpvirtualaragon.es", firstname="Juan", lastname="Pérez García", suspended=0, id_sigad=16840, email_sigad="juan.perez@ejemplo.com"),
             ],
             courses=[
                 MoodleCourseRecord(id=1, shortname="IPPE1", fullname="IPPE1"),

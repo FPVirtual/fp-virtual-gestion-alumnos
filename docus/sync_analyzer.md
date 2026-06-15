@@ -6,18 +6,48 @@ Este documento explica paso a paso cómo `SyncAnalyzer` detecta las diferencias 
 
 ## Índice
 
-1. [Visión General](#visión-general)
-2. [Carga de Datos en DuckDB](#carga-de-datos-en-duckdb)
-3. [Flujo Completo del Análisis](#flujo-completo-del-análisis)
-4. [Delta 1: Altas (New Users)](#delta-1-altas-new-users)
-5. [Delta 2: Bajas (Removed Users)](#delta-2-bajas-removed-users)
-6. [Delta 3: Cambios de Email](#delta-3-cambios-de-email)
-7. [Delta 4: Cambios de Nombre/Apellidos](#delta-4-cambios-de-nombreapellidos)
-8. [Delta 5: Cambios de Username (NIE → DNI)](#delta-5-cambios-de-username-nie--dni)
-9. [Delta 6: Nuevas Matrículas](#delta-6-nuevas-matrículas)
-10. [Delta 7: Matrículas Eliminadas](#delta-7-matrículas-eliminadas)
-11. [Casos Especiales](#casos-especiales)
-12. [Resumen de Tipos de Delta](#resumen-de-tipos-de-delta)
+- [Análisis de Deltas en SyncAnalyzer](#análisis-de-deltas-en-syncanalyzer)
+  - [Índice](#índice)
+  - [Visión General](#visión-general)
+  - [Carga de Datos en DuckDB](#carga-de-datos-en-duckdb)
+    - [Tablas SIGAD](#tablas-sigad)
+    - [Tablas Moodle](#tablas-moodle)
+  - [Flujo Completo del Análisis](#flujo-completo-del-análisis)
+  - [Listado de Deltas a implementar y cómo se resuelven:](#listado-de-deltas-a-implementar-y-cómo-se-resuelven)
+  - [Delta 1: Altas (New Users)](#delta-1-altas-new-users)
+    - [Lógica](#lógica)
+    - [Diagrama](#diagrama)
+    - [Ejemplo](#ejemplo)
+  - [Delta 2: Bajas (Removed Users)](#delta-2-bajas-removed-users)
+    - [Lógica](#lógica-1)
+    - [Diagrama](#diagrama-1)
+    - [Ejemplo](#ejemplo-1)
+  - [Delta 3: Cambios de Email](#delta-3-cambios-de-email)
+    - [Lógica](#lógica-2)
+    - [Diagrama](#diagrama-2)
+    - [Ejemplo](#ejemplo-2)
+  - [Delta 4: Cambios de Nombre/Apellidos](#delta-4-cambios-de-nombreapellidos)
+    - [Lógica](#lógica-3)
+    - [Diagrama](#diagrama-3)
+    - [Ejemplo](#ejemplo-3)
+  - [Delta 5: Cambios de Username (NIE → DNI)](#delta-5-cambios-de-username-nie--dni)
+    - [Lógica](#lógica-4)
+    - [Diagrama](#diagrama-4)
+    - [Ejemplo](#ejemplo-4)
+  - [Delta 6: Nuevas Matrículas](#delta-6-nuevas-matrículas)
+    - [Lógica](#lógica-5)
+    - [Diagrama](#diagrama-5)
+    - [Ejemplo](#ejemplo-5)
+  - [Delta 7: Matrículas Eliminadas](#delta-7-matrículas-eliminadas)
+    - [Lógica](#lógica-6)
+    - [Diagrama](#diagrama-6)
+    - [Ejemplo](#ejemplo-6)
+  - [Casos Especiales](#casos-especiales)
+    - [Usuarios Protegidos](#usuarios-protegidos)
+    - [NIE → DNI](#nie--dni)
+  - [Resumen de Tipos de Delta](#resumen-de-tipos-de-delta)
+    - [Matriz de decisión](#matriz-de-decisión)
+  - [Referencias](#referencias)
 
 ---
 
@@ -47,14 +77,14 @@ Antes de analizar, el analyzer normaliza ambas fuentes en **4 tablas planas**:
 
 | Tabla | Origen | Filas |
 |-------|--------|-------|
-| `sigad_users` | Un `Alumno` → una fila | `documento`, `nombre`, `apellido1`, `apellido2`, `email` |
+| `sigad_users` | Un `Alumno` → una fila | `documento`, `id_alumno`, `nombre`, `apellido1`, `apellido2`, `email` |
 | `sigad_enrolments` | Un `Alumno` × sus módulos → N filas | `documento`, `codigo_centro`, `siglas_ciclo`, `siglas_modulo` |
 
 ### Tablas Moodle
 
 | Tabla | Origen | Filas |
 |-------|--------|-------|
-| `moodle_users` | Un `MoodleUserRecord` → una fila | `id`, `username`, `email`, `firstname`, `lastname`, `suspended` |
+| `moodle_users` | Un `MoodleUserRecord` → una fila | `id`, `username`, `email`, `firstname`, `lastname`, `suspended`, `id_sigad`, `email_sigad` |
 | `moodle_enrolments` | Un `MoodleEnrolmentRecord` → una fila | `user_id`, `username`, `course_id`, `shortname`, `status` |
 
 > **Nota sobre normalización:** El `documento` de SIGAD se convierte a `UPPERCASE`. El `username` de Moodle se convierte a `lowercase`. Esto permite comparar `78842153Q` (SIGAD) con `78842153q` (Moodle).
@@ -98,6 +128,27 @@ flowchart TD
 > **Importante:** Los 7 análisis son **independientes** entre sí. Se ejecutan secuencialmente pero cada uno opera sobre las mismas 4 tablas cargadas inicialmente.
 
 ---
+
+## Listado de Deltas a implementar y cómo se resuelven:
+
+> ToDo DARÍO
+¿ Qué cambios pueden darse ?
+
+* Altas de nuevos alumnos -> No existe nadie con ese DNI/NIE/Pasaporte
+  * Verificamos con IdSIGAD como dato no cambiante
+* Un usuario ha cambiado de DNI/NIE/Pasaporte a otro tipo de documento? 
+  * ¿Sabemos si el *idAlumno* del json debe ser el mismo?
+* Un usuario ha cambiado su nombre, apellidos | mantiene su DNI/NIE/Pasaporte
+  * ¿Si cambia de nombre hay que crear un nuevo email de fpvirtualaragon.es?
+* Un usuario ha cambiado su email | mantiene su DNI/NIE/Pasaporte
+* Un usuario ha cambiado su matrícula (añade o elimina módulos en los que está matriculado) | mantiene DNI/NIE/Pasaporte
+* Un usuario ha abandonado la formación (se le debe suspender en módulos y acceso) | mantiene DNI/NIE/Pasaporte
+* 
+-- Obtengo los alumnos (profesores no) que están suspendidos en moodle y miro si están en el fichero de SIGAD
+-- Si están en el fichero de SIGAD los reactivo
+
+
+
 
 ## Delta 1: Altas (New Users)
 
@@ -192,7 +243,7 @@ flowchart LR
 
 ## Delta 3: Cambios de Email
 
-**Definición:** Alumnos que existen en ambos sistemas pero tienen direcciones de email diferentes (o uno es nulo y el otro no).
+**Definición:** Alumnos cuyo email personal de SIGAD difiere del custom field `emailsigad` de Moodle. El email principal/institucional de Moodle (`documento@fpvirtualaragon.es`) no se sincroniza desde SIGAD.
 
 ### Lógica
 
@@ -200,12 +251,12 @@ flowchart LR
 SELECT
     s.documento,
     s.email AS email_sigad,
-    m.email AS email_moodle
+    m.email_sigad AS email_moodle
 FROM sigad_users s
 JOIN moodle_users m ON lower(s.documento) = m.username
-WHERE lower(s.email) <> lower(m.email)
-   OR (s.email IS NOT NULL AND m.email IS NULL)
-   OR (s.email IS NULL AND m.email IS NOT NULL)
+WHERE lower(s.email) <> lower(m.email_sigad)
+   OR (s.email IS NOT NULL AND m.email_sigad IS NULL)
+   OR (s.email IS NULL AND m.email_sigad IS NOT NULL)
 ```
 
 ### Diagrama
@@ -234,6 +285,8 @@ flowchart LR
 | `12345678A` | `juan@ejemplo.com` | `juan@ejemplo.com` | No |
 
 **Salida:** `EmailChangeDelta(documento="78842153Q", email_sigad="valeria.torres@new.com", email_moodle="valeria@old.com")`
+
+> **Nota:** `email_moodle` aquí representa el valor del custom field `emailsigad` de Moodle, no el email principal de la cuenta.
 
 ---
 
@@ -291,7 +344,7 @@ flowchart LR
 
 ## Delta 5: Cambios de Username (NIE → DNI)
 
-**Definición:** Un alumno cambió su documento de identidad (ej: de NIE extranjero a DNI español) pero mantiene el mismo email. Se detecta cruzando por email.
+**Definición:** Un alumno cambió su documento de identidad (ej: de NIE extranjero a DNI español). Se detecta cruzando por **IdSIGAD**, el identificador inmutable de SIGAD que se almacena como custom field en Moodle.
 
 ### Lógica
 
@@ -301,8 +354,9 @@ SELECT
     s.documento AS new_documento,
     s.email AS email
 FROM moodle_users m
-JOIN sigad_users s ON lower(s.email) = lower(m.email)
+JOIN sigad_users s ON s.id_alumno = m.id_sigad
 WHERE m.username <> lower(s.documento)
+  AND m.id_sigad IS NOT NULL
 ```
 
 ### Diagrama
@@ -325,14 +379,14 @@ flowchart LR
 
 ### Ejemplo
 
-| Origen | Identificador | Email | Coincidencia |
-|--------|---------------|-------|--------------|
-| Moodle | `X1234567L` | `juan@ejemplo.com` | — |
-| SIGAD | `12345678A` | `juan@ejemplo.com` | ✅ Mismo email |
+| Origen | Identificador | IdSIGAD | Coincidencia |
+|--------|---------------|---------|--------------|
+| Moodle | `X1234567L` | `99999` | — |
+| SIGAD | `12345678A` | `99999` | ✅ Mismo IdSIGAD |
 
 **Salida:** `UsernameChangeDelta(old_username="X1234567L", new_documento="12345678A", email="juan@ejemplo.com")`
 
-> **Caso de uso típico:** Un estudiante extranjero obtiene la nacionalidad y cambia su NIE por DNI. SIGAD refleja el nuevo documento, pero Moodle conserva el antiguo como `username`.
+> **Caso de uso típico:** Un estudiante extranjero obtiene la nacionalidad y cambia su NIE por DNI. SIGAD refleja el nuevo documento, pero Moodle conserva el antiguo como `username`. El `IdSIGAD` (custom field) permite relacionar ambos usuarios.
 
 ---
 
@@ -456,7 +510,9 @@ flowchart TD
 
 ### NIE → DNI
 
-Este delta depende críticamente de que el alumno mantenga el **mismo email** entre el cambio de documento. Si el email también cambia, el sistema no detectará automáticamente la relación y reportará:
+Este delta depende críticamente de que el alumno mantenga el **mismo IdSIGAD** entre el cambio de documento. El `IdSIGAD` es un custom field de Moodle que no varía y se rellena con el `id_alumno` de SIGAD.
+
+Si el usuario de Moodle no tiene `IdSIGAD` (por ejemplo, usuarios antiguos creados antes de esta sincronización), el sistema no detectará automáticamente la relación y reportará:
 - Una **baja** del usuario antiguo (NIE)
 - Una **alta** del usuario nuevo (DNI)
 
@@ -470,9 +526,9 @@ Esto es el comportamiento esperado y seguro.
 |---|-------|------|-------|-------------------|
 | 1 | **Altas** | `sigad LEFT JOIN moodle` | `moodle.id IS NULL` | Documento normalizado |
 | 2 | **Bajas** | `moodle LEFT JOIN sigad` | `sigad.documento IS NULL` + no protegido | Documento normalizado |
-| 3 | **Email** | `sigad INNER JOIN moodle` | `email` diferente (case-insensitive) | Documento normalizado |
+| 3 | **Email** | `sigad INNER JOIN moodle` | `email` personal diferente del custom field `emailsigad` (case-insensitive) | Documento normalizado |
 | 4 | **Nombre** | `sigad INNER JOIN moodle` | `nombre` o `apellidos` diferente | Documento normalizado |
-| 5 | **Username** | `moodle INNER JOIN sigad` | `username <> documento` cruzado por **email** | Email normalizado |
+| 5 | **Username** | `moodle INNER JOIN sigad` | `username <> documento` cruzado por **IdSIGAD** | IdSIGAD (id_alumno) |
 | 6 | **Matrículas nuevas** | `sigad_enrol LEFT JOIN moodle_enrol` | `moodle.course_id IS NULL` | Documento + siglas módulo |
 | 7 | **Matrículas eliminadas** | `moodle_enrol LEFT JOIN sigad_enrol` | `sigad.documento IS NULL` | Documento + siglas módulo |
 
@@ -490,7 +546,7 @@ flowchart TD
 
     Comparar -->|Email diferente| D3[Delta 3: Email]
     Comparar -->|Nombre diferente| D4[Delta 4: Nombre]
-    Comparar -->|Documento ≠ Username<br/>pero email coincide| D5[Delta 5: Username]
+    Comparar -->|Documento ≠ Username<br/>pero IdSIGAD coincide| D5[Delta 5: Username]
     Comparar -->|Todo igual| Matricula{¿Matrículas?}
 
     Matricula -->|En SIGAD, no Moodle| D6[Delta 6: Nueva matrícula]

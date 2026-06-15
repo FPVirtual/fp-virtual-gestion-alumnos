@@ -107,7 +107,7 @@
 |-----------|-----------|-------|----------|
 | Listar usuarios | `obtener_todos_usuarios()` | `moosh user-list` | `core_user_get_users` |
 | Obtener usuario | `obtener_por_username()` | `moosh user-get` | `core_user_get_users_by_field` |
-| Crear usuario | `crear_usuario()` | `moosh user-create` | `core_user_create_users` |
+| Crear usuario | `crear_usuario()` | `moosh user-create` (+ `user-mod --profile_field_*`) | `core_user_create_users` (con `customfields`: IdSIGAD, tipoDocumento, emailsigad, consentimientoCDD) |
 | Actualizar usuario | `actualizar_usuario()` | `moosh user-mod` | `core_user_update_users` |
 | Suspender usuario | `suspender_usuario()` | `moosh user-mod --suspend 1` | `core_user_update_users` (suspend=1) |
 | Reactivar usuario | `reactivar_usuario()` | `moosh user-mod --suspend 0` | `core_user_update_users` (suspend=0) |
