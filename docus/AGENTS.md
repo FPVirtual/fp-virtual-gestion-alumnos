@@ -191,6 +191,8 @@ BASE_PATH=/var/fp-distancia-gestion-usuarios-automatica/
 
 **No hay variables de base de datos.** No se usa MySQL.
 
+> **Configuración de Moodle:** los pasos necesarios para crear el usuario de servicio, el rol, el servicio web externo y el token en Moodle se documentan en [`docus/conexion_moodle_api.md`](conexion_moodle_api.md).
+
 ---
 
 ## 5. Convenciones de Código

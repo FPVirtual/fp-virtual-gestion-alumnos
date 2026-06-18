@@ -228,6 +228,14 @@ poetry run pytest tests/test_core_container.py -v
 | Matricular en cohorte | `moosh cohort-enrol` | `core_cohort_add_cohort_members` | ✅ |
 | Suspender matrícula | ❌ | ❌ | Requiere plugin PHP |
 
+## Conexión con Moodle mediante API REST
+
+Para configurar Moodle y la aplicación cuando se usa `MOODLE_DRIVER=api`, consulta la guía detallada:
+
+📄 [`docus/conexion_moodle_api.md`](docus/conexion_moodle_api.md)
+
+Incluye los pasos en la interfaz web de Moodle, las sentencias SQL equivalentes, las funciones REST necesarias, las capacidades del rol de servicio y la verificación con `curl`.
+
 ## Plugin PHP local_fparagon
 
 Para usar la estrategia `api-snapshot`, instala el plugin en Moodle:
