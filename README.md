@@ -64,7 +64,7 @@ Para probar sin llamar a los Web Services, pon `procesa_desde_fichero = True` en
 |---|---|
 | `main.py` | Flujo principal y funciones de acceso a Moodle, BD y correo |
 | `Conexion.py` | Cliente HTTP para los Web Services |
-| `Util.py` | Utilidades (generación de emails de dominio, normalización de texto, conversión LFP→LOE) |
+| `Util.py` | Utilidades (generación de emails de dominio, normalización de texto) |
 | `classes/` | Modelos `Alumno`, `Centro`, `Ciclo`, `Modulo` |
 | `templates/` | Plantillas HTML de correos e informes |
 | `extrae_alumnado.sh` | Genera CSVs a partir de los informes HTML del día (opcionalmente los copia con `scp` si defines `SCP_TARGET`) |

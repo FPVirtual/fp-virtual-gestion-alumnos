@@ -4,9 +4,7 @@ class Modulo:
     NAME="MODULO"
 
     def __init__(self, idMateria, modulo, siglasModulo):
-        # print("idMateria antes: " + str(idMateria))
-        self.__idMateria = conversionLFPaLOE(idMateria)
-        # print("idMateria después: " + str(self.__idMateria))
+        self.__idMateria = idMateria
         self.__modulo = modulo
         self.__siglasModulo = siglasModulo
 
