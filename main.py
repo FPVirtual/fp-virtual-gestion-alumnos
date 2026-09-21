@@ -9,9 +9,32 @@ import io
 import smtplib
 import ssl
 import traceback
+import argparse
 from datetime import datetime
+
+# Se parsean los argumentos antes de importar Config para que --help funcione sin Config.py
+parser = argparse.ArgumentParser(
+    description="Sincroniza el alumnado de SIGAD con Moodle (usuarios, matrículas y cohortes) y envía un informe por correo."
+)
+parser.add_argument(
+    "--dry-run",
+    action="store_true",
+    help="No modifica Moodle (ni moosh ni SQL de escritura) ni envía correos; sólo muestra por pantalla lo que haría. "
+         "Sí consulta SIGAD y Moodle y sí escribe el informe y el CSV.",
+)
+parser.add_argument(
+    "--no-emails",
+    action="store_true",
+    help="No envía ningún correo (ni avisos a alumnos ni informes), pero sí modifica Moodle. "
+         "Implícito con --dry-run. Útil para pruebas.",
+)
+args = parser.parse_args()
+DRY_RUN = args.dry_run
+SEND_EMAILS = not (args.no_emails or DRY_RUN)
+
 from Config import *
 from Conexion import *
+from Correo import ColaCorreo
 from classes.Alumno import *
 from classes.Centro import *
 from classes.Ciclo import *
@@ -26,6 +49,9 @@ from pathlib import Path
 import re
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Los correos los envía un proceso aparte (ver Correo.py)
+cola_correo = ColaCorreo(SMTP_HOSTS, SMTP_PORT, SMTP_USER, SMTP_PASSWORD)
 
 filename_md = "";
 filename_csv = "";
@@ -49,6 +75,10 @@ def main():
     os.makedirs(os.path.dirname(filename_csv), exist_ok=True)
     os.makedirs(BASE_DIR + "/logs/" + SUBDOMAIN + "/json/", exist_ok=True)
     #
+    if DRY_RUN:
+        escribeEnFichero(filename_md, "**EJECUCIÓN EN MODO --dry-run: no se ha modificado Moodle ni se han enviado correos.**\n")
+    if not SEND_EMAILS and not DRY_RUN:
+        escribeEnFichero(filename_md, "**EJECUCIÓN CON --no-emails: no se han enviado correos.**\n")
     escribeEnFichero(filename_md, "# Informe de gestion alumnos\n")
     escribeEnFichero(filename_md, get_date_time_for_humans())
     escribeEnFichero(filename_md, "\n## ENTORNO\n")
@@ -592,6 +622,10 @@ def main():
     escribeEnFichero(filename_md, "- Cantidad de matriculas borradas en tutorías (vía eliminación estudiante de cohorte): " + str(num_tutorias_suspendidas) )
     escribeEnFichero(filename_md, "- Cantidad de matriculas borradas en modulos (solo en Agosto): " + str(num_matriculas_borradas) )
     escribeEnFichero(filename_md, "- Cantidad de matriculas no hechas por no existir el curso destino: " + str(num_alumnos_no_matriculados_en_cursos_inexistentes) )
+    # Espero a que el proceso de correo termine con lo encolado para saber cuáles han fallado
+    fallos_correo = cierra_correo()
+    num_emails_enviados = num_emails_enviados - len(fallos_correo)
+    num_emails_no_enviados = num_emails_no_enviados + len(fallos_correo)
     escribeEnFichero(filename_md, "- Cantidad de emails enviados: " + str(num_emails_enviados) )
     escribeEnFichero(filename_md, "- Cantidad de emails NO enviados: " + str(num_emails_no_enviados) )
     ########################
@@ -612,6 +646,7 @@ def main():
     emails = REPORT_TO.split()
     for email in emails:
         send_email_con_adjuntos(email, "Informe automatizado gestión automática usuarios moodle", mensaje, [filename_md, filename_csv] )
+    cierra_correo()
 
     #
     # End of main 
@@ -1058,9 +1093,19 @@ def get_moodle(subdomain):
 
     return container
 
-def run_moosh_command(moodle, command, capture=False, timeout=10):
+def run_moosh_command(moodle, command, capture=False, timeout=10, mutates=None):
+    """
+    mutates: si el comando modifica Moodle. Por defecto se asume que lo hace cuando capture es False.
+    En --dry-run los comandos que modifican no se ejecutan.
+    """
     print("run_moosh_command(...)")
     print("command:", command)
+
+    if mutates is None:
+        mutates = not capture
+    if DRY_RUN and mutates:
+        print("[DRY-RUN] No se ejecuta.")
+        return ""
 
     command_string = f"docker exec {moodle['container_name']} {command}"
 
@@ -1088,6 +1133,11 @@ def run_moosh_command(moodle, command, capture=False, timeout=10):
 def run_command(command, capture=False, timeout=10):
     print("run_command(...)")
     print("command:", command)
+
+    # Las consultas se piden con capture=True; el resto modifican datos
+    if DRY_RUN and not capture:
+        print("[DRY-RUN] No se ejecuta.")
+        return ""
 
     try:
         if capture:
@@ -1289,92 +1339,36 @@ def is_alumno_matriculado_en_curso(moodle, id_alumno, id_curso):
     else:
         return True
 
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-import smtplib, ssl
-
 def send_email_con_adjuntos(destinatario, asunto, html, filenames):
     """
-    Envía un correo con uno o varios ficheros adjuntos.
-    - destinatario: dirección del receptor
-    - asunto: asunto del correo
-    - filenames: lista de rutas a los ficheros adjuntos
+    Encola un correo con ficheros adjuntos (rutas en filenames) para que lo envíe el proceso de correo.
+    Devuelve True si se ha encolado; los fallos de envío se conocen al llamar a cierra_correo().
     """
     print(f"send_email_con_adjuntos(destinatario: '{destinatario}', archivos: {filenames})")
-
-    enviado = False
-    port = SMTP_PORT
-    smtp_server = SMTP_HOSTS
-    sender_email = SMTP_USER
-    receiver_email = destinatario
-    password = SMTP_PASSWORD
-
-    # Crear mensaje
-    message = MIMEMultipart()
-    message["From"] = sender_email
-    message["To"] = receiver_email
-    message["Subject"] = asunto
-
-    message.attach(MIMEText(html, "html")) # parte HTML
-
-    # Adjuntar cada fichero
-    for filename in filenames:
-        try:
-            with open(filename, 'rb') as attachment:
-                part = MIMEBase('application', 'octet-stream')
-                part.set_payload(attachment.read())
-                encoders.encode_base64(part)
-                # Solo el nombre del archivo, no la ruta completa
-                nombre_archivo = filename.split('/')[-1]  
-                part.add_header('Content-Disposition', f'attachment; filename="{nombre_archivo}"')
-                message.attach(part)
-        except Exception as e:
-            print(f"Error al adjuntar {filename}: {e}")
-
-    # Enviar mensaje
-    my_message = message.as_string()
-    context = ssl.create_default_context()
-    with smtplib.SMTP(smtp_server, port) as server:
-        try:
-            server.starttls(context=context)
-            server.login(sender_email, password)
-            server.sendmail(sender_email, receiver_email, my_message)
-            enviado = True
-        except Exception as e:
-            print(f"Error al enviar el correo: {e}")
-        finally:
-            server.quit()
-    return enviado
-
-
-import smtplib, ssl
-from email.message import EmailMessage
-from email.headerregistry import Address
+    if not SEND_EMAILS:
+        print("[NO-EMAILS] No se envía el correo.")
+        return True
+    cola_correo.enviar(destinatario, asunto, html, filenames)
+    return True
 
 def send_email(destinatario, asunto, html):
-    port = SMTP_PORT
-    smtp_server = SMTP_HOSTS
-    sender_email = SMTP_USER
-    password = SMTP_PASSWORD
+    """
+    Encola un correo para que lo envíe el proceso de correo. Devuelve True si se ha encolado.
+    """
+    if not SEND_EMAILS:
+        print("[NO-EMAILS] No se envía el correo a '" + destinatario + "'.")
+        return True
+    cola_correo.enviar(destinatario, asunto, html)
+    return True
 
-    msg = EmailMessage()
-    msg['Subject'] = asunto                # se codifica bien
-    msg['From'] = sender_email
-    msg['To'] = destinatario
-    msg.set_content("Tu cliente no soporta HTML.")   # parte de texto plano
-    msg.add_alternative(html, subtype='html')        # parte HTML
-
-    context = ssl.create_default_context()
-    with smtplib.SMTP(smtp_server, port) as server:
-        try:
-            server.starttls(context=context)
-            server.login(sender_email, password)
-            server.send_message(msg)  # <- evita concatenaciones manuales
-            return True
-        except Exception as e:
-            print(e)
-            return False
+def cierra_correo():
+    """
+    Espera a que el proceso de correo envíe todo lo encolado y devuelve la lista de destinatarios con fallo.
+    """
+    fallos = cola_correo.cerrar()
+    for destinatario in fallos:
+        print("Ha fallado el envío del email a '", destinatario, "'.", sep="")
+    return fallos
 
 
 def suspende_alumno_moodle(id_usuario, moodle):
@@ -1642,7 +1636,7 @@ def crearAlumnoEnMoodle(moodle, alumno, password):
             + " --digest 2 --city Aragón --country ES --firstname \"" +  alumno.getNombre() \
             + "\" --lastname \"" +  alumno.getApellidos() + "\" " \
             + alumno.getDocumento().lower()
-        idUser = run_moosh_command(moodle, cmd, True).rstrip()
+        idUser = run_moosh_command(moodle, cmd, True, mutates=True).rstrip()
 
         print("idUser: '",idUser,"'")
 
@@ -1697,28 +1691,30 @@ def es_dni_valido(dni: str) -> bool:
 ###################################################
 ###################################################
 ###################################################
-try:
-    main()
-except Exception as exc:
-    print("1.- traceback.print_exc()")
-    traceback.print_exc()
-    print("2.- traceback.print_exception(*sys.exc_info())")
-    traceback.print_exception(*sys.exc_info())
-    print("--------------------")
-    print(exc)
+if __name__ == "__main__": # necesario para que el proceso de correo pueda importar este fichero (multiprocessing)
+    try:
+        main()
+    except Exception as exc:
+        print("1.- traceback.print_exc()")
+        traceback.print_exc()
+        print("2.- traceback.print_exception(*sys.exc_info())")
+        traceback.print_exception(*sys.exc_info())
+        print("--------------------")
+        print(exc)
 
-    plantilla_path = Path(BASE_DIR + "/templates/haFalladoElInforme.html")
-    plantilla = plantilla_path.read_text(encoding="utf-8")
+        plantilla_path = Path(BASE_DIR + "/templates/haFalladoElInforme.html")
+        plantilla = plantilla_path.read_text(encoding="utf-8")
 
-    mensaje = plantilla.format(
-        subdomain = SUBDOMAIN,
-        filename_md = filename_md,
-        filename_csv = filename_csv,
-        error = str(exc),
-        traceback = str(traceback.print_exc()),
-        tracebackException = str(traceback.print_exception(*sys.exc_info())),
-    )
+        mensaje = plantilla.format(
+            subdomain = SUBDOMAIN,
+            filename_md = filename_md,
+            filename_csv = filename_csv,
+            error = str(exc),
+            traceback = str(traceback.print_exc()),
+            tracebackException = str(traceback.print_exception(*sys.exc_info())),
+        )
 
-    emails = REPORT_TO.split()
-    for email in emails:
-        send_email_con_adjuntos("gestion@fpvirtualaragon.es", "ERROR - Informe automatizado gestión automática usuarios moodle", mensaje, [filename_md, filename_csv] )
+        emails = REPORT_TO.split()
+        for email in emails:
+            send_email_con_adjuntos("gestion@fpvirtualaragon.es", "ERROR - Informe automatizado gestión automática usuarios moodle", mensaje, [filename_md, filename_csv] )
+    cierra_correo()

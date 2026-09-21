@@ -9,7 +9,9 @@ Script Python (sin framework) que sincroniza el alumnado de SIGAD (2 Web Service
 ## Comandos
 
 ```bash
-python main.py                      # ejecuta todo el flujo (llama a main() un `try: main()` a nivel de módulo, sin `__main__`)
+python main.py                      # ejecuta todo el flujo (`try: main()` bajo `if __name__ == "__main__"`)
+python main.py --dry-run            # no modifica Moodle ni envía correos; --help lista las opciones
+python main.py --no-emails           # sí modifica Moodle pero no envía ningún correo (implícito en --dry-run)
 docker build -t fp-gestion-usuarios .   # Dockerfile usa python:3.8-slim-buster
 ./extrae_alumnado.sh                # genera CSVs a partir de los informes de hoy en logs/ (SCP_TARGET opcional)
 ```
@@ -47,8 +49,13 @@ Convenciones clave que enlazan varias piezas:
 Nada usa la API REST de Moodle. Las acciones se hacen con:
 - `run_moosh_command`: `docker exec <contenedor> moosh ...` (el contenedor se localiza con `docker ps | grep <SUBDOMAIN>` en `get_moodle`, filtrando nombres que terminan en `moodle-1`).
 - `run_command`: comandos `mysql --execute="..."` con SQL directo sobre tablas `mdl_*` (lecturas de usuarios/matrículas y varios updates/deletes), con SQL construido por `.format()` de strings.
+`--dry-run` (`DRY_RUN`, parseado con argparse antes de importar `Config`) se aplica en estos dos helpers: `run_command` no ejecuta nada con `capture=False`; `run_moosh_command` igual, salvo `mutates=True` (p. ej. `user-create`, que usa `capture=True` porque devuelve el id). `send_email*` respetan `SEND_EMAILS` (falso con `--no-emails` o `--dry-run`). Cualquier acción nueva que modifique Moodle debe pasar por ellos.
 Ambos tienen timeout de 10 s por defecto y `shell=True`.
 
 ### Informes y plantillas
 
-`escribeEnFichero(filename_md, ...)` va acumulando el informe Markdown; `filename_csv` acumula las altas para Google Workspace. Las plantillas de `templates/*.html` se rellenan con `str.format` (cualquier llave literal habría que duplicarla) y se envían con `send_email` / `send_email_con_adjuntos` por SMTP.
+`escribeEnFichero(filename_md, ...)` va acumulando el informe Markdown; `filename_csv` acumula las altas para Google Workspace. Las plantillas de `templates/*.html` se rellenan con `str.format` (cualquier llave literal habría que duplicarla).
+
+### Envío de correo (proceso aparte)
+
+`Correo.py` (`ColaCorreo`) lanza un `multiprocessing.Process` que envía los correos por una única conexión SMTP; `send_email` / `send_email_con_adjuntos` en main.py sólo encolan y devuelven `True`. Por eso los fallos no se conocen en el momento: `cierra_correo()` espera a que se vacíe la cola y devuelve los destinatarios fallidos, y `main()` la llama justo antes de escribir los contadores del informe (corrigiéndolos) y otra vez tras encolar el informe final. El arranque de main.py está bajo `if __name__ == "__main__":` para que `spawn` (Windows/macOS) no relance `main()` en el proceso hijo; los ficheros adjuntos se leen en el hijo, así que deben estar completos al encolar.
