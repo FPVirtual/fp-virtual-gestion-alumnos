@@ -2,7 +2,6 @@
 
 # general
 SUBDOMAIN=""
-PATH=""#set final slash
 
 # 1st ws
 url1=""

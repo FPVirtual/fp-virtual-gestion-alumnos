@@ -25,6 +25,8 @@ from email import encoders
 from pathlib import Path
 import re
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 filename_md = "";
 filename_csv = "";
 
@@ -35,14 +37,17 @@ def main():
     print("Comenzamos con el fichero")
     datetimeForFilename = get_date_time_for_filename()
     print("filename: " + datetimeForFilename)
-    filename_md = "/var/fp-distancia-gestion-usuarios-automatica/logs/" + SUBDOMAIN + "/html/" + datetimeForFilename + SUBDOMAIN + ".md"
+    filename_md = BASE_DIR + "/logs/" + SUBDOMAIN + "/html/" + datetimeForFilename + SUBDOMAIN + ".md"
     print("filename_md: " + filename_md)
 
     ## Preparao el fichero csv para escribir en él.
     global filename_csv
-    filename_csv = "/var/fp-distancia-gestion-usuarios-automatica/csvs/" + datetimeForFilename + SUBDOMAIN + ".csv"
+    filename_csv = BASE_DIR + "/csvs/" + datetimeForFilename + SUBDOMAIN + ".csv"
     print("filename_csv: " + filename_csv)
     
+    os.makedirs(os.path.dirname(filename_md), exist_ok=True)
+    os.makedirs(os.path.dirname(filename_csv), exist_ok=True)
+    os.makedirs(BASE_DIR + "/logs/" + SUBDOMAIN + "/json/", exist_ok=True)
     #
     escribeEnFichero(filename_md, "# Informe de gestion alumnos\n")
     escribeEnFichero(filename_md, get_date_time_for_humans())
@@ -88,7 +93,7 @@ def main():
 
     procesa_desde_fichero = False # Procesa desde fichero en lugar del ws
     if procesa_desde_fichero:
-        with open(PATH + "jsons/20250925_01.json", "r", encoding="utf-8") as f:
+        with open(BASE_DIR + "/jsons/20250925_01.json", "r", encoding="utf-8") as f:
             y = json.load(f)
         if y is not None:
             codigo=y["codigo"]
@@ -229,7 +234,7 @@ def main():
                 usuario = alumnoSIGAD.getDocumento()
                 oldUsuario = alumnoMoodle['username']
 
-                plantilla_path = Path("/var/fp-distancia-gestion-usuarios-automatica/templates/nombreUsuarioActualizado.html")
+                plantilla_path = Path(BASE_DIR + "/templates/nombreUsuarioActualizado.html")
                 plantilla = plantilla_path.read_text(encoding="utf-8")
 
                 mensaje = plantilla.format(
@@ -479,7 +484,7 @@ def main():
             nombre = alumno.getNombre()
             apellidos = alumno.getApellidos()
 
-            plantilla_path = Path("/var/fp-distancia-gestion-usuarios-automatica/templates/nuevoUsuario.html")
+            plantilla_path = Path(BASE_DIR + "/templates/nuevoUsuario.html")
             plantilla = plantilla_path.read_text(encoding="utf-8")
             
             mensaje = plantilla.format(
@@ -514,7 +519,7 @@ def main():
                 nombre = alumno.getNombre()
                 apellidos = alumno.getApellidos()
 
-                plantilla_path = Path("/var/fp-distancia-gestion-usuarios-automatica/templates/matriculasAnadidas.html")
+                plantilla_path = Path(BASE_DIR + "/templates/matriculasAnadidas.html")
                 plantilla = plantilla_path.read_text(encoding="utf-8")
 
                 mensaje = plantilla.format(
@@ -595,7 +600,7 @@ def main():
     time.sleep(5)
     print("Printed after 5 seconds.")
 
-    plantilla_path = Path("/var/fp-distancia-gestion-usuarios-automatica/templates/informeAutomatizado.html")
+    plantilla_path = Path(BASE_DIR + "/templates/informeAutomatizado.html")
     plantilla = plantilla_path.read_text(encoding="utf-8")
 
     mensaje = plantilla.format(
@@ -1007,7 +1012,7 @@ def abre_fichero(nombre_fichero):
     """
     print("abre_fichero(" + nombre_fichero + ")")
     # open the file nombre_fichero and return its contents
-    with open(PATH + "logs/" + nombre_fichero, "r") as f:
+    with open(BASE_DIR + "/logs/" + nombre_fichero, "r") as f:
         return f.read()
 
 def guarda_fichero_respuesta_ws1(nombre_fichero, contenido):
@@ -1016,7 +1021,7 @@ def guarda_fichero_respuesta_ws1(nombre_fichero, contenido):
     """
     print("guarda_fichero_respuesta_ws1(...)")
     data = json.loads(contenido.decode("utf-8"))
-    with open(PATH + "logs/" + SUBDOMAIN + "/json/" + nombre_fichero, "w", encoding="utf-8") as f:
+    with open(BASE_DIR + "/logs/" + SUBDOMAIN + "/json/" + nombre_fichero, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def guarda_fichero_respuesta_ws2(nombre_fichero, contenido):
@@ -1026,7 +1031,7 @@ def guarda_fichero_respuesta_ws2(nombre_fichero, contenido):
     print("guarda_fichero_respuesta(...)")
     data = json.loads(contenido.decode("utf-8"))
     data["estudiantes"] = json.loads(data["estudiantes"])
-    with open(PATH + "logs/" + SUBDOMAIN + "/json/" + nombre_fichero, "w", encoding="utf-8") as f:
+    with open(BASE_DIR + "/logs/" + SUBDOMAIN + "/json/" + nombre_fichero, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
@@ -1702,7 +1707,7 @@ except Exception as exc:
     print("--------------------")
     print(exc)
 
-    plantilla_path = Path("/var/fp-distancia-gestion-usuarios-automatica/templates/haFalladoElInforme.html")
+    plantilla_path = Path(BASE_DIR + "/templates/haFalladoElInforme.html")
     plantilla = plantilla_path.read_text(encoding="utf-8")
 
     mensaje = plantilla.format(

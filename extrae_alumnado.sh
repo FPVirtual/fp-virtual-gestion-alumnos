@@ -8,7 +8,7 @@
 set -euo pipefail
 
 # --- CONFIGURACIÓN ---
-ROOT_DIR="/var/fp-distancia-gestion-usuarios-automatica"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # (Opcional) destino de descarga para scp, por ejemplo:
 # export SCP_TARGET="usuario@miportatil:/home/usuario/Descargas"
