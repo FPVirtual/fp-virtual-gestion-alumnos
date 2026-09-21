@@ -73,4 +73,5 @@ Para probar sin llamar a los Web Services, pon `procesa_desde_fichero = True` en
 ## Notas
 
 - Los usuarios de sistema de Moodle (ids fijos listados en `usuarios_moodle_no_borrables` en `main.py`) nunca se suspenden ni se borran.
-- El proyecto sólo usa la librería estándar de Python, por eso no hay `requirements.txt`.
+- Dependencia externa: Jinja2 (`pip install -r requirements.txt`), para las plantillas de correo.
+- Las plantillas (`templates/`) heredan de `base.html`, donde están los estilos y el pie. Para incluir un logo en los correos, guárdalo como `templates/img/logo.png` (si no existe, se muestra el texto "FP virtual Aragón").

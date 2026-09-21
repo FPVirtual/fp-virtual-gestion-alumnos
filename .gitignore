@@ -10,3 +10,4 @@ classes/__pycache__/*
 jsons/
 csvs/
 scripts/
+tmp/

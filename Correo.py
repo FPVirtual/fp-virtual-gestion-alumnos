@@ -6,13 +6,21 @@ import ssl
 from email.message import EmailMessage
 
 
-def _construye_mensaje(remitente, destinatario, asunto, html, adjuntos):
+def _construye_mensaje(remitente, destinatario, asunto, html, adjuntos, imagenes):
     msg = EmailMessage()
     msg['Subject'] = asunto
     msg['From'] = remitente
     msg['To'] = destinatario
     msg.set_content("Tu cliente no soporta HTML.")   # parte de texto plano
     msg.add_alternative(html, subtype='html')        # parte HTML
+    # imágenes incrustadas: el HTML las referencia como cid:<clave>
+    for cid, ruta in imagenes.items():
+        try:
+            with open(ruta, 'rb') as f:
+                subtipo = os.path.splitext(ruta)[1].lstrip('.').lower().replace('jpg', 'jpeg')
+                msg.get_body(('html',)).add_related(f.read(), maintype='image', subtype=subtipo, cid=f"<{cid}>")
+        except Exception as e:
+            print(f"Error al incrustar {ruta}: {e}")
     for ruta in adjuntos:
         try:
             with open(ruta, 'rb') as f:
@@ -47,7 +55,7 @@ def _worker(cola, resultados, host, port, user, password):
             try:
                 if server is None:
                     server = _conecta(host, port, user, password)
-                msg = _construye_mensaje(user, destinatario, item["asunto"], item["html"], item["adjuntos"])
+                msg = _construye_mensaje(user, destinatario, item["asunto"], item["html"], item["adjuntos"], item["imagenes"])
                 server.send_message(msg)
                 enviado = True
                 break
@@ -83,7 +91,7 @@ class ColaCorreo:
         self._resultados = None
         self._encolados = 0
 
-    def enviar(self, destinatario, asunto, html, adjuntos=()):
+    def enviar(self, destinatario, asunto, html, adjuntos=(), imagenes=None):
         if self._proceso is None:
             self._cola = multiprocessing.Queue()
             self._resultados = multiprocessing.Queue()
@@ -91,7 +99,7 @@ class ColaCorreo:
                 target=_worker, args=(self._cola, self._resultados) + self._config, daemon=True)
             self._proceso.start()
             self._encolados = 0
-        self._cola.put({"destinatario": destinatario, "asunto": asunto, "html": html, "adjuntos": list(adjuntos)})
+        self._cola.put({"destinatario": destinatario, "asunto": asunto, "html": html, "adjuntos": list(adjuntos), "imagenes": dict(imagenes or {})})
         self._encolados += 1
 
     def cerrar(self):

@@ -1,11 +1,14 @@
-<p>El script de gestion de alumnos se ha ejecutado satisfactoriamente</p>
+{% extends "base.html" %}
+{% block titulo %}Informe automatizado de gestión de usuarios{% endblock %}
+{% block contenido %}
+<p>El script de gestion de alumnos se ha ejecutado satisfactoriamente.</p>
 
-<p>Subdominio: {subdomain}</p>
+<p>Subdominio: <strong>{{ subdomain }}</strong></p>
 
-<h2>Ficheros que se adjuntan</h2>
+<h2 style="font-size:17px;margin:24px 0 8px 0;">Ficheros que se adjuntan</h2>
 
-<p>{filename_md}</p>
-
-<p>{filename_csv}</p>
-
-<p>Saludos</p>
+<ul>
+  <li>{{ filename_md }}</li>
+  <li>{{ filename_csv }}</li>
+</ul>
+{% endblock %}

@@ -35,6 +35,7 @@ SEND_EMAILS = not (args.no_emails or DRY_RUN)
 from Config import *
 from Conexion import *
 from Correo import ColaCorreo
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from classes.Alumno import *
 from classes.Centro import *
 from classes.Ciclo import *
@@ -52,6 +53,21 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Los correos los envía un proceso aparte (ver Correo.py)
 cola_correo = ColaCorreo(SMTP_HOSTS, SMTP_PORT, SMTP_USER, SMTP_PASSWORD)
+
+# Plantillas de correo (Jinja2, todas heredan de templates/base.html). El logo es opcional:
+# si existe templates/img/logo.png se incrusta en los correos.
+LOGO_PATH = BASE_DIR + "/templates/img/logo.png"
+LOGO_DISPONIBLE = os.path.isfile(LOGO_PATH)
+entorno_plantillas = Environment(
+    loader=FileSystemLoader(BASE_DIR + "/templates"),
+    autoescape=select_autoescape(["html"]),
+)
+
+def renderiza_plantilla(nombre_plantilla, **contexto):
+    """
+    Devuelve el HTML de templates/<nombre_plantilla> con el contexto dado (se escapan los valores).
+    """
+    return entorno_plantillas.get_template(nombre_plantilla).render(logo=LOGO_DISPONIBLE, **contexto)
 
 filename_md = "";
 filename_csv = "";
@@ -264,10 +280,7 @@ def main():
                 usuario = alumnoSIGAD.getDocumento()
                 oldUsuario = alumnoMoodle['username']
 
-                plantilla_path = Path(BASE_DIR + "/templates/nombreUsuarioActualizado.html")
-                plantilla = plantilla_path.read_text(encoding="utf-8")
-
-                mensaje = plantilla.format(
+                mensaje = renderiza_plantilla("nombreUsuarioActualizado.html",
                     subdomain = SUBDOMAIN,
                     usuario = usuario,
                     oldUsuario = oldUsuario,
@@ -498,32 +511,28 @@ def main():
                             reactiva_alumno_en_curso(moodle, id_alumno, id_curso)
                             num_matriculas_reactivadas = num_matriculas_reactivadas + 1;
                             escribeEnFichero(filename_md, "- Alumno "+ alumno.getDocumento()+ " reactivada su matricula en "+ shortname_curso + ".")
-                            matriculado_en.append("- " + centro.get_centro() + " - " + ciclo.get_ciclo() + " - " + modulo.get_modulo() )
+                            matriculado_en.append(centro.get_centro() + " - " + ciclo.get_ciclo() + " - " + modulo.get_modulo() )
                         elif not is_alumno_matriculado_en_curso(moodle, id_alumno, id_curso):
                             print("  - El alumno ", str(id_alumno) , " NO está matriculado en el curso ", str(shortname_curso),". Se le matricula.", sep="")
                             matricula_alumno_en_curso(moodle, id_alumno, id_curso)
                             num_modulos_matriculados = num_modulos_matriculados + 1
                             escribeEnFichero(filename_md, "- Alumno "+ alumno.getDocumento()+ " matriculado en "+ shortname_curso + ".")
-                            matriculado_en.append("- " + centro.get_centro() + " - " + ciclo.get_ciclo() + " - " + modulo.get_modulo() )
+                            matriculado_en.append(centro.get_centro() + " - " + ciclo.get_ciclo() + " - " + modulo.get_modulo() )
                         else:
                             print("  - El alumno (",id_alumno,") ya estaba matriculado en ", shortname_curso, sep="")
         # envío email
         if alumno_es_nuevo:
             time.sleep(2) # para no saturar el envío de emails
-            matriculado_en_texto = "<br/>".join(matriculado_en)
             nombre = alumno.getNombre()
             apellidos = alumno.getApellidos()
 
-            plantilla_path = Path(BASE_DIR + "/templates/nuevoUsuario.html")
-            plantilla = plantilla_path.read_text(encoding="utf-8")
-            
-            mensaje = plantilla.format(
+            mensaje = renderiza_plantilla("nuevoUsuario.html",
                 nombre=nombre,
                 apellidos=apellidos,
                 subdomain=SUBDOMAIN,
                 usuario=alumno.getDocumento().lower(),
                 contrasena=password,
-                matriculado_en_texto=matriculado_en_texto,
+                matriculado_en=matriculado_en,
                 email=alumno.getEmailDominio(),
             )
             
@@ -545,18 +554,14 @@ def main():
             
         else:
             if len(matriculado_en) > 0:
-                matriculado_en_texto = "<br/>".join(matriculado_en)
                 nombre = alumno.getNombre()
                 apellidos = alumno.getApellidos()
 
-                plantilla_path = Path(BASE_DIR + "/templates/matriculasAnadidas.html")
-                plantilla = plantilla_path.read_text(encoding="utf-8")
-
-                mensaje = plantilla.format(
+                mensaje = renderiza_plantilla("matriculasAnadidas.html",
                     nombre = nombre, 
                     apellidos = apellidos, 
                     subdomain = SUBDOMAIN, 
-                    matriculado_en_texto = matriculado_en_texto,
+                    matriculado_en = matriculado_en,
                 )
 
                 destinatario = "gestion@fpvirtualaragon.es"
@@ -634,10 +639,7 @@ def main():
     time.sleep(5)
     print("Printed after 5 seconds.")
 
-    plantilla_path = Path(BASE_DIR + "/templates/informeAutomatizado.html")
-    plantilla = plantilla_path.read_text(encoding="utf-8")
-
-    mensaje = plantilla.format(
+    mensaje = renderiza_plantilla("informeAutomatizado.html",
         subdomain = SUBDOMAIN,
         filename_md = filename_md,
         filename_csv = filename_csv
@@ -1339,6 +1341,12 @@ def is_alumno_matriculado_en_curso(moodle, id_alumno, id_curso):
     else:
         return True
 
+def imagenes_incrustadas():
+    """
+    Imágenes que se incrustan en el correo y a las que las plantillas se refieren con cid:<clave>
+    """
+    return {"logo": LOGO_PATH} if LOGO_DISPONIBLE else {}
+
 def send_email_con_adjuntos(destinatario, asunto, html, filenames):
     """
     Encola un correo con ficheros adjuntos (rutas en filenames) para que lo envíe el proceso de correo.
@@ -1348,7 +1356,7 @@ def send_email_con_adjuntos(destinatario, asunto, html, filenames):
     if not SEND_EMAILS:
         print("[NO-EMAILS] No se envía el correo.")
         return True
-    cola_correo.enviar(destinatario, asunto, html, filenames)
+    cola_correo.enviar(destinatario, asunto, html, filenames, imagenes_incrustadas())
     return True
 
 def send_email(destinatario, asunto, html):
@@ -1358,7 +1366,7 @@ def send_email(destinatario, asunto, html):
     if not SEND_EMAILS:
         print("[NO-EMAILS] No se envía el correo a '" + destinatario + "'.")
         return True
-    cola_correo.enviar(destinatario, asunto, html)
+    cola_correo.enviar(destinatario, asunto, html, imagenes=imagenes_incrustadas())
     return True
 
 def cierra_correo():
@@ -1702,16 +1710,13 @@ if __name__ == "__main__": # necesario para que el proceso de correo pueda impor
         print("--------------------")
         print(exc)
 
-        plantilla_path = Path(BASE_DIR + "/templates/haFalladoElInforme.html")
-        plantilla = plantilla_path.read_text(encoding="utf-8")
-
-        mensaje = plantilla.format(
+        mensaje = renderiza_plantilla("haFalladoElInforme.html",
             subdomain = SUBDOMAIN,
             filename_md = filename_md,
             filename_csv = filename_csv,
             error = str(exc),
-            traceback = str(traceback.print_exc()),
-            tracebackException = str(traceback.print_exception(*sys.exc_info())),
+            traceback = traceback.format_exc(),
+            tracebackException = "".join(traceback.format_exception(exc)),
         )
 
         emails = REPORT_TO.split()

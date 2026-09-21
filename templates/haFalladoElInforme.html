@@ -1,15 +1,18 @@
-<p>Ha fallado el informe, revisar logs.</p>
+{% extends "base.html" %}
+{% block titulo %}ERROR en el informe automatizado{% endblock %}
+{% block contenido %}
+<p style="color:#b42318;"><strong>Ha fallado el informe, revisar logs.</strong></p>
 
-<p>Subdominio: {subdomain}</p>
+<p>Subdominio: <strong>{{ subdomain }}</strong></p>
 
-<p>{filename_md}</p>
+<ul>
+  <li>{{ filename_md }}</li>
+  <li>{{ filename_csv }}</li>
+</ul>
 
-<p>{filename_csv}</p>
+<p>Error: {{ error }}</p>
 
-<p>Error: {error}</p>
+<pre>{{ traceback }}</pre>
 
-<pre>{traceback}</pre>
-
-<pre>{tracebackException}</pre>
-
-<p>Saludos</p>
+<pre>{{ tracebackException }}</pre>
+{% endblock %}

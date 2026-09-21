@@ -16,7 +16,7 @@ docker build -t fp-gestion-usuarios .   # Dockerfile usa python:3.8-slim-buster
 ./extrae_alumnado.sh                # genera CSVs a partir de los informes de hoy en logs/ (SCP_TARGET opcional)
 ```
 
-No hay tests, linter ni sistema de build. No hay `requirements.txt`: el código sólo usa la librería estándar.
+No hay tests, linter ni sistema de build. Única dependencia externa: Jinja2 (`pip install -r requirements.txt`).
 
 Para probar sin llamar a SIGAD: poner `procesa_desde_fichero = True` en `main()` (main.py) y dejar un JSON en `jsons/...` (bajo `BASE_DIR`) (el nombre del fichero está hardcodeado).
 
@@ -52,9 +52,11 @@ Nada usa la API REST de Moodle. Las acciones se hacen con:
 `--dry-run` (`DRY_RUN`, parseado con argparse antes de importar `Config`) se aplica en estos dos helpers: `run_command` no ejecuta nada con `capture=False`; `run_moosh_command` igual, salvo `mutates=True` (p. ej. `user-create`, que usa `capture=True` porque devuelve el id). `send_email*` respetan `SEND_EMAILS` (falso con `--no-emails` o `--dry-run`). Cualquier acción nueva que modifique Moodle debe pasar por ellos.
 Ambos tienen timeout de 10 s por defecto y `shell=True`.
 
-### Informes y plantillas
+### Informes y plantillas de correo
 
-`escribeEnFichero(filename_md, ...)` va acumulando el informe Markdown; `filename_csv` acumula las altas para Google Workspace. Las plantillas de `templates/*.html` se rellenan con `str.format` (cualquier llave literal habría que duplicarla).
+`escribeEnFichero(filename_md, ...)` va acumulando el informe Markdown; `filename_csv` acumula las altas para Google Workspace.
+
+Los correos se generan con `renderiza_plantilla(nombre, **contexto)` (Jinja2, autoescape activado): todas las plantillas de `templates/` heredan de `base.html`, que contiene cabecera con logo, estilos y pie con redes sociales; los estilos comunes se cambian sólo ahí (los clientes de correo ignoran muchas reglas CSS, así que lo importante va en línea y con tablas). `_aviso_automatico.html` es un fragmento incluido. El logo es opcional: si existe `templates/img/logo.png` se incrusta como imagen `cid:logo` (lo hace `Correo.py` con el parámetro `imagenes`); si no, la cabecera muestra texto. Las listas de matrículas se pasan como lista (`matriculado_en`), no como HTML.
 
 ### Envío de correo (proceso aparte)
 
