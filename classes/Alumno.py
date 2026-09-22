@@ -23,6 +23,9 @@ class Alumno:
             self.__centros = []
         self.__centros.append(centro)
 
+    def getIdAlumno(self):
+        return self.__idAlumno
+
     def getDocumento(self):
         return self.__documento
 

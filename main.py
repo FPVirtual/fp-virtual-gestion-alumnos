@@ -460,7 +460,7 @@ def main():
                 matricula_alumno_en_cohorte_alumnado(moodle, id_alumno)
                 alumno_es_nuevo = True
                 
-                # añadirlo al CSV de creación de cuentas 
+                # añadirlo al CSV de creación de cuentas
                 # TODO: tratar de crearlo vía API de google
                 # https://support.google.com/a/answer/40057?hl=es&p=bulk_add_users&rd=1
                 # First Name [Required],Last Name [Required],Email Address [Required],Password [Required],Password Hash Function [UPLOAD ONLY],Org Unit Path [Required],New Primary Email [UPLOAD ONLY],Recovery Email,Work Secondary Email
@@ -1007,14 +1007,15 @@ def update_moodle_email_sigad(userid, email_nuevo):
     En el moodle dado actualiza el email de sigad a userid
     """
     print("update_moodle_email_sigad(...)")
-    
+
+    fieldid = get_user_info_fieldid("email_sigad")
     command = '''\
             mysql --user=\"{DB_USER}\" --password=\"{DB_PASS}\" --host=\"{DB_HOST}\" -D \"{DB_NAME}\"  --execute=\"
-                update mdl_user_info_data  
+                update mdl_user_info_data
                 set data = '{email_nuevo}'
-                WHERE fieldid = 4 and userid = {userid}
+                WHERE fieldid = {fieldid} and userid = {userid}
             \"
-            '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, email_nuevo = email_nuevo, userid = userid )
+            '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, fieldid = fieldid, email_nuevo = email_nuevo, userid = userid )
 
     devuelto = run_command( command, True )
     # print(" devuelto " + devuelto)
@@ -1160,6 +1161,33 @@ def run_command(command, capture=False, timeout=10):
     except subprocess.TimeoutExpired:
         print(f"⏱️ El comando tardó más de {timeout} segundos y fue cancelado.")
         return ""
+
+_cache_user_info_fieldid = {}
+
+def get_user_info_fieldid(shortname):
+    """
+    Devuelve el id (mdl_user_info_field.id) del campo personalizado de perfil de usuario
+    con el shortname dado (p. ej. "email_sigad", "id_sigad"). Se busca por shortname en
+    lugar de usar el id numérico directamente porque éste puede variar entre instalaciones
+    de Moodle. El resultado se cachea porque no cambia durante la ejecución.
+    """
+    if shortname in _cache_user_info_fieldid:
+        return _cache_user_info_fieldid[shortname]
+
+    command = '''\
+            mysql --user=\"{DB_USER}\" --password=\"{DB_PASS}\" --host=\"{DB_HOST}\" -D \"{DB_NAME}\"  --execute=\"
+                SELECT id
+                FROM mdl_user_info_field
+                WHERE shortname = '{shortname}'
+            \" | tail -n +2
+            '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, shortname = shortname )
+
+    fieldid = run_command( command, True ).rstrip()
+    if not fieldid:
+        raise ValueError(f"No existe en Moodle el campo personalizado de perfil con shortname '{shortname}'")
+
+    _cache_user_info_fieldid[shortname] = fieldid
+    return fieldid
 
 def matricula_alumno_en_cohorte_alumnado(moodle, id_alumno):
     """
@@ -1463,15 +1491,16 @@ def get_alumnos_moodle_no_borrados(moodle):
     alumnos.extend(alumno)
 
     # Recorro cada alumno y le añado el email de sigad
+    fieldid_email_sigad = get_user_info_fieldid("email_sigad")
     for al in alumnos:
-        
+
         command = '''\
             mysql --user=\"{DB_USER}\" --password=\"{DB_PASS}\" --host=\"{DB_HOST}\" -D \"{DB_NAME}\"  --execute=\"
                 SELECT data
                 FROM mdl_user_info_data
-                where fieldid = 4 and userid = {id_usuario}
+                where fieldid = {fieldid} and userid = {id_usuario}
             \" | tail -n +2
-            '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, id_usuario = al["userid"] )
+            '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, fieldid = fieldid_email_sigad, id_usuario = al["userid"] )
 
         email_sigad = run_command( command , True).rstrip()
     
@@ -1648,15 +1677,20 @@ def crearAlumnoEnMoodle(moodle, alumno, password):
 
         print("idUser: '",idUser,"'")
 
-        # Al usuario recién creado le añadimos el email de SIGAD en otros campos
+        # Al usuario recién creado le añadimos el email y el id de SIGAD en otros campos
 
+        fieldid_email_sigad = get_user_info_fieldid("email_sigad")
+        fieldid_id_sigad = get_user_info_fieldid("id_sigad")
         command = '''\
             mysql --user=\"{DB_USER}\" --password=\"{DB_PASS}\" --host=\"{DB_HOST}\" -D \"{DB_NAME}\"  --execute=\"
-                insert into mdl_user_info_data (userid, fieldid, data) 
-                values 
-                ({idUser}, 4, '{email_sigad}')
+                insert into mdl_user_info_data (userid, fieldid, data)
+                values
+                ({idUser}, {fieldid_email_sigad}, '{email_sigad}'),
+                ({idUser}, {fieldid_id_sigad}, '{id_sigad}')
             \"
-            '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, idUser = idUser, email_sigad = alumno.getEmailSigad() )
+            '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, idUser = idUser,
+                       fieldid_email_sigad = fieldid_email_sigad, email_sigad = alumno.getEmailSigad(),
+                       fieldid_id_sigad = fieldid_id_sigad, id_sigad = alumno.getIdAlumno() )
 
         run_command( command, False )
 

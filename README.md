@@ -15,7 +15,8 @@ Script en Python que sincroniza automáticamente el alumnado de SIGAD con una pl
    - actualiza nombre de usuario y email cuando cambian;
    - matricula, suspende, reactiva o borra matrículas en los cursos (por `shortname` de curso) y en las cohortes;
    - detecta alumnado con más de una tutoría.
-6. Escribe un informe detallado (Markdown/HTML en `logs/`), un CSV en `csvs/`, y lo envía por correo a `REPORT_TO`. Las plantillas de correo están en `templates/`.
+6. Al crear un alumno nuevo, añade su alta a un CSV en `csvs/` para importarlo a mano en la Admin Console de Google Workspace.
+7. Escribe un informe detallado (Markdown/HTML en `logs/`) y lo envía por correo a `REPORT_TO`. Las plantillas de correo están en `templates/`.
 
 Las acciones sobre Moodle se hacen con **moosh** dentro del contenedor Docker de Moodle (`docker exec <contenedor> moosh ...`) y con consultas directas al cliente `mysql` de la base de datos.
 

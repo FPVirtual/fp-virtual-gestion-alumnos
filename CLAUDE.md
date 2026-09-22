@@ -34,7 +34,7 @@ Casi toda la lógica está en `main.py` (~1700 líneas): una función `main()` g
 1. Calcula el curso académico (`get_curso_para_REST`: sep–dic = año actual; ene–ago = año anterior).
 2. `Conexion` (http.client) llama al 1er WS → `idSolicitud`; hace polling al 2º WS (10 intentos × 10 s) hasta que `codigo == 0`. Guarda las respuestas crudas (`guarda_fichero_respuesta_ws1/2`).
 3. `procesaJsonEstudiantes` construye el árbol `Alumno → Centro → Ciclo → Modulo` (`classes/`). `Alumno` calcula su email corporativo con `Util.creaEmailsDominio`.
-4. Reactiva suspendidos que vuelven a estar en SIGAD → detecta cambios de email (SIGAD vs. campo `email_sigad` de Moodle) → cambio de login NIE→DNI emparejando por email (envía correo) → suspende a quienes no están en SIGAD (primero sus matrículas de curso, luego sale de las cohortes; los ids de `usuarios_moodle_no_borrables` se saltan siempre).
+4. Reactiva suspendidos que vuelven a estar en SIGAD → detecta cambios de email (SIGAD vs. campo de perfil `email_sigad` de Moodle) → cambio de login NIE→DNI emparejando por email (envía correo) → suspende a quienes no están en SIGAD (primero sus matrículas de curso, luego sale de las cohortes; los ids de `usuarios_moodle_no_borrables` se saltan siempre).
 5. Suspende matrículas de curso que SIGAD ya no contempla (se ignoran el curso `ayuda` y los cursos cuyo shortname `centro-ciclo-materia` lleva "t" en el tercer campo = tutoría, matriculados vía cohorte).
 6. Recorre `alumnos_sigad`: crea los inexistentes (contraseña aleatoria, cohorte `alumnado`, fila en el CSV de alta de Google Workspace, correo de bienvenida), y matricula/reactiva en cursos y cohortes `<centro>-<ciclo>`.
 7. Evalúa alumnado con más de una tutoría, cierra el informe y lo envía por correo (con adjuntos). Cualquier excepción envía un correo de error (`haFalladoElInforme.html`).
@@ -51,6 +51,8 @@ Nada usa la API REST de Moodle. Las acciones se hacen con:
 - `run_command`: comandos `mysql --execute="..."` con SQL directo sobre tablas `mdl_*` (lecturas de usuarios/matrículas y varios updates/deletes), con SQL construido por `.format()` de strings.
 `--dry-run` (`DRY_RUN`, parseado con argparse antes de importar `Config`) se aplica en estos dos helpers: `run_command` no ejecuta nada con `capture=False`; `run_moosh_command` igual, salvo `mutates=True` (p. ej. `user-create`, que usa `capture=True` porque devuelve el id). `send_email*` respetan `SEND_EMAILS` (falso con `--no-emails` o `--dry-run`). Cualquier acción nueva que modifique Moodle debe pasar por ellos.
 Ambos tienen timeout de 10 s por defecto y `shell=True`.
+
+**Campos personalizados de perfil de usuario** (`mdl_user_info_field` / `mdl_user_info_data`): se usan `email_sigad` (email de SIGAD; comparado contra el email de SIGAD del fichero para detectar cambios) y `id_sigad` (el `idAlumno` de SIGAD, sólo se escribe al crear el alumno). `get_user_info_fieldid(shortname)` resuelve el `id` numérico de cada uno por su `shortname` (en vez de asumir un id fijo, que puede variar entre instalaciones) y lo cachea en memoria. Ambos campos deben existir de antemano en Moodle (Administración del sitio → Usuarios → Campos de perfil de usuario) con esos shortnames exactos; si no existen, `get_user_info_fieldid` lanza `ValueError`.
 
 ### Informes y plantillas de correo
 
