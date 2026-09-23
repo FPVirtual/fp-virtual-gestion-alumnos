@@ -258,16 +258,17 @@ def main():
     alumnos_a_suspender = [ ] # los que no haya que actualizar son para suspender, irán aquí
     for alumnoMoodle in alumnos_en_moodle_pero_no_SIGAD:
         existe = False
-        # comprobamos si existe por email
+        # comprobamos si existe por id_sigad
         for alumnoSIGAD in alumnos_sigad:
             # Si el alumno ha pasado de un NIE a un DNI en SIGAD se lo actualizo el usuario en moodle
-            if alumnoSIGAD.getEmailSigad() is not None \
+            if alumnoSIGAD.getIdAlumno() is not None \
                     and alumnoSIGAD.getDocumento() is not None \
                     and es_nie_valido(alumnoMoodle['username']) \
                     and es_dni_valido(alumnoSIGAD.getDocumento()) \
-                    and alumnoMoodle['email_sigad'].lower() == alumnoSIGAD.getEmailSigad().lower(): 
+                    and alumnoMoodle['id_sigad'] not in (None, "") \
+                    and str(alumnoMoodle['id_sigad']) == str(alumnoSIGAD.getIdAlumno()):
                 existe = True
-                print("Alumno a actualizar su login por coincidencia de email: '", repr(alumnoMoodle),"'", sep="" )
+                print("Alumno a actualizar su login por coincidencia de id_sigad: '", repr(alumnoMoodle),"'", sep="" )
                 print("habría que ponerle de login '", alumnoSIGAD.getDocumento(),"'", sep="" )
                 userid = alumnoMoodle['userid']
                 username_nuevo = alumnoSIGAD.getDocumento().lower().strip()
@@ -275,7 +276,7 @@ def main():
                 num_alumnos_modificado_login = num_alumnos_modificado_login + 1
                 escribeEnFichero(filename_md, "- Al alumno que tenia usuario de acceso " + alumnoMoodle['username'] + \
                         " se le ha cambiado a " + alumnoSIGAD.getDocumento() + \
-                        "(" + alumnoSIGAD.getEmailSigad().lower() + ").")
+                        " (id_sigad " + str(alumnoSIGAD.getIdAlumno()) + ").")
                 # Le envío email avisándolede su cambio de usuario 
                 usuario = alumnoSIGAD.getDocumento()
                 oldUsuario = alumnoMoodle['username']
@@ -1017,8 +1018,7 @@ def update_moodle_email_sigad(userid, email_nuevo):
             \"
             '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, fieldid = fieldid, email_nuevo = email_nuevo, userid = userid )
 
-    devuelto = run_command( command, True )
-    # print(" devuelto " + devuelto)
+    run_command( command, False )
 
 def get_date_time():
     """
@@ -1484,14 +1484,16 @@ def get_alumnos_moodle_no_borrados(moodle):
             "userid": line.split()[1].replace("(","").replace("),",""),
             "email": line.split()[2].replace(",",""), # email del dominio google
             "email_sigad": "", # email de sigad
+            "id_sigad": "", # idAlumno de sigad
         }
         for line in lines
         # if line.split()[-1].endswith("moodle_1")
     ]
     alumnos.extend(alumno)
 
-    # Recorro cada alumno y le añado el email de sigad
+    # Recorro cada alumno y le añado el email y el id de sigad
     fieldid_email_sigad = get_user_info_fieldid("email_sigad")
+    fieldid_id_sigad = get_user_info_fieldid("id_sigad")
     for al in alumnos:
 
         command = '''\
@@ -1503,11 +1505,25 @@ def get_alumnos_moodle_no_borrados(moodle):
             '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, fieldid = fieldid_email_sigad, id_usuario = al["userid"] )
 
         email_sigad = run_command( command , True).rstrip()
-    
+
         print("email_sigad: ", email_sigad)
 
         al["email_sigad"] = email_sigad
-    
+
+        command = '''\
+            mysql --user=\"{DB_USER}\" --password=\"{DB_PASS}\" --host=\"{DB_HOST}\" -D \"{DB_NAME}\"  --execute=\"
+                SELECT data
+                FROM mdl_user_info_data
+                where fieldid = {fieldid} and userid = {id_usuario}
+            \" | tail -n +2
+            '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, fieldid = fieldid_id_sigad, id_usuario = al["userid"] )
+
+        id_sigad = run_command( command , True).rstrip()
+
+        print("id_sigad: ", id_sigad)
+
+        al["id_sigad"] = id_sigad
+
     # Devuelvo el listado de alumnos que cumplen las condiciones
     return alumnos
 

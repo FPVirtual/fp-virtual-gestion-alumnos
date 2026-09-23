@@ -1,23 +1,56 @@
 {% extends "base.html" %}
 {% block titulo %}Bienvenido/a a FP virtual Aragón{% endblock %}
 {% block contenido %}
-<p>Bienvenido/a {{ nombre }} {{ apellidos }},</p>
 
-<p>su cuenta se ha creado en <a href="https://{{ subdomain }}.fpvirtualaragon.es/">https://{{ subdomain }}.fpvirtualaragon.es/</a> y sus datos de acceso son los siguientes:</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#fff8db;border:1px solid #f0d878;border-radius:6px;padding:12px 16px;font-size:16px;color:#6b5900;">
+      <strong>IMPORTANTE:</strong> lea en detalle las instrucciones que se le proporcionan a continuación.
+    </td>
+  </tr>
+</table>
 
-<ul>
-  <li>usuario: <strong>{{ usuario }}</strong></li>
-  <li>contraseña (es recomendable que la cambie): <strong>{{ contrasena }}</strong></li>
-</ul>
+<p>Bienvenido/a {{ nombre }} {{ apellidos }}.</p>
 
-<p>También se le creará la siguiente cuenta de correo:</p>
+<p>Se le han creado las siguientes cuentas:</p>
 
-<ul>
-  <li>cuenta: <strong>{{ email }}</strong></li>
-  <li>contraseña (deberá cambiarla al acceder): <strong>{{ contrasena }}</strong></li>
-</ul>
+<h1>Cuenta administrada de correo electrónico de Gmail: <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:inherit;color:#22303f;">{{ email }}</code></h1>
 
-<p>Esta cuenta de correo es la que le dará acceso a las videoconferencias de la plataforma. <strong>La cuenta puede tardar hasta 72 horas lectivas en estar disponible</strong>.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#fff8db;border:1px solid #f0d878;border-radius:6px;padding:12px 16px;font-size:16px;color:#6b5900;">
+      La cuenta puede tardar hasta 72 horas lectivas en estar disponible desde el envío de este mensaje.
+    </td>
+  </tr>
+</table>
+
+<p>Su contraseña (deberá cambiarla tras acceder la primera vez) es: <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:15px;color:#22303f;">{{ contrasena }}</code>.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#eaf2fb;border:1px solid #bcd6f0;border-radius:6px;padding:12px 16px;font-size:16px;color:#1a4971;">
+      Si en algún momento necesita recuperar la contraseña de está cuenta (<code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:15px;color:#22303f;">{{ email }}</code>) el mensaje de recuperación se enviará a la dirección de correo electrónico en la que está recibiendo este email.
+    </td>
+  </tr>
+</table>
+
+<p>Esta cuenta de correo es la que le dará acceso a las videoconferencias de la plataforma.</p>
+
+<h1>Cuenta de acceso a la plataforma Moodle de FP virtual Aragón (<a href="https://{{ subdomain }}.fpvirtualaragon.es/">https://{{ subdomain }}.fpvirtualaragon.es/</a>): <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:inherit;color:#22303f;">{{ usuario }}</code></h1>
+
+<p>Su contraseña (deberá cambiarla tras acceder la primera vez) es: <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:15px;color:#22303f;">{{ contrasena }}</code>.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#eaf2fb;border:1px solid #bcd6f0;border-radius:6px;padding:12px 16px;font-size:16px;color:#1a4971;">
+      Puede recuperar la contraseña de la plataforma <a href="https://{{ subdomain }}.fpvirtualaragon.es/">https://{{ subdomain }}.fpvirtualaragon.es/</a> haciendo uso de su cuenta de correo de <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:15px;color:#22303f;">{{ email }}</code> y el enlace <a href="https://{{ subdomain }}.fpvirtualaragon.es/login/forgot_password.php">https://{{ subdomain }}.fpvirtualaragon.es/login/forgot_password.php</a>.
+    </td>
+  </tr>
+</table>
+
+<p>El curso comienza el 1 de octubre, por lo que la creación de las cuentas del alumnado puede demorarse hasta dicha fecha.</p>
+
+<h1>Matriculaciones</h1>
 
 <p>Ha sido matriculado/a en:</p>
 
@@ -25,11 +58,9 @@
 {% for matricula in matriculado_en %}  <li>{{ matricula }}</li>
 {% endfor %}</ul>
 
-<p>Puede recuperar la contraseña de la plataforma <a href="https://{{ subdomain }}.fpvirtualaragon.es/">https://{{ subdomain }}.fpvirtualaragon.es/</a> haciendo uso de su cuenta de correo de {{ email }} y el enlace <a href="https://{{ subdomain }}.fpvirtualaragon.es/login/forgot_password.php">https://{{ subdomain }}.fpvirtualaragon.es/login/forgot_password.php</a>.</p>
+<h1>Si necesita ayuda...</h1>
 
-<p>Puede recuperar la contraseña de su cuenta de correo {{ email }} haciendo uso de su cuenta de correo en la que está recibiendo este mensaje.</p>
-
-<p>Dispone de un curso de ayuda (al que puede acceder como usuario invitado) dónde encontrar información sobre el uso de la plataforma en <a href="https://{{ subdomain }}.fpvirtualaragon.es/course/view.php?id=2">https://{{ subdomain }}.fpvirtualaragon.es/course/view.php?id=2</a>.</p>
+<p>Dispone del curso Ayuda (al que puede acceder como usuario invitado) donde encontrar información sobre el uso de la plataforma en <a href="https://{{ subdomain }}.fpvirtualaragon.es/course/view.php?id=2">https://{{ subdomain }}.fpvirtualaragon.es/course/view.php?id=654</a>.</p>
 
 {% include "_aviso_automatico.html" %}
 {% endblock %}
