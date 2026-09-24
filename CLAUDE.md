@@ -15,7 +15,7 @@ python main.py --no-emails           # sí modifica Moodle pero no genera ningú
 python main.py --limite-alumnos [N]  # pruebas: sólo los N primeros alumnos de SIGAD (100 por defecto) y sin suspender a nadie por no estar en SIGAD
 python enviar_correos.py            # envía los correos de pendientes/<SUBDOMAIN>/ (2 s entre correos)
 python enviar_correos.py --dry-run  # renderiza los pendientes sin enviarlos ni borrarlos
-docker build -t fp-gestion-usuarios .   # Dockerfile usa python:3.8-slim-buster
+docker build -t fp-gestion-usuarios .   # Dockerfile usa python:3.11.2-slim-bullseye
 ./extrae_alumnado.sh                # genera CSVs a partir de los informes de hoy en logs/ (SCP_TARGET opcional)
 ```
 

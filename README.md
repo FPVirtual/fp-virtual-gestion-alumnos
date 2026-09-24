@@ -34,7 +34,7 @@ Las acciones sobre Moodle se hacen con **moosh** dentro del contenedor Docker de
 ## Requisitos
 
 - Linux con acceso al Docker donde corre Moodle (el contenedor se localiza con `docker ps | grep <SUBDOMAIN>`).
-- Python 3.8+ (ver `Dockerfile`).
+- Python 3.11.2 (ver `Dockerfile`).
 - `moosh` y cliente `mysql` disponibles donde se ejecutan los comandos.
 - Acceso a los dos Web Services de SIGAD, a la base de datos de Moodle y a un servidor SMTP.
 
