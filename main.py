@@ -6,8 +6,6 @@ import subprocess
 import os
 import sys
 import io
-import smtplib
-import ssl
 import traceback
 import argparse
 from datetime import datetime
@@ -19,13 +17,13 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--dry-run",
     action="store_true",
-    help="No modifica Moodle (ni moosh ni SQL de escritura) ni envía correos; sólo muestra por pantalla lo que haría. "
+    help="No modifica Moodle (ni moosh ni SQL de escritura) ni genera correos; sólo muestra por pantalla lo que haría. "
          "Sí consulta SIGAD y Moodle y sí escribe el informe y el CSV.",
 )
 parser.add_argument(
     "--no-emails",
     action="store_true",
-    help="No envía ningún correo (ni avisos a alumnos ni informes), pero sí modifica Moodle. "
+    help="No genera ningún correo en pendientes/ (ni avisos a alumnos ni informes), pero sí modifica Moodle. "
          "Implícito con --dry-run. Útil para pruebas.",
 )
 args = parser.parse_args()
@@ -34,40 +32,15 @@ SEND_EMAILS = not (args.no_emails or DRY_RUN)
 
 from Config import *
 from Conexion import *
-from Correo import ColaCorreo
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from Correo import guarda_correo_pendiente, TIPO_INFORME, TIPO_AVISO
 from classes.Alumno import *
 from classes.Centro import *
 from classes.Ciclo import *
 from classes.Modulo import *
-from email.message import EmailMessage
-from email.headerregistry import Address
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
 from pathlib import Path
 import re
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Los correos los envía un proceso aparte (ver Correo.py)
-cola_correo = ColaCorreo(SMTP_HOSTS, SMTP_PORT, SMTP_USER, SMTP_PASSWORD)
-
-# Plantillas de correo (Jinja2, todas heredan de templates/base.html). El logo es opcional:
-# si existe templates/img/logo.png se incrusta en los correos.
-LOGO_PATH = BASE_DIR + "/templates/img/logo.png"
-LOGO_DISPONIBLE = os.path.isfile(LOGO_PATH)
-entorno_plantillas = Environment(
-    loader=FileSystemLoader(BASE_DIR + "/templates"),
-    autoescape=select_autoescape(["html"]),
-)
-
-def renderiza_plantilla(nombre_plantilla, **contexto):
-    """
-    Devuelve el HTML de templates/<nombre_plantilla> con el contexto dado (se escapan los valores).
-    """
-    return entorno_plantillas.get_template(nombre_plantilla).render(logo=LOGO_DISPONIBLE, **contexto)
 
 filename_md = "";
 filename_csv = "";
@@ -92,9 +65,9 @@ def main():
     os.makedirs(BASE_DIR + "/logs/" + SUBDOMAIN + "/json/", exist_ok=True)
     #
     if DRY_RUN:
-        escribeEnFichero(filename_md, "**EJECUCIÓN EN MODO --dry-run: no se ha modificado Moodle ni se han enviado correos.**\n")
+        escribeEnFichero(filename_md, "**EJECUCIÓN EN MODO --dry-run: no se ha modificado Moodle ni se han generado correos.**\n")
     if not SEND_EMAILS and not DRY_RUN:
-        escribeEnFichero(filename_md, "**EJECUCIÓN CON --no-emails: no se han enviado correos.**\n")
+        escribeEnFichero(filename_md, "**EJECUCIÓN CON --no-emails: no se han generado correos.**\n")
     escribeEnFichero(filename_md, "# Informe de gestion alumnos\n")
     escribeEnFichero(filename_md, get_date_time_for_humans())
     escribeEnFichero(filename_md, "\n## ENTORNO\n")
@@ -120,8 +93,7 @@ def main():
     num_matriculas_reactivadas = 0
     num_matriculas_borradas = 0
     num_alumnos_no_matriculados_en_cursos_inexistentes = 0
-    num_emails_enviados = 0
-    num_emails_no_enviados = 0
+    num_emails_generados = 0
     num_tutorias_suspendidas = 0
     #
     num_alumnos_pre_app = len(alumnos_moodle)
@@ -281,26 +253,18 @@ def main():
                 usuario = alumnoSIGAD.getDocumento()
                 oldUsuario = alumnoMoodle['username']
 
-                mensaje = renderiza_plantilla("nombreUsuarioActualizado.html",
-                    subdomain = SUBDOMAIN,
-                    usuario = usuario,
-                    oldUsuario = oldUsuario,
-                )
-                
                 destinatario = "gestion@fpvirtualaragon.es"
                 if SUBDOMAIN == "www":
-                    destinatario = alumnoSIGAD.getEmailDominio().lower() 
+                    destinatario = alumnoSIGAD.getEmailDominio().lower()
                 else:
                     print("Debería haberse enviado a '", alumnoSIGAD.getEmailDominio().lower(), "'.", sep="" )
 
-                enviado = send_email( destinatario , "FP virtual - Aragón", mensaje)
-
-                if enviado:
-                    num_emails_enviados = num_emails_enviados + 1
-                    print("num_emails_enviados: ", num_emails_enviados)
-                else:
-                    num_emails_no_enviados = num_emails_no_enviados + 1
-                    print("Ha fallado el envío del email a'", destinatario, "'. Total fallos: '", num_emails_no_enviados, "'")
+                if genera_correo(TIPO_AVISO, destinatario, "FP virtual - Aragón", "nombreUsuarioActualizado.html", {
+                    "subdomain": SUBDOMAIN,
+                    "usuario": usuario,
+                    "oldUsuario": oldUsuario,
+                }):
+                    num_emails_generados = num_emails_generados + 1
 
                 break
         if not existe:
@@ -429,19 +393,7 @@ def main():
     #
     escribeEnFichero(filename_csv, "First Name [Required],Last Name [Required],Email Address [Required],Password [Required],Password Hash Function [UPLOAD ONLY],Org Unit Path [Required],New Primary Email [UPLOAD ONLY],Recovery Email,Work Secondary Email,New Status [UPLOAD ONLY]")
     for alumno in alumnos_sigad:
-
-        if SUBDOMAIN == "www" and num_emails_enviados >= 1000: # limitacion de 2.000 emails diarios en actual cuenta de gmail
-            escribeEnFichero(filename_md, "\nALCANZADO LÍMITE DE ENVÍO DE EMAILS DIARIOS")
-            escribeEnFichero(filename_md, "ALCANZADO LÍMITE DE ENVÍO DE EMAILS DIARIOS ")
-            escribeEnFichero(filename_md, "ALCANZADO LÍMITE DE ENVÍO DE EMAILS DIARIOS\n")
-            break
-
-        if  SUBDOMAIN != "www" and num_emails_enviados >= 3: # limitacion de 10 emails para entornos que no sean producción.:
-            escribeEnFichero(filename_md, "\nALCANZADO LÍMITE DE ENVÍO DE EMAILS DIARIOS")
-            escribeEnFichero(filename_md, "ALCANZADO LÍMITE DE ENVÍO DE EMAILS DIARIOS ")
-            escribeEnFichero(filename_md, "ALCANZADO LÍMITE DE ENVÍO DE EMAILS DIARIOS\n")
-            break
-        
+        # el límite de correos diarios lo aplica enviar_correos.py; aquí se procesa a todo el alumnado
         print("## Procesando alumno de fichero JSON")
         print(get_date_time_for_humans())
         print("- ", repr(alumno) )
@@ -521,64 +473,41 @@ def main():
                             matriculado_en.append(centro.get_centro() + " - " + ciclo.get_ciclo() + " - " + modulo.get_modulo() )
                         else:
                             print("  - El alumno (",id_alumno,") ya estaba matriculado en ", shortname_curso, sep="")
-        # envío email
+        # genero el correo (lo envía enviar_correos.py)
         if alumno_es_nuevo:
-            time.sleep(2) # para no saturar el envío de emails
-            nombre = alumno.getNombre()
-            apellidos = alumno.getApellidos()
-
-            mensaje = renderiza_plantilla("nuevoUsuario.html",
-                nombre=nombre,
-                apellidos=apellidos,
-                subdomain=SUBDOMAIN,
-                usuario=alumno.getDocumento().lower(),
-                contrasena=password,
-                matriculado_en=matriculado_en,
-                email=alumno.getEmailDominio(),
-            )
-            
             destinatario = "gestion@fpvirtualaragon.es"
             if SUBDOMAIN == "www":
                 destinatario = alumno.getEmailSigad()
             else:
                 print("Debería haberse enviado a '", alumno.getEmailSigad(), "'." )
 
-            enviado = send_email( destinatario , "FP virtual - Aragón", mensaje)
+            if genera_correo(TIPO_AVISO, destinatario, "FP virtual - Aragón", "nuevoUsuario.html", {
+                "nombre": alumno.getNombre(),
+                "apellidos": alumno.getApellidos(),
+                "subdomain": SUBDOMAIN,
+                "usuario": alumno.getDocumento().lower(),
+                "contrasena": password,
+                "matriculado_en": matriculado_en,
+                "email": alumno.getEmailDominio(),
+            }):
+                num_emails_generados = num_emails_generados + 1
 
-            if enviado:
-                num_emails_enviados = num_emails_enviados + 1
-                print("num_emails_enviados: ", num_emails_enviados)
-            else:
-                num_emails_no_enviados = num_emails_no_enviados + 1
-                print("Ha fallado el envío del email a '", destinatario, "'. Total fallos: '", num_emails_no_enviados, "'")
-            
-            
+
         else:
             if len(matriculado_en) > 0:
-                nombre = alumno.getNombre()
-                apellidos = alumno.getApellidos()
-
-                mensaje = renderiza_plantilla("matriculasAnadidas.html",
-                    nombre = nombre, 
-                    apellidos = apellidos, 
-                    subdomain = SUBDOMAIN, 
-                    matriculado_en = matriculado_en,
-                )
-
                 destinatario = "gestion@fpvirtualaragon.es"
                 if SUBDOMAIN == "www":
                     destinatario = alumno.getEmailSigad()
                 else:
                     print("Debería haberse enviado a '", alumno.getEmailSigad(), "'." )
-                
-                enviado = send_email( destinatario , "FP virtual - Aragón", mensaje)
 
-                if enviado:
-                    num_emails_enviados = num_emails_enviados + 1
-                    print("num_emails_enviados: ", num_emails_enviados)
-                else:
-                    num_emails_no_enviados = num_emails_no_enviados + 1
-                    print("Ha fallado el envío del email a '", destinatario, "'. Total fallos: '", num_emails_no_enviados, "'")
+                if genera_correo(TIPO_AVISO, destinatario, "FP virtual - Aragón", "matriculasAnadidas.html", {
+                    "nombre": alumno.getNombre(),
+                    "apellidos": alumno.getApellidos(),
+                    "subdomain": SUBDOMAIN,
+                    "matriculado_en": matriculado_en,
+                }):
+                    num_emails_generados = num_emails_generados + 1
 
     # Evaluo alumnos con 2 tutorías o mas y los comparo con el fichero json origen a ver si están en las tutorías que les corresponde estar
     # suspendo las matrículas de las tutorías que no corresponda
@@ -628,28 +557,17 @@ def main():
     escribeEnFichero(filename_md, "- Cantidad de matriculas borradas en tutorías (vía eliminación estudiante de cohorte): " + str(num_tutorias_suspendidas) )
     escribeEnFichero(filename_md, "- Cantidad de matriculas borradas en modulos (solo en Agosto): " + str(num_matriculas_borradas) )
     escribeEnFichero(filename_md, "- Cantidad de matriculas no hechas por no existir el curso destino: " + str(num_alumnos_no_matriculados_en_cursos_inexistentes) )
-    # Espero a que el proceso de correo termine con lo encolado para saber cuáles han fallado
-    fallos_correo = cierra_correo()
-    num_emails_enviados = num_emails_enviados - len(fallos_correo)
-    num_emails_no_enviados = num_emails_no_enviados + len(fallos_correo)
-    escribeEnFichero(filename_md, "- Cantidad de emails enviados: " + str(num_emails_enviados) )
-    escribeEnFichero(filename_md, "- Cantidad de emails NO enviados: " + str(num_emails_no_enviados) )
+    escribeEnFichero(filename_md, "- Cantidad de emails a alumnos generados (los envía enviar_correos.py): " + str(num_emails_generados) )
     ########################
-    # Envío email resumen de lo hecho por email a responsables
+    # Genero el correo con el resumen de lo hecho para los responsables
     ########################
-    time.sleep(5)
-    print("Printed after 5 seconds.")
-
-    mensaje = renderiza_plantilla("informeAutomatizado.html",
-        subdomain = SUBDOMAIN,
-        filename_md = filename_md,
-        filename_csv = filename_csv
-    )
-
     emails = REPORT_TO.split()
     for email in emails:
-        send_email_con_adjuntos(email, "Informe automatizado gestión automática usuarios moodle", mensaje, [filename_md, filename_csv] )
-    cierra_correo()
+        genera_correo(TIPO_INFORME, email, "Informe automatizado gestión automática usuarios moodle", "informeAutomatizado.html", {
+            "subdomain": SUBDOMAIN,
+            "filename_md": filename_md,
+            "filename_csv": filename_csv,
+        }, [filename_md, filename_csv])
 
     #
     # End of main 
@@ -1369,42 +1287,17 @@ def is_alumno_matriculado_en_curso(moodle, id_alumno, id_curso):
     else:
         return True
 
-def imagenes_incrustadas():
+def genera_correo(tipo, destinatario, asunto, plantilla, contexto, adjuntos=()):
     """
-    Imágenes que se incrustan en el correo y a las que las plantillas se refieren con cid:<clave>
+    Deja el correo en pendientes/<SUBDOMAIN>/ como JSON (plantilla + contexto) para que lo envíe enviar_correos.py.
+    Los adjuntos deben estar completos al llamar a esta función. Devuelve True si se ha generado.
     """
-    return {"logo": LOGO_PATH} if LOGO_DISPONIBLE else {}
-
-def send_email_con_adjuntos(destinatario, asunto, html, filenames):
-    """
-    Encola un correo con ficheros adjuntos (rutas en filenames) para que lo envíe el proceso de correo.
-    Devuelve True si se ha encolado; los fallos de envío se conocen al llamar a cierra_correo().
-    """
-    print(f"send_email_con_adjuntos(destinatario: '{destinatario}', archivos: {filenames})")
+    print(f"genera_correo(destinatario: '{destinatario}', plantilla: '{plantilla}', adjuntos: {list(adjuntos)})")
     if not SEND_EMAILS:
-        print("[NO-EMAILS] No se envía el correo.")
-        return True
-    cola_correo.enviar(destinatario, asunto, html, filenames, imagenes_incrustadas())
+        print("[NO-EMAILS] No se genera el correo.")
+        return False
+    guarda_correo_pendiente(BASE_DIR, SUBDOMAIN, tipo, destinatario, asunto, plantilla, contexto, adjuntos)
     return True
-
-def send_email(destinatario, asunto, html):
-    """
-    Encola un correo para que lo envíe el proceso de correo. Devuelve True si se ha encolado.
-    """
-    if not SEND_EMAILS:
-        print("[NO-EMAILS] No se envía el correo a '" + destinatario + "'.")
-        return True
-    cola_correo.enviar(destinatario, asunto, html, imagenes=imagenes_incrustadas())
-    return True
-
-def cierra_correo():
-    """
-    Espera a que el proceso de correo envíe todo lo encolado y devuelve la lista de destinatarios con fallo.
-    """
-    fallos = cola_correo.cerrar()
-    for destinatario in fallos:
-        print("Ha fallado el envío del email a '", destinatario, "'.", sep="")
-    return fallos
 
 
 def suspende_alumno_moodle(id_usuario, moodle):
@@ -1749,7 +1642,7 @@ def es_dni_valido(dni: str) -> bool:
 ###################################################
 ###################################################
 ###################################################
-if __name__ == "__main__": # necesario para que el proceso de correo pueda importar este fichero (multiprocessing)
+if __name__ == "__main__":
     try:
         main()
     except Exception as exc:
@@ -1760,16 +1653,13 @@ if __name__ == "__main__": # necesario para que el proceso de correo pueda impor
         print("--------------------")
         print(exc)
 
-        mensaje = renderiza_plantilla("haFalladoElInforme.html",
-            subdomain = SUBDOMAIN,
-            filename_md = filename_md,
-            filename_csv = filename_csv,
-            error = str(exc),
-            traceback = traceback.format_exc(),
-            tracebackException = "".join(traceback.format_exception(exc)),
-        )
-
-        emails = REPORT_TO.split()
-        for email in emails:
-            send_email_con_adjuntos("gestion@fpvirtualaragon.es", "ERROR - Informe automatizado gestión automática usuarios moodle", mensaje, [filename_md, filename_csv] )
-    cierra_correo()
+        # sólo se adjuntan los ficheros que se hayan llegado a crear
+        adjuntos = [f for f in (filename_md, filename_csv) if f and os.path.isfile(f)]
+        genera_correo(TIPO_INFORME, "gestion@fpvirtualaragon.es", "ERROR - Informe automatizado gestión automática usuarios moodle", "haFalladoElInforme.html", {
+            "subdomain": SUBDOMAIN,
+            "filename_md": filename_md,
+            "filename_csv": filename_csv,
+            "error": str(exc),
+            "traceback": traceback.format_exc(),
+            "tracebackException": "".join(traceback.format_exception(type(exc), exc, exc.__traceback__)),
+        }, adjuntos)

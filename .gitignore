@@ -11,3 +11,6 @@ jsons/
 csvs/
 scripts/
 tmp/
+pendientes/
+fallidos/
+enviados/
