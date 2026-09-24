@@ -26,8 +26,21 @@ parser.add_argument(
     help="No genera ningún correo en pendientes/ (ni avisos a alumnos ni informes), pero sí modifica Moodle. "
          "Implícito con --dry-run. Útil para pruebas.",
 )
+parser.add_argument(
+    "--limite-alumnos",
+    type=int,
+    nargs="?",
+    const=100,
+    default=None,
+    metavar="N",
+    help="Para pruebas: procesa sólo los N primeros alumnos de SIGAD (100 si no se indica N). "
+         "No se suspende a nadie por no estar en SIGAD, porque faltarían todos los demás.",
+)
 args = parser.parse_args()
+if args.limite_alumnos is not None and args.limite_alumnos < 1:
+    parser.error("--limite-alumnos debe ser mayor que 0")
 DRY_RUN = args.dry_run
+LIMITE_ALUMNOS = args.limite_alumnos
 SEND_EMAILS = not (args.no_emails or DRY_RUN)
 
 from Config import *
@@ -68,6 +81,8 @@ def main():
         escribeEnFichero(filename_md, "**EJECUCIÓN EN MODO --dry-run: no se ha modificado Moodle ni se han generado correos.**\n")
     if not SEND_EMAILS and not DRY_RUN:
         escribeEnFichero(filename_md, "**EJECUCIÓN CON --no-emails: no se han generado correos.**\n")
+    if LIMITE_ALUMNOS is not None:
+        escribeEnFichero(filename_md, "**EJECUCIÓN CON --limite-alumnos " + str(LIMITE_ALUMNOS) + ": sólo se han procesado los " + str(LIMITE_ALUMNOS) + " primeros alumnos de SIGAD y no se ha suspendido a nadie por no estar en SIGAD.**\n")
     escribeEnFichero(filename_md, "# Informe de gestion alumnos\n")
     escribeEnFichero(filename_md, get_date_time_for_humans())
     escribeEnFichero(filename_md, "\n## ENTORNO\n")
@@ -155,6 +170,9 @@ def main():
             else: # Error en la 1era llamada
                 print("Error en la llamada al 1er web service")
 
+    if LIMITE_ALUMNOS is not None and len(alumnos_sigad) > LIMITE_ALUMNOS:
+        print("--limite-alumnos: se procesan sólo", LIMITE_ALUMNOS, "de", len(alumnos_sigad), "alumnos de SIGAD")
+        del alumnos_sigad[LIMITE_ALUMNOS:]
     
 
     ########################
@@ -274,6 +292,11 @@ def main():
     print("## Alumnos a suspender totalmente de Moodle")
     escribeEnFichero(filename_md, "\n### Estudiantes a suspender totalmente de Moodle al no estar en SIGAD, 1ero matrículas y 2ndo a ellos:\n")
     escribeEnFichero(filename_md, get_date_time_for_humans() + "\n")
+    if LIMITE_ALUMNOS is not None:
+        # con la carga limitada casi nadie de Moodle está en alumnos_sigad: no se puede suspender a nadie
+        print("--limite-alumnos: no se suspende a", len(alumnos_a_suspender), "alumnos que no están en la carga limitada")
+        escribeEnFichero(filename_md, "- Omitido por --limite-alumnos (" + str(len(alumnos_a_suspender)) + " alumnos no suspendidos).")
+        alumnos_a_suspender = []
     for alumnoMoodle in alumnos_a_suspender:
         print("- ", repr(alumnoMoodle) )
         if int(alumnoMoodle['userid']) not in usuarios_moodle_no_borrables:

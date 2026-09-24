@@ -12,6 +12,7 @@ Scripts Python (sin framework): `main.py` sincroniza el alumnado de SIGAD (2 Web
 python main.py                      # ejecuta todo el flujo (`try: main()` bajo `if __name__ == "__main__"`)
 python main.py --dry-run            # no modifica Moodle ni genera correos; --help lista las opciones
 python main.py --no-emails           # sí modifica Moodle pero no genera ningún correo (implícito en --dry-run)
+python main.py --limite-alumnos [N]  # pruebas: sólo los N primeros alumnos de SIGAD (100 por defecto) y sin suspender a nadie por no estar en SIGAD
 python enviar_correos.py            # envía los correos de pendientes/<SUBDOMAIN>/ (2 s entre correos)
 python enviar_correos.py --dry-run  # renderiza los pendientes sin enviarlos ni borrarlos
 docker build -t fp-gestion-usuarios .   # Dockerfile usa python:3.8-slim-buster

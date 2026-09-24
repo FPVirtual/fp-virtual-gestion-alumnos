@@ -60,7 +60,7 @@ python main.py             # sincroniza Moodle y deja los correos en pendientes/
 python enviar_correos.py   # envía los correos pendientes
 ```
 
-En cron conviene lanzar `enviar_correos.py` justo después de `main.py` (p. ej. `python main.py; python enviar_correos.py`) y, si se quiere, también en otros momentos para reintentar lo pendiente. `enviar_correos.py --dry-run` genera el HTML de los pendientes sin enviarlos ni moverlos.
+En cron conviene lanzar `enviar_correos.py` justo después de `main.py` (p. ej. `python main.py; python enviar_correos.py`) y, si se quiere, también en otros momentos para reintentar lo pendiente. Para pruebas, `python main.py --limite-alumnos` procesa sólo los 100 primeros alumnos de SIGAD (o los N de `--limite-alumnos N`). En ese modo no se suspende a nadie por no estar en SIGAD, porque faltarían todos los demás; se combina con `--dry-run` o `--no-emails`. `enviar_correos.py --dry-run` genera el HTML de los pendientes sin enviarlos ni moverlos.
 
 O con Docker:
 
