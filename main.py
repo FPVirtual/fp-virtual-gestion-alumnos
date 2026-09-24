@@ -89,7 +89,8 @@ def main():
     escribeEnFichero(filename_md, SUBDOMAIN)
     escribeEnFichero(filename_md, "\n## RESUMEN DETALLADO\n")
     # ids de users creados en deploy que no hay que borrar
-    usuarios_moodle_no_borrables = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 3725, 3729, 3730, 7152, 7490, 7491, 11720, 12270, 12272]
+    usuarios_moodle_no_borrables = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 3725, 3729, 3730, 7152, 7490, 7491, 11720, 12270, 12272,
+                                   34, 35, 36, 37] # pre: admin4, admin5, moodle-api, appmovil
     # 
     moodle = get_moodle(SUBDOMAIN)[0]
     alumnos_sigad = []
@@ -299,7 +300,8 @@ def main():
         alumnos_a_suspender = []
     for alumnoMoodle in alumnos_a_suspender:
         print("- ", repr(alumnoMoodle) )
-        if int(alumnoMoodle['userid']) not in usuarios_moodle_no_borrables:
+        if int(alumnoMoodle['userid']) not in usuarios_moodle_no_borrables \
+                and not es_profesorado(alumnoMoodle['username']):
             # Antes de suspender a un alumno hay que suspender todas sus matrículas en cursos
             # pero HAY QUE mantenerlo en las cohortes ya que sacarlo puede borrar su progreso
             id_alumno = int(alumnoMoodle['userid'])
@@ -340,7 +342,7 @@ def main():
         print("- ", alumno_moodle['username'] )
         userid = alumno_moodle['userid']
         # no recorro los no borrables
-        if int(userid) in usuarios_moodle_no_borrables: 
+        if int(userid) in usuarios_moodle_no_borrables or es_profesorado(alumno_moodle['username']): 
             continue
         username = alumno_moodle['username']
         # Obtengo los cursos en que este alumno moodle está matriculado en moodle
@@ -355,6 +357,9 @@ def main():
 
             # Si el curso es el de ayuda omitir comprobación. Están matriculados vía cohorte
             if course_shortname == "ayuda":
+                continue;
+            # Si el shortname no es centro-ciclo-materia (p. ej. profesorado, coordinacion) no viene de SIGAD
+            if len(course_codes) < 3:
                 continue;
             # Si el curso es el de tutoría omitir comprobación. Están matriculados vía cohorte
             if course_codes[2].count("t") == 1:
@@ -1352,6 +1357,12 @@ def get_id_de_curso_by_shortname(moodle, shortname):
     print("id_course: ", id_course)
 
     return id_course
+
+def es_profesorado(username):
+    """
+    El profesorado (username que empieza por 'prof') nunca lo gestiona este script
+    """
+    return username is not None and username.strip().lower().startswith("prof")
 
 def get_alumnos_suspendidos(moodle):
     print("get_alumnos_suspendidos(...)")
