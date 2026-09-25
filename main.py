@@ -44,6 +44,8 @@ LIMITE_ALUMNOS = args.limite_alumnos
 SEND_EMAILS = not (args.no_emails or DRY_RUN)
 
 from Config import *
+# destinatario de los correos de bienvenida fuera de www (opcional en Config.py)
+BIENVENIDA_TO = globals().get("BIENVENIDA_TO") or "gestion@fpvirtualaragon.es"
 from Conexion import *
 from Correo import guarda_correo_pendiente, TIPO_INFORME, TIPO_AVISO
 from classes.Alumno import *
@@ -503,7 +505,7 @@ def main():
                             print("  - El alumno (",id_alumno,") ya estaba matriculado en ", shortname_curso, sep="")
         # genero el correo (lo envía enviar_correos.py)
         if alumno_es_nuevo:
-            destinatario = "gestion@fpvirtualaragon.es"
+            destinatario = BIENVENIDA_TO
             if SUBDOMAIN == "www":
                 destinatario = alumno.getEmailSigad()
             else:

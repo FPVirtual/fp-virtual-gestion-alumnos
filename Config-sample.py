@@ -31,3 +31,6 @@ DB_NAME=""
 
 #reports
 REPORT_TO=""#emails splitted by spaces
+
+#destinatario de los correos de bienvenida fuera de www (si no se pone, gestion@fpvirtualaragon.es)
+BIENVENIDA_TO=""
