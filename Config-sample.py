@@ -32,5 +32,8 @@ DB_NAME=""
 #reports
 REPORT_TO=""#emails splitted by spaces
 
-#destinatario de los correos de bienvenida fuera de www (si no se pone, gestion@fpvirtualaragon.es)
+#destinatario de los correos de bienvenida y de matrículas añadidas fuera de www (si no se pone, gestion@fpvirtualaragon.es)
 BIENVENIDA_TO=""
+
+#correos como máximo por ejecución de enviar_correos.py (si no se pone, 1000 en www y 3 en el resto)
+MAX_CORREOS_POR_EJECUCION=""

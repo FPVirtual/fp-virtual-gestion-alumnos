@@ -37,8 +37,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 PAUSA_ENTRE_CORREOS = 2  # segundos
 MAX_INTENTOS = 3
-# limitacion de 2.000 emails diarios en actual cuenta de gmail; en entornos que no son producción, muy pocos
-MAX_CORREOS_POR_EJECUCION = 1000 if SUBDOMAIN == "www" else 3
+# limitacion de 2.000 emails diarios en actual cuenta de gmail; en entornos que no son producción, muy pocos.
+# Se puede fijar con MAX_CORREOS_POR_EJECUCION en Config.py
+MAX_CORREOS_POR_EJECUCION = int(globals().get("MAX_CORREOS_POR_EJECUCION") or (1000 if SUBDOMAIN == "www" else 3))
 
 # Plantillas de correo (Jinja2, todas heredan de templates/base.html). El logo es opcional:
 # si existe templates/img/logo.png se incrusta en los correos.
