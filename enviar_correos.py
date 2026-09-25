@@ -37,6 +37,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 PAUSA_ENTRE_CORREOS = 2  # segundos
 MAX_INTENTOS = 3
+SMTP_TIMEOUT = 30  # segundos
 # limitacion de 2.000 emails diarios en actual cuenta de gmail; en entornos que no son producción, muy pocos.
 # Se puede fijar con MAX_CORREOS_POR_EJECUCION en Config.py
 MAX_CORREOS_POR_EJECUCION = int(globals().get("MAX_CORREOS_POR_EJECUCION") or (1000 if SUBDOMAIN == "www" else 3))
@@ -80,7 +81,8 @@ def construye_mensaje(remitente, destinatario, asunto, html, adjuntos):
 
 
 def conecta():
-    server = smtplib.SMTP(SMTP_HOSTS, SMTP_PORT)
+    # sin timeout, un servidor que no responde dejaría el proceso colgado y con el bloqueo cogido
+    server = smtplib.SMTP(SMTP_HOSTS, SMTP_PORT, timeout=SMTP_TIMEOUT)
     server.starttls(context=ssl.create_default_context())
     server.login(SMTP_USER, SMTP_PASSWORD)
     return server
