@@ -1651,6 +1651,8 @@ def crearShortnameCurso(codigo_centro, siglas_ciclo, id_materia):
 
     shortname = str(codigo_centro) + "-" + str(siglas_ciclo) + "-" + str(id_materia)
 
+    return shortname
+
 def es_nie_valido(nie: str) -> bool:
     """
     Devuelve True si el formato del string corresponde a un NIE válido.
