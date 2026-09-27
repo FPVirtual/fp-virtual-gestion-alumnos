@@ -26,11 +26,17 @@ parser.add_argument(
     action="store_true",
     help="Genera el HTML de cada correo pendiente pero no lo envía ni toca los ficheros.",
 )
+parser.add_argument(
+    "--solo-informes",
+    action="store_true",
+    help="Envía sólo los informes (0-informe-*) y deja los avisos pendientes. Lo usa el cron cuando main.py falla.",
+)
 args = parser.parse_args()
 DRY_RUN = args.dry_run
+SOLO_INFORMES = args.solo_informes
 
 from Config import *
-from Correo import dir_pendientes, dir_fallidos, dir_enviados, guarda_json
+from Correo import dir_pendientes, dir_fallidos, dir_enviados, guarda_json, TIPO_INFORME
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -140,6 +146,8 @@ def main():
         return 0
 
     ficheros = sorted(f for f in os.listdir(carpeta) if f.endswith(".json"))
+    if SOLO_INFORMES:
+        ficheros = [f for f in ficheros if f.startswith(TIPO_INFORME)]
     print(f"Correos pendientes en {carpeta}: {len(ficheros)}")
     if len(ficheros) > MAX_CORREOS_POR_EJECUCION:
         print(f"Sólo se enviarán {MAX_CORREOS_POR_EJECUCION}; el resto queda para la siguiente ejecución.")

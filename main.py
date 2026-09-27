@@ -1701,3 +1701,5 @@ if __name__ == "__main__":
             "traceback": traceback.format_exc(),
             "tracebackException": "".join(traceback.format_exception(type(exc), exc, exc.__traceback__)),
         }, adjuntos)
+        # código de salida distinto de 0 para que el cron no lance enviar_correos.py tras un fallo
+        sys.exit(1)
