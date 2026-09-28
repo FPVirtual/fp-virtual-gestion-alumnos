@@ -2,6 +2,9 @@ import http.client
 
 class Conexion:
     NAME="CONEXION"
+    # segundos máximos para conectar y para cada lectura: si SIGAD no responde, se lanza una excepción
+    # (main.py termina con error) en lugar de quedarse colgado indefinidamente
+    TIMEOUT = 120
 
 
     def __init__(self, url, path, usuario, password, method):
@@ -15,7 +18,7 @@ class Conexion:
     def getJson(self):
         print( self.NAME + ".getJson()" )
         headers = {"Usuario" : self.usuario, "Password": self.password}
-        conn = http.client.HTTPSConnection(self.url, 443) # si http 80 https 443
+        conn = http.client.HTTPSConnection(self.url, 443, timeout=self.TIMEOUT) # si http 80 https 443
         conn.request(self.method, self.path, "", headers)
         response = conn.getresponse()
         resp_data = response.read()

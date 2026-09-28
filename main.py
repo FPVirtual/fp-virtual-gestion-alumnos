@@ -174,6 +174,12 @@ def main():
             else: # Error en la 1era llamada
                 print("Error en la llamada al 1er web service")
 
+    # Sin alumnos de SIGAD (error en el 1er WS o el fichero no llega a estar listo) no se sigue: con la lista vacía
+    # se suspendería a todo el alumnado de Moodle. La excepción genera el correo de error y main.py sale con 1.
+    if not alumnos_sigad:
+        raise RuntimeError("SIGAD no ha devuelto ningún alumno (error en el Web Service o fichero no disponible). "
+                           "No se ha modificado Moodle.")
+
     if LIMITE_ALUMNOS is not None and len(alumnos_sigad) > LIMITE_ALUMNOS:
         print("--limite-alumnos: se procesan sólo", LIMITE_ALUMNOS, "de", len(alumnos_sigad), "alumnos de SIGAD")
         del alumnos_sigad[LIMITE_ALUMNOS:]

@@ -35,7 +35,7 @@ Para probar sin llamar a SIGAD: poner `procesa_desde_fichero = True` en `main()`
 Casi toda la lógica está en `main.py` (~1700 líneas): una función `main()` gigante y secuencial, más helpers. Fases de `main()`, en orden:
 
 1. Calcula el curso académico (`get_curso_para_REST`: sep–dic = año actual; ene–ago = año anterior).
-2. `Conexion` (http.client) llama al 1er WS → `idSolicitud`; hace polling al 2º WS (10 intentos × 10 s) hasta que `codigo == 0`. Guarda las respuestas crudas (`guarda_fichero_respuesta_ws1/2`).
+2. `Conexion` (http.client) llama al 1er WS → `idSolicitud`; hace polling al 2º WS (10 intentos × 10 s) hasta que `codigo == 0`. Guarda las respuestas crudas (`guarda_fichero_respuesta_ws1/2`). Cada llamada HTTP tiene `Conexion.TIMEOUT` (120 s). Si al final `alumnos_sigad` está vacío, `main()` lanza `RuntimeError` antes de modificar Moodle (con la lista vacía se suspendería a todo el alumnado).
 3. `procesaJsonEstudiantes` construye el árbol `Alumno → Centro → Ciclo → Modulo` (`classes/`). `Alumno` calcula su email corporativo con `Util.creaEmailsDominio`.
 4. Reactiva suspendidos que vuelven a estar en SIGAD → detecta cambios de email (SIGAD vs. campo de perfil `email_sigad` de Moodle) → cambio de login NIE→DNI emparejando por `id_sigad` (envía correo) → suspende a quienes no están en SIGAD (primero sus matrículas de curso, luego sale de las cohortes; los ids de `usuarios_moodle_no_borrables` se saltan siempre).
 5. Suspende matrículas de curso que SIGAD ya no contempla (se ignoran el curso `ayuda` y los cursos cuyo shortname `centro-ciclo-materia` lleva "t" en el tercer campo = tutoría, matriculados vía cohorte).
