@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block titulo %}ERROR en el informe automatizado{% endblock %}
+{% block preheader %}Ha fallado la sincronización con SIGAD en {{ subdomain }}: {{ error }}{% endblock %}
 {% block contenido %}
 <p style="color:#b42318;"><strong>Ha fallado el informe, revisar logs.</strong></p>
 

@@ -16,6 +16,7 @@ import sys
 import time
 from datetime import datetime
 from email.message import EmailMessage
+from html.parser import HTMLParser
 
 # Se parsean los argumentos antes de importar Config para que --help funcione sin Config.py
 parser = argparse.ArgumentParser(
@@ -65,17 +66,88 @@ def renderiza_plantilla(nombre_plantilla, contexto):
     return entorno_plantillas.get_template(nombre_plantilla).render(logo=LOGO_DISPONIBLE, **contexto)
 
 
+class _ExtractorTexto(HTMLParser):
+    """
+    Convierte el HTML de un correo en texto plano: omite <head>, estilos y lo oculto (el preheader),
+    separa los bloques con saltos de línea y añade la URL de los enlaces cuyo texto no la muestra.
+    """
+    OMITIDOS = {"head", "style", "script", "title"}
+    BLOQUES = {"p", "br", "div", "tr", "li", "ul", "ol", "table", "h1", "h2", "h3", "pre"}
+    VACIOS = {"br", "img", "meta", "link", "hr", "input"}  # no tienen etiqueta de cierre
+
+    def __init__(self):
+        super().__init__()
+        self.partes = []
+        self._pila = []  # por cada etiqueta abierta: si oculta su contenido
+        self._enlaces = []
+
+    def _oculto(self):
+        return any(self._pila)
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag in self.VACIOS:
+            if not self._oculto():
+                if tag == "br":
+                    self.partes.append("\n")
+                elif tag == "img" and attrs.get("alt"):
+                    self.partes.append(attrs["alt"] + " ")
+            return
+        estilo = (attrs.get("style") or "").replace(" ", "").lower()
+        self._pila.append(tag in self.OMITIDOS or "display:none" in estilo)
+        if self._oculto():
+            return
+        if tag in self.BLOQUES:
+            self.partes.append("\n")
+        if tag == "li":
+            self.partes.append("- ")
+        if tag == "a":
+            self._enlaces.append((attrs.get("href") or "", len(self.partes)))
+
+    def handle_endtag(self, tag):
+        if tag in self.VACIOS:
+            return
+        oculto = self._oculto()
+        if self._pila:
+            self._pila.pop()
+        if oculto:
+            return
+        if tag == "a" and self._enlaces:
+            href, inicio = self._enlaces.pop()
+            texto = "".join(self.partes[inicio:]).strip()
+            if href.startswith("http") and href.rstrip("/") not in texto:
+                self.partes.append(f" ({href})")
+        if tag in self.BLOQUES:
+            self.partes.append("\n")
+
+    def handle_data(self, data):
+        if not self._oculto():
+            self.partes.append(data)
+
+
+def html_a_texto(html):
+    """
+    Versión de texto plano del correo (la usan los clientes sin HTML y muchos para la previsualización).
+    """
+    extractor = _ExtractorTexto()
+    extractor.feed(html)
+    lineas = (" ".join(linea.split()) for linea in "".join(extractor.partes).splitlines())
+    return "\n".join(linea for linea in lineas if linea) + "\n"
+
+
 def construye_mensaje(remitente, destinatario, asunto, html, adjuntos):
     msg = EmailMessage()
     msg['Subject'] = asunto
     msg['From'] = remitente
     msg['To'] = destinatario
-    msg.set_content("Tu cliente no soporta HTML.")   # parte de texto plano
-    msg.add_alternative(html, subtype='html')        # parte HTML
-    # el logo se incrusta como imagen y las plantillas lo referencian como cid:logo
+    msg.set_content(html_a_texto(html))       # parte de texto plano, generada a partir del HTML
+    msg.add_alternative(html, subtype='html')  # parte HTML
+    # el logo se incrusta como imagen y las plantillas lo referencian como cid:logo. Se marca como "inline" y con
+    # nombre para que los clientes no lo muestren como un adjunto "noname" (sólo forma parte de la cabecera)
     if LOGO_DISPONIBLE:
         with open(LOGO_PATH, 'rb') as f:
-            msg.get_body(('html',)).add_related(f.read(), maintype='image', subtype='png', cid="<logo>")
+            msg.get_body(('html',)).add_related(f.read(), maintype='image', subtype='png', cid="<logo>",
+                                                disposition='inline', filename='logo.png')
     for ruta in adjuntos:
         try:
             with open(ruta, 'rb') as f:
