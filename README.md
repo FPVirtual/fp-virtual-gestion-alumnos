@@ -1,4 +1,4 @@
-# fp-distancia-gestion-usuarios-automatica
+# fp-virtual-gestion-usuarios-automatica
 
 Script en Python que sincroniza automáticamente el alumnado de SIGAD con una plataforma Moodle (FP a distancia de Aragón): crea usuarios, los suspende/reactiva, actualiza sus datos y gestiona sus matrículas en cursos y cohortes. Al terminar genera un informe que se envía por correo.
 
