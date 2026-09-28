@@ -65,14 +65,15 @@ def main():
     # Preparo el fichero log para escribir en él.
     global filename_md
     print("Comenzamos con el fichero")
-    datetimeForFilename = get_date_time_for_filename()
+    # <fecha>_<SUBDOMAIN>: el informe y el CSV de una misma ejecución comparten nombre
+    datetimeForFilename = get_date_time() + "_" + SUBDOMAIN
     print("filename: " + datetimeForFilename)
-    filename_md = BASE_DIR + "/logs/" + SUBDOMAIN + "/html/" + datetimeForFilename + SUBDOMAIN + ".md"
+    filename_md = BASE_DIR + "/logs/" + SUBDOMAIN + "/md/" + datetimeForFilename + ".md"
     print("filename_md: " + filename_md)
 
     ## Preparao el fichero csv para escribir en él.
     global filename_csv
-    filename_csv = BASE_DIR + "/csvs/" + datetimeForFilename + SUBDOMAIN + ".csv"
+    filename_csv = BASE_DIR + "/csvs/" + datetimeForFilename + ".csv"
     print("filename_csv: " + filename_csv)
     
     os.makedirs(os.path.dirname(filename_md), exist_ok=True)
@@ -148,7 +149,7 @@ def main():
             mensaje=y["mensaje"]
             idSolicitud=y["idSolicitud"]
             print("Código: " , codigo, ", Mensaje: ", mensaje, "idSolicitud: ", idSolicitud)
-            guarda_fichero_respuesta_ws1(get_date_time() + "." + SUBDOMAIN + ".ws1.json", resp_data)
+            guarda_fichero_respuesta_ws1(get_date_time() + "_" + SUBDOMAIN + "_ws1.json", resp_data)
             if codigo == 0: # éxito en la 1era llamada
                 # 
                 print( 'Waiting 10 seconds before the first call to the 2nd web service...')
@@ -164,7 +165,7 @@ def main():
                         mensaje=y["mensaje"]
                         print("codigo: " + str(codigo) + ", mensaje: " + str(mensaje))
                         if codigo == 0: # éxito de la 2nda llamada
-                            guarda_fichero_respuesta_ws2(get_date_time() + "." + SUBDOMAIN + ".ws2.json", resp_data )
+                            guarda_fichero_respuesta_ws2(get_date_time() + "_" + SUBDOMAIN + "_ws2.json", resp_data )
                             procesaJsonEstudiantes(y, alumnos_sigad)
                             break
                         else: # Error  en la 2ª llamada
@@ -970,7 +971,8 @@ def update_moodle_email_sigad(userid, email_nuevo):
 
 def get_date_time():
     """
-    return the datetime in format yyyymmddhhmmss
+    return the datetime in format yyyymmdd-hhmmss: formato común de la fecha en los nombres de todos los ficheros
+    que se generan (informes, CSVs, respuestas de SIGAD, correos y logs del cron)
     info from  https://www.programiz.com/python-programming/datetime/strftime
     """
     now = datetime.now() # current date and time
@@ -983,14 +985,6 @@ def get_date_time_for_humans():
     """
     now = datetime.now() # current date and time
     return now.strftime("%d/%m/%Y %H:%M:%S")
-
-def get_date_time_for_filename():
-    """
-    return the datetime in format yyyy_mm_dd_hh_mm_ss_
-    info from  https://www.programiz.com/python-programming/datetime/strftime
-    """
-    now = datetime.now() # current date and time
-    return now.strftime("%Y_%m_%d_%H_%M_%S_")
 
 def abre_fichero(nombre_fichero):
     """

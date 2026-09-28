@@ -17,7 +17,6 @@ python enviar_correos.py            # envía los correos de pendientes/<SUBDOMAI
 python enviar_correos.py --dry-run  # renderiza los pendientes sin enviarlos ni borrarlos
 python enviar_correos.py --solo-informes  # envía sólo los 0-informe-* (el cron lo usa si main.py falla: main.py sale con 1 tras un error)
 docker build -t fp-gestion-usuarios .   # Dockerfile usa python:3.11.2-slim-bullseye
-./extrae_alumnado.sh                # genera CSVs a partir de los informes de hoy en logs/ (SCP_TARGET opcional)
 ```
 
 No hay tests, linter ni sistema de build. Única dependencia externa: Jinja2 (`pip install -r requirements.txt`).
@@ -28,7 +27,7 @@ Para probar sin llamar a SIGAD: poner `procesa_desde_fichero = True` en `main()`
 
 - `Config.py` (ignorado por git; plantilla en `Config-sample.py`) se importa con `from Config import *`. Variables globales: `SUBDOMAIN`, credenciales de los dos WS, SMTP, BD, `REPORT_TO`. También se ignoran `Config-{predesarrollo,test,www}.py` (uno por entorno, copiado a `Config.py`).
 - `SUBDOMAIN == "www"` es producción y cambia el comportamiento: sólo ahí los correos de aviso van a los alumnos (en otros entornos van a `gestion@fpvirtualaragon.es`, salvo los de bienvenida y matrículas añadidas, que van a `BIENVENIDA_TO` de `Config.py` si está definido), y el tope de correos por ejecución de `enviar_correos.py` es 1000 (www) frente a 3 (resto), salvo que `Config.py` defina `MAX_CORREOS_POR_EJECUCION`; lo que no se envía queda pendiente.
-- Las rutas (`logs/<SUBDOMAIN>/html/`, `csvs/`, `templates/`, `jsons/`, `pendientes/<SUBDOMAIN>/`, `enviados/<SUBDOMAIN>/`, `fallidos/<SUBDOMAIN>/`) son relativas a `BASE_DIR`, la carpeta de `main.py`; los directorios de salida se crean al arrancar.
+- Las rutas (`logs/<SUBDOMAIN>/md/`, `csvs/`, `templates/`, `jsons/`, `pendientes/<SUBDOMAIN>/`, `enviados/<SUBDOMAIN>/`, `fallidos/<SUBDOMAIN>/`) son relativas a `BASE_DIR`, la carpeta de `main.py`; los directorios de salida se crean al arrancar. Todos los nombres de fichero generados empiezan por la fecha `AAAAMMDD-HHMMSS` (`get_date_time()`), seguida de `_<SUBDOMAIN>` y un sufijo (`_ws1.json`, `.md`, `.csv`, y en el cron `_main.log` / `_envio.log`); los correos llevan delante su tipo (`0-informe-`/`1-aviso-`) para el orden de envío.
 - Los directorios `processors/` y `services/` están vacíos (sin seguimiento en git); todo el código vive en `main.py`, `enviar_correos.py` y `Correo.py`.
 
 ## Arquitectura
