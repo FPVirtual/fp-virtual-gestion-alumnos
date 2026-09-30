@@ -2,7 +2,7 @@
 {% block titulo %}Su usuario de FP virtual Aragón ha cambiado{% endblock %}
 {% block preheader %}Su nuevo usuario de FP virtual Aragón es {{ usuario }}. La contraseña no cambia.{% endblock %}
 {% block contenido %}
-<p>Hola,</p>
+<p>Hola {{ nombre }} {{ apellidos }},</p>
 
 <p>su cuenta en <a href="https://{{ subdomain }}.fpvirtualaragon.es/">https://{{ subdomain }}.fpvirtualaragon.es/</a> se ha actualizado.</p>
 
@@ -12,6 +12,10 @@
 </ul>
 
 <p>Recuerde que puede recuperar su contraseña en cualquier momento a través de <a href="https://{{ subdomain }}.fpvirtualaragon.es/login/forgot_password.php">https://{{ subdomain }}.fpvirtualaragon.es/login/forgot_password.php</a></p>
+
+<p>Su cuenta de correo electrónico{% if email %} <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:15px;color:#22303f;">{{ email }}</code>{% else %} de @fpvirtualaragon.es{% endif %} NO cambia durante este curso. El curso que viene, si vuelve a matricularse, sí cambiará.</p>
+
+<p>Si necesita cambiar su correo electrónico de @fpvirtualaragon.es, puede abrir una incidencia en <a href="https://www.fpvirtualaragon.es/soporte/">https://www.fpvirtualaragon.es/soporte/</a>.</p>
 
 {% include "_aviso_automatico.html" %}
 {% endblock %}

@@ -281,16 +281,21 @@ def main():
                 usuario = alumnoSIGAD.getDocumento()
                 oldUsuario = alumnoMoodle['username']
 
+                # Se envía al email de SIGAD: getEmailDominio() se calcula con la letra final del
+                # documento nuevo y no existe (su cuenta real sigue siendo la de Moodle, calculada con el NIE)
                 destinatario = "gestion@fpvirtualaragon.es"
-                if SUBDOMAIN == "www":
-                    destinatario = alumnoSIGAD.getEmailDominio().lower()
+                if SUBDOMAIN == "www" and alumnoSIGAD.getEmailSigad():
+                    destinatario = alumnoSIGAD.getEmailSigad().lower().strip()
                 else:
-                    print("Debería haberse enviado a '", alumnoSIGAD.getEmailDominio().lower(), "'.", sep="" )
+                    print("Debería haberse enviado a '", alumnoSIGAD.getEmailSigad(), "'.", sep="" )
 
                 if genera_correo(TIPO_AVISO, destinatario, "FP virtual - Aragón", "nombreUsuarioActualizado.html", {
+                    "nombre": alumnoSIGAD.getNombre(),
+                    "apellidos": alumnoSIGAD.getApellidos(),
                     "subdomain": SUBDOMAIN,
                     "usuario": usuario,
                     "oldUsuario": oldUsuario,
+                    "email": alumnoMoodle['email'],
                 }):
                     num_emails_generados = num_emails_generados + 1
 
