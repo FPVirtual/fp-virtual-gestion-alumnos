@@ -278,7 +278,7 @@ def main():
                         " se le ha cambiado a " + alumnoSIGAD.getDocumento() + \
                         " (id_sigad " + str(alumnoSIGAD.getIdAlumno()) + ").")
                 # Le envío email avisándolede su cambio de usuario 
-                usuario = alumnoSIGAD.getDocumento()
+                usuario = username_nuevo # el login en Moodle va en minúsculas
                 oldUsuario = alumnoMoodle['username']
 
                 # Se envía al email de SIGAD: getEmailDominio() se calcula con la letra final del
