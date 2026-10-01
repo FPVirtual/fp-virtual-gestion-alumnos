@@ -106,6 +106,7 @@ def main():
     num_alumnos_modificado_login = 0
     num_alumnos_modificado_email = 0
     num_alumnos_creados = 0
+    num_emails_dominio_duplicados = 0
     num_alumnos_no_creables = 0
     num_modulos_matriculados = 0
     num_matriculas_suspendidas = 0
@@ -432,6 +433,8 @@ def main():
     # Creo diccionario de id_cursoshortname para evitar usar get_id_de_curso_by_shortname en cada iteración
     diccionario_cursos = {curso['shortname'] : curso['courseid'] for curso in cursos_moodle}
     diccionario_alumnos = {alumno['username'] : alumno['userid'] for alumno in alumnos_moodle}
+    # Emails ya usados en moodle (y el id_sigad de quien los tiene), para no dar el mismo email corporativo a dos alumnos
+    emails_moodle = get_emails_moodle()
     #
     escribeEnFichero(filename_csv, "First Name [Required],Last Name [Required],Email Address [Required],Password [Required],Password Hash Function [UPLOAD ONLY],Org Unit Path [Required],New Primary Email [UPLOAD ONLY],Recovery Email,Work Secondary Email,New Status [UPLOAD ONLY]")
     for alumno in alumnos_sigad:
@@ -446,12 +449,20 @@ def main():
             print("  - Es nuevo")
             password = random_pass(10)
             try:
-                # TODO: Comprobar al ir a crearlo si ya existe en moodle alguien con 
-                # TODO: ese email corporativo. De ser así, modificarle el email corporativo
-                # TODO: y volver a intentar crearlo. Repetir hasta éxito.
+                # Si ya hay otra persona en moodle (o creada en esta misma ejecución) con ese email
+                # corporativo se le da otro libre; es otra persona si su id_sigad es distinto
+                # (con el mismo id_sigad es el propio alumno y conserva su dirección): moodle, el CSV de Google y el correo de
+                # bienvenida usan todos alumno.getEmailDominio()
+                email_calculado = alumno.getEmailDominio()
+                email_libre = get_email_dominio_libre(email_calculado, alumno.getIdAlumno(), emails_moodle)
+                alumno.setEmailDominio(email_libre)
                 id_alumno = crearAlumnoEnMoodle(moodle, alumno, password)
+                emails_moodle.setdefault(email_libre.lower(), set()).add(str(alumno.getIdAlumno()))
                 num_alumnos_creados = num_alumnos_creados + 1
                 escribeEnFichero(filename_md, "- Alumno " + alumno.getDocumento() + " creado.")
+                if email_libre != email_calculado:
+                    num_emails_dominio_duplicados = num_emails_dominio_duplicados + 1
+                    escribeEnFichero(filename_md, "- Alumno " + alumno.getDocumento() + ": el email " + email_calculado + " ya existía, se le asigna " + email_libre + ".")
                 matricula_alumno_en_cohorte_alumnado(moodle, id_alumno)
                 alumno_es_nuevo = True
                 
@@ -588,6 +599,7 @@ def main():
     num_alumnos_post_script = len( get_alumnos_moodle_no_borrados(moodle) )
     escribeEnFichero(filename_md, "- Alumnos existentes en moodle despues de ejecutar este programa: " + str(num_alumnos_post_script) )
     escribeEnFichero(filename_md, "- Alumnos creados por este script: " + str(num_alumnos_creados) )
+    escribeEnFichero(filename_md, "- Alumnos creados con otro email corporativo por estar ya en uso el suyo: " + str(num_emails_dominio_duplicados) )
     escribeEnFichero(filename_md, "- Alumnos que NO es posible crear por este script: " + str(num_alumnos_no_creables) )
     escribeEnFichero(filename_md, "- Alumnos reactivados por este script: " + str(num_alumnos_reactivados) )
     escribeEnFichero(filename_md, "- Alumnos suspendidos por este script: " + str(num_alumnos_suspendidos) )
@@ -979,6 +991,55 @@ def update_moodle_email_sigad(userid, email_nuevo):
             '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, fieldid = fieldid, email_nuevo = email_nuevo, userid = userid )
 
     run_command( command, False )
+
+def get_emails_moodle():
+    """
+    Devuelve un diccionario email (en minúsculas) -> conjunto de id_sigad de los usuarios
+    de moodle que lo tienen (incluidos suspendidos y borrados; "" si no tiene id_sigad),
+    para no dar a un alumno nuevo la dirección de otra persona
+    """
+    print("get_emails_moodle(...)")
+
+    fieldid_id_sigad = get_user_info_fieldid("id_sigad")
+    command = '''\
+            mysql --user=\"{DB_USER}\" --password=\"{DB_PASS}\" --host=\"{DB_HOST}\" -D \"{DB_NAME}\"  --execute=\"
+                SELECT LOWER(u.email), IFNULL(d.data, '')
+                FROM mdl_user u
+                LEFT JOIN mdl_user_info_data d ON d.userid = u.id AND d.fieldid = {fieldid}
+                WHERE u.email <> ''
+            \" | tail -n +2
+            '''.format(DB_USER = DB_USER, DB_PASS = DB_PASS, DB_HOST = DB_HOST, DB_NAME = DB_NAME, fieldid = fieldid_id_sigad )
+
+    emails = {}
+    for line in run_command( command, True ).splitlines():
+        campos = line.split("\t")
+        id_sigad = campos[1].strip() if len(campos) > 1 else ""
+        emails.setdefault(campos[0].strip(), set()).add(id_sigad)
+
+    if not emails:
+        # sin esta lista no se detectarían los duplicados
+        raise RuntimeError("No se han podido leer los emails de los usuarios de Moodle")
+
+    return emails
+
+def get_email_dominio_libre(email, id_sigad, emails_usados):
+    """
+    Devuelve el email corporativo a usar para el alumno con ese id_sigad (idAlumno de SIGAD).
+    emails_usados es el diccionario de get_emails_moodle(). Un email está libre si no lo
+    tiene nadie o si quien lo tiene es el mismo alumno (mismo id_sigad: la dirección ya es
+    suya). Si lo tiene otra persona se añade un número antes de la @ hasta dar con uno
+    libre: agonzalezsm@... -> agonzalezsm2@..., agonzalezsm3@...
+    Quien no tiene id_sigad en moodle cuenta como otra persona.
+    """
+    id_sigad = str(id_sigad)
+    usuario, dominio = email.split("@")
+    candidato = email
+    n = 2
+    while candidato.lower() in emails_usados and id_sigad not in emails_usados[candidato.lower()]:
+        candidato = usuario + str(n) + "@" + dominio
+        n = n + 1
+
+    return candidato
 
 def get_date_time():
     """

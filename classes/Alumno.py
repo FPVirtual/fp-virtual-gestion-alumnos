@@ -50,6 +50,9 @@ class Alumno:
     def getEmailDominio(self):
         return self.__emailDominio
 
+    def setEmailDominio(self, emailDominio):
+        self.__emailDominio = emailDominio
+
     def getCentros(self):
         return self.__centros
 

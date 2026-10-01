@@ -15,7 +15,7 @@ Son dos scripts: `main.py` hace todo el trabajo sobre Moodle y deja los correos 
    - actualiza el email cuando cambia en SIGAD y el nombre de usuario cuando un alumno pasa de NIE a DNI (lo reconoce por su `id_sigad`);
    - suspende a los que ya no figuran en SIGAD: primero sus matrículas y después les saca de sus cohortes;
    - suspende las matrículas en cursos que SIGAD ya no recoge (sin tocar las cohortes, porque sacar a un alumno de una cohorte borra su progreso);
-   - crea los alumnos que no existen (si tienen nombre, apellidos, documento y email SIGAD), los mete en la cohorte `alumnado` y les genera un correo de bienvenida con sus datos de acceso;
+   - crea los alumnos que no existen (si tienen nombre, apellidos, documento y email SIGAD), con un email corporativo que no tenga ya otra persona en Moodle, distinguida por su `id_sigad` (si está cogido se le añade un número: `agonzalezsm2@...`), los mete en la cohorte `alumnado` y les genera un correo de bienvenida con sus datos de acceso;
    - matricula o reactiva a cada alumno en los cursos de sus módulos y en la cohorte de su ciclo, y avisa por correo de las matrículas nuevas a quien ya tenía cuenta;
    - revisa el alumnado con más de una tutoría y lo saca de las que no le corresponden;
    - en agosto borra las matrículas suspendidas.
