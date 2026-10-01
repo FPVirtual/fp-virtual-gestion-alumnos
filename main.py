@@ -248,42 +248,57 @@ def main():
         escribeEnFichero(filename_md, "- alumnoMoodle: " + str(alumnoMoodle) )
     
     ########################
-    # De cada alumno que esté en moodle y no en sigad miro si en moodle hay alguien con ese email
-    # - si hay alguien con ese email considero que es la misma persona a la que han actualizado de NIE a DNI en SIGAD y la actualizo
-    # TODO: Utilizar este bucle como ejemplo para las que su nombre ha cambiado
-    # - si no hay nadie con ese email considero que es una baja y lo suspendo
+    # De cada alumno que esté en moodle y no en sigad (por su documento) miro si en SIGAD hay alguien con su id_sigad
+    # - si lo hay es la misma persona a la que han cambiado el documento en SIGAD (de NIE a DNI, le han añadido
+    #   la letra que faltaba, han corregido un error...) y le actualizo el usuario en moodle
+    # - si no lo hay considero que es una baja y lo suspendo
     ########################
     print("## Alumnos que habría que actualizar su id:")
     escribeEnFichero(filename_md, "\n### Alumnos a los que se ha actualizado su login\n")
     escribeEnFichero(filename_md, get_date_time_for_humans() + "\n")
     alumnos_a_suspender = [ ] # los que no haya que actualizar son para suspender, irán aquí
+    usernames_moodle = { al['username'].lower().strip() for al in alumnos_moodle }
+    ids_suspendidos = { al['userid'] for al in alumnos_suspendidos }
     for alumnoMoodle in alumnos_en_moodle_pero_no_SIGAD:
         existe = False
         # comprobamos si existe por id_sigad
         for alumnoSIGAD in alumnos_sigad:
-            # Si el alumno ha pasado de un NIE a un DNI en SIGAD se lo actualizo el usuario en moodle
+            # Si al alumno le han cambiado el documento en SIGAD le actualizo el usuario en moodle
             if alumnoSIGAD.getIdAlumno() is not None \
-                    and alumnoSIGAD.getDocumento() is not None \
-                    and es_nie_valido(alumnoMoodle['username']) \
-                    and es_dni_valido(alumnoSIGAD.getDocumento()) \
+                    and alumnoSIGAD.getDocumento() not in (None, "") \
                     and alumnoMoodle['id_sigad'] not in (None, "") \
                     and str(alumnoMoodle['id_sigad']) == str(alumnoSIGAD.getIdAlumno()):
+                userid = alumnoMoodle['userid']
+                username_nuevo = alumnoSIGAD.getDocumento().lower().strip()
+                if username_nuevo in usernames_moodle:
+                    # ya hay otra cuenta con el documento nuevo (se creó antes de reconocer el cambio):
+                    # no se puede renombrar ésta, se queda como baja
+                    print("No se actualiza el login de '", repr(alumnoMoodle), "': ya existe el usuario '", username_nuevo, "'", sep="" )
+                    escribeEnFichero(filename_md, "- Al alumno con usuario de acceso " + alumnoMoodle['username'] + \
+                            " NO se le ha cambiado a " + alumnoSIGAD.getDocumento() + " porque ese usuario ya existe" + \
+                            " (id_sigad " + str(alumnoSIGAD.getIdAlumno()) + ").")
+                    break
                 existe = True
                 print("Alumno a actualizar su login por coincidencia de id_sigad: '", repr(alumnoMoodle),"'", sep="" )
                 print("habría que ponerle de login '", alumnoSIGAD.getDocumento(),"'", sep="" )
-                userid = alumnoMoodle['userid']
-                username_nuevo = alumnoSIGAD.getDocumento().lower().strip()
                 update_moodle_username(moodle, userid, username_nuevo)
+                usernames_moodle.add(username_nuevo)
                 num_alumnos_modificado_login = num_alumnos_modificado_login + 1
                 escribeEnFichero(filename_md, "- Al alumno que tenia usuario de acceso " + alumnoMoodle['username'] + \
                         " se le ha cambiado a " + alumnoSIGAD.getDocumento() + \
                         " (id_sigad " + str(alumnoSIGAD.getIdAlumno()) + ").")
+                if userid in ids_suspendidos:
+                    # estaba suspendido y el bucle de reactivación no lo ha encontrado por su documento
+                    reactiva_usuario( moodle, userid )
+                    escribeEnFichero(filename_md, "  - Estudiante '"+ userid + "' reactivado" )
+                    matricula_alumno_en_cohorte_alumnado(moodle, userid )
+                    num_alumnos_reactivados = num_alumnos_reactivados + 1
                 # Le envío email avisándolede su cambio de usuario 
                 usuario = username_nuevo # el login en Moodle va en minúsculas
                 oldUsuario = alumnoMoodle['username']
 
-                # Se envía al email de SIGAD: getEmailDominio() se calcula con la letra final del
-                # documento nuevo y no existe (su cuenta real sigue siendo la de Moodle, calculada con el NIE)
+                # Se envía al email de SIGAD: getEmailDominio() se calcula con el último carácter del
+                # documento nuevo y no existe (su cuenta real sigue siendo la de Moodle, calculada con el antiguo)
                 destinatario = "gestion@fpvirtualaragon.es"
                 if SUBDOMAIN == "www" and alumnoSIGAD.getEmailSigad():
                     destinatario = alumnoSIGAD.getEmailSigad().lower().strip()

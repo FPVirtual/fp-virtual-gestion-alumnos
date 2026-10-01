@@ -12,7 +12,7 @@ Son dos scripts: `main.py` hace todo el trabajo sobre Moodle y deja los correos 
 4. Transforma el JSON en objetos `Alumno` / `Centro` / `Ciclo` / `Modulo` (carpeta `classes/`).
 5. Compara con los usuarios de Moodle y, en este orden:
    - reactiva a los suspendidos que vuelven a figurar en SIGAD;
-   - actualiza el email cuando cambia en SIGAD y el nombre de usuario cuando un alumno pasa de NIE a DNI (lo reconoce por su `id_sigad`);
+   - actualiza el email cuando cambia en SIGAD y el nombre de usuario cuando a un alumno le cambian el documento en SIGAD: de NIE a DNI, la letra que faltaba, una corrección… (lo reconoce por su `id_sigad`; si ya existe otra cuenta con el documento nuevo no la renombra);
    - suspende a los que ya no figuran en SIGAD: primero sus matrículas y después les saca de sus cohortes;
    - suspende las matrículas en cursos que SIGAD ya no recoge (sin tocar las cohortes, porque sacar a un alumno de una cohorte borra su progreso);
    - crea los alumnos que no existen (si tienen nombre, apellidos, documento y email SIGAD), con un email corporativo que no tenga ya otra persona en Moodle, distinguida por su `id_sigad` (si está cogido se le añade un número: `agonzalezsm2@...`), los mete en la cohorte `alumnado` y les genera un correo de bienvenida con sus datos de acceso;
@@ -45,7 +45,7 @@ Las acciones sobre Moodle se hacen con **moosh** dentro del contenedor Docker de
 |---|---|---|---|
 | Bienvenida (usuario, contraseña y matrículas) | `nuevoUsuario.html` | email de SIGAD del alumno | `BIENVENIDA_TO` (o `gestion@fpvirtualaragon.es`) |
 | Matrículas añadidas | `matriculasAnadidas.html` | email de SIGAD del alumno | `BIENVENIDA_TO` (o `gestion@fpvirtualaragon.es`) |
-| Cambio de usuario (NIE → DNI) | `nombreUsuarioActualizado.html` | email corporativo del alumno | `gestion@fpvirtualaragon.es` |
+| Cambio de usuario (documento cambiado en SIGAD) | `nombreUsuarioActualizado.html` | email corporativo del alumno | `gestion@fpvirtualaragon.es` |
 | Informe de la ejecución (adjunta el informe y el CSV) | `informeAutomatizado.html` | cada dirección de `REPORT_TO` | igual |
 | Error en la ejecución | `haFalladoElInforme.html` | `gestion@fpvirtualaragon.es` | igual |
 
@@ -181,5 +181,5 @@ Los ficheros de `md/`, `json/` y `csvs/` y las carpetas de correos los crea `mai
   - los usuarios de sistema de Moodle, cuyos ids están en `usuarios_moodle_no_borrables` en `main.py` (los mismos en `www` y en `pre`);
   - el profesorado (usuarios que empiezan por `prof`).
 - Los cursos cuyo `shortname` no sigue el formato `centro-ciclo-materia` (p. ej. `profesorado`, `coordinacion`) se ignoran al revisar matrículas.
-- Los alumnos creados antes de que existiera el campo `id_sigad` no lo tienen relleno, así que no se les reconoce el cambio de NIE a DNI hasta que se rellene a mano.
+- Los alumnos creados antes de que existiera el campo `id_sigad` no lo tienen relleno, así que no se les reconoce el cambio de documento hasta que se rellene a mano.
 - Plantillas de correo (`templates/`): todas heredan de `base.html`, que tiene los estilos, la cabecera, el pie y un texto de previsualización oculto (bloque `preheader`, que cada plantilla define). Para incluir un logo, guárdalo como `templates/img/logo.png`: se incrusta en el correo sin aparecer como adjunto (si no existe, se muestra el texto "FP virtual Aragón").
