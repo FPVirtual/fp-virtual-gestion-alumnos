@@ -21,7 +21,7 @@ La aplicación se comunica con Moodle usando el protocolo **REST** sobre HTTPS, 
 Dependiendo de la estrategia de extracción configurada, las llamadas serán:
 
 - `MOODLE_SOURCE_STRATEGY=api-course-based`: una llamada a `core_course_get_courses` y una llamada a `core_enrol_get_enrolled_users` por cada curso.
-- `MOODLE_SOURCE_STRATEGY=api-snapshot`: una única llamada a `local_fparagon_get_snapshot`, que requiere el plugin propio `local_fparagon` instalado en Moodle.
+- `MOODLE_SOURCE_STRATEGY=api-snapshot`: una única llamada a `local_fpvirtual_gestion_alumnado_get_snapshot`, que requiere el plugin propio `local_fpvirtual_gestion_alumnado` instalado en Moodle.
 
 ---
 
@@ -138,7 +138,7 @@ Se recomienda crear un **usuario de sistema dedicado** y un **servicio web exter
    | `core_cohort_search_cohorts` | Buscar cohortes por nombre |
    | `core_cohort_add_cohort_members` | Añadir usuario a cohorte |
    | `core_cohort_delete_cohort_members` | Eliminar usuario de cohorte |
-   | `local_fparagon_get_snapshot` | **Solo si usas `api-snapshot`** y tienes el plugin instalado |
+   | `local_fpvirtual_gestion_alumnado_get_snapshot` | **Solo si usas `api-snapshot`** y tienes el plugin instalado |
 
 5. En **Usuarios autorizados**, añade el usuario `svc-fpvirtual-gestion`.
 
@@ -280,7 +280,7 @@ VALUES
 (5, 'core_cohort_delete_cohort_members');
 ```
 
-Añade también `local_fparagon_get_snapshot` si vas a usar la estrategia `api-snapshot` y tienes el plugin instalado.
+Añade también `local_fpvirtual_gestion_alumnado_get_snapshot` si vas a usar la estrategia `api-snapshot` y tienes el plugin instalado.
 
 ### 4.8. Autorizar al usuario en el servicio
 
@@ -325,21 +325,27 @@ Si alguno de estos campos no existe, las operaciones de creación/actualización
 
 ---
 
-## 6. Plugin `local_fparagon` (estrategia `api-snapshot`)
+## 6. Plugin `fpvirtual_gestion_alumnado` (estrategia `api-snapshot`)
 
-La estrategia `api-snapshot` requiere que el plugin `local_fparagon` esté instalado en Moodle y exponga la función `local_fparagon_get_snapshot`. En la estructura actual del repositorio, el plugin está especificado pero **no implementado**.
+La estrategia `api-snapshot` requiere que el plugin `fpvirtual_gestion_alumnado`
+(componente `local_fpvirtual_gestion_alumnado`) esté instalado en Moodle y
+exponga la función `local_fpvirtual_gestion_alumnado_get_snapshot`. El plugin
+está implementado en `moodle_plugin/fpvirtual_gestion_alumnado/` e incluye,
+además del snapshot, un panel de administración para lanzar el proceso en
+dry-run/apply, programarlo por cron y consultar logs y estado (ver
+[`roadmap-plugin-fpvirtual_gestion_alumnado.md`](roadmap-plugin-fpvirtual_gestion_alumnado.md)).
 
-### Instalación prevista
+### Instalación
 
 ```bash
-cp -r moodle_plugin/local_fparagon /ruta/a/moodle/local/
+cp -r moodle_plugin/fpvirtual_gestion_alumnado /ruta/a/moodle/local/fpvirtual_gestion_alumnado
 ```
 
 Una vez copiado, accede a `Administración del sitio > Notificaciones` para completar la instalación.
 
 ### Funciones a añadir al servicio web
 
-Si el plugin estuviera implementado, habría que añadir `local_fparagon_get_snapshot` al servicio web creado en el paso 3.6.
+Añade `local_fpvirtual_gestion_alumnado_get_snapshot` al servicio web creado en el paso 3.6.
 
 ---
 
@@ -395,6 +401,6 @@ Si obtienes un error de permisos (`accessexception`, `nopermissions`), revisa:
 | `Invalid token` | Token incorrecto o revocado | Regenera el token en Moodle |
 | `accessexception` | El usuario no está autorizado en el servicio | Añade el usuario en **Usuarios autorizados** |
 | `nopermissions` | Falta alguna capacidad en el rol | Revisa las capacidades del paso 3.4 |
-| `functionnotavailable` | La función no está en el servicio o no existe | Añádela al servicio; si es `local_fparagon_get_snapshot`, instala el plugin |
+| `functionnotavailable` | La función no está en el servicio o no existe | Añádela al servicio; si es `local_fpvirtual_gestion_alumnado_get_snapshot`, instala el plugin |
 | `errorcoursecontextnotvalid` o similar al matricular | El método de matriculación manual está deshabilitado en el curso | Habilita la matriculación manual en el curso |
 | Los campos personalizados no se actualizan | No existen en Moodle o los nombres cortos no coinciden | Crea los campos con los nombres exactos del paso 5 |

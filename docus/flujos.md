@@ -236,7 +236,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[MoodleSource.extract_all] --> B[local_fparagon_get_snapshot<br/>1 llamada]
+    A[MoodleSource.extract_all] --> B[local_fpvirtual_gestion_alumnado_get_snapshot<br/>1 llamada]
     B --> C{¿Plugin instalado?}
     C -->|Sí| D[Parsear JSON<br/>usuarios + matriculas]
     C -->|No| E[Lanzar MoodleError]

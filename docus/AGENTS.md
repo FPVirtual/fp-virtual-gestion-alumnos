@@ -36,7 +36,7 @@
 1. **Extracción SIGAD** (`EstudianteRepository`) — API REST real, 100% funcional.
 2. **Extracción Moodle** (`MoodleSource`) — abstracta, múltiples implementaciones:
    - `APICourseBasedMoodleSource` — itera ~1000 cursos vía API REST
-   - `APISnapshotMoodleSource` — consume plugin PHP `local_fparagon` (1 llamada)
+   - `APISnapshotMoodleSource` — consume plugin PHP `local_fpvirtual_gestion_alumnado` (1 llamada)
 3. **Análisis** (`SyncAnalyzer`) — puro, sin dependencias de red. Usa DuckDB in-memory para comparar datasets y detectar deltas.
 4. **Carga Moodle** (`MoodleSink`) — abstracta, implementada por `APIMoodleRepository` y `MooshMoodleRepository`.
 
@@ -128,17 +128,18 @@ gestion_alumnos/
 └── data/
     └── usuarios_protegidos.csv   # IDs de usuarios no borrables (configurable por entorno)
 
-moodle_plugin/             # Especificación del plugin PHP local_fparagon
-└── local_fparagon/
-    ├── db/
-    │   └── services.php
+moodle_plugin/             # Plugin PHP fpvirtual_gestion_alumnado (snapshot + panel de admin)
+└── fpvirtual_gestion_alumnado/
+    ├── db/                # access.php, install.xml, services.php, tasks.php
     ├── classes/
-    │   └── external/
-    │       └── get_snapshot.php
-    ├── version.php
-    └── lang/
-        └── en/
-            └── local_fparagon.php
+    │   ├── external/get_snapshot.php   # local_fpvirtual_gestion_alumnado_get_snapshot
+    │   ├── runner.php                  # Lanza el proceso Python (manual y cron)
+    │   ├── run_store.php               # Historial de ejecuciones + logs
+    │   ├── task/                       # sync_task, adhoc_sync_task, cleanup_task
+    │   └── privacy/provider.php
+    ├── admin/             # launch.php, status.php, logs.php
+    ├── lang/en/, lang/es/
+    └── tests/external/get_snapshot_test.php
 
 archive/                   # Código legacy v0.2 (main.py, Util.py, Conexion.py, classes/)
 ```
@@ -348,9 +349,9 @@ Responde al comando CLI `process-emails`.
 - **Contras:** Lento para muchos cursos
 
 #### `APISnapshotMoodleSource` (requiere plugin PHP)
-- `extract_all()` → `local_fparagon_get_snapshot` (1 llamada)
+- `extract_all()` → `local_fpvirtual_gestion_alumnado_get_snapshot` (1 llamada)
 - **Pros:** Instantáneo, una sola llamada
-- **Contras:** Requiere instalar plugin `local_fparagon` en Moodle
+- **Contras:** Requiere instalar plugin `local_fpvirtual_gestion_alumnado` en Moodle
 
 ### MoodleSink implementations
 
@@ -523,7 +524,7 @@ Esto permite tener un CSV diferente por entorno (test, preproducción, producci�
 
 ## 13. Próximos Pasos Sugeridos
 
-1. **Implementar y desplegar el plugin PHP** `fpvirtual_gestion_alumnado` en Moodle (producción + preproducción) — ver [`roadmap-plugin-fpvirtual_gestion_alumnado.md`](roadmap-plugin-fpvirtual_gestion_alumnado.md): renombrado (`local_fparagon` → `fpvirtual_gestion_alumnado`), función webservice snapshot, panel de admin con lanzamiento dry-run manual, programación por cron (scheduled tasks), logs y estado de la última ejecución
+1. **Implementar y desplegar el plugin PHP** `fpvirtual_gestion_alumnado` en Moodle (producción + preproducción) — ver [`roadmap-plugin-fpvirtual_gestion_alumnado.md`](roadmap-plugin-fpvirtual_gestion_alumnado.md): renombrado (`local_fpvirtual_gestion_alumnado` → `fpvirtual_gestion_alumnado`), función webservice snapshot, panel de admin con lanzamiento dry-run manual, programación por cron (scheduled tasks), logs y estado de la última ejecución
 2. **Tests de integración** para `APICourseBasedMoodleSource` y `APISnapshotMoodleSource`
 3. **Tests end-to-end** del `SyncOrchestrator` con mocks completos
 4. **Mejorar `SyncApplier`** con batching de matrículas y reintentos

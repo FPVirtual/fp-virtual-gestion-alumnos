@@ -355,7 +355,7 @@ class MooshMoodleRepository(MoodleRepository):
         """
         raise NotImplementedError(
             "suspend_enrolment no está implementado para driver=moosh. "
-            "Requiere plugin local_fparagon o SQL directo."
+            "Requiere plugin local_fpvirtual_gestion_alumnado o SQL directo."
         )
 
     def reactivate_enrolment(self, username: str, course_id: str) -> bool:
@@ -366,7 +366,7 @@ class MooshMoodleRepository(MoodleRepository):
         """
         raise NotImplementedError(
             "reactivate_enrolment no está implementado para driver=moosh. "
-            "Requiere plugin local_fparagon o SQL directo."
+            "Requiere plugin local_fpvirtual_gestion_alumnado o SQL directo."
         )
 
     def remove_user_from_cohort(self, username: str, cohort_name: str) -> bool:
@@ -380,5 +380,5 @@ class MooshMoodleRepository(MoodleRepository):
         except MoodleError as e:
             raise NotImplementedError(
                 "cohort-unenrol no disponible en esta versión de moosh. "
-                "Requiere plugin local_fparagon."
+                "Requiere plugin local_fpvirtual_gestion_alumnado."
             ) from e

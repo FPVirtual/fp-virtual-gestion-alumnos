@@ -1,8 +1,11 @@
 # Roadmap — Plugin Moodle `fpvirtual_gestion_alumnado`
 
 > **Fecha:** 2026-10-29
-> **Estado:** ⬜ No iniciado (especificación previa; el directorio
-> `moodle_plugin/` está vacío en el repo).
+> **Estado (2026-10-29):** implementadas las fases 1–5 y la 6.1/6.3/6.4
+> (código PHP completo en `moodle_plugin/fpvirtual_gestion_alumnado/`,
+> cliente Python renombrado, docs actualizadas). **Pendiente:** CI con
+> `moodle-plugin-ci` (6.2) y el despliegue real en preproducción/producción
+> (Fase 7), que requiere acceso a los servidores Moodle.
 > **Objetivo:** Implementar y desplegar el plugin PHP que complementa al
 > zipapp Python: por un lado expone el *snapshot* vía webservice (lo que hoy
 > ya consume `APISnapshotMoodleSource`), y por otro da a los administradores
@@ -53,7 +56,7 @@ auditoría** del proceso; el cerebro sigue siendo el zipapp Python.
 
 ---
 
-## Fase 1 — Renombrado, esqueleto y función webservice snapshot ⬜
+## Fase 1 — Renombrado, esqueleto y función webservice snapshot ✅ IMPLEMENTADO
 
 Base sobre la que se construye todo lo demás. Al terminar, la estrategia
 `api-snapshot` deja de estar limitada por "plugin no instalado".
@@ -73,7 +76,7 @@ orquestador genera el informe igual que con `api-course-based`.
 
 ---
 
-## Fase 2 — Configuración de administración (settings) ⬜
+## Fase 2 — Configuración de administración (settings) ✅ IMPLEMENTADO
 
 Página de configuración del plugin (`Administración del sitio > Plugins >
 Local > FP Virtual Gestión Alumnado`) con los ajustes que condicionan el
@@ -94,7 +97,7 @@ timeout > 0).
 
 ---
 
-## Fase 3 — Lanzamiento manual: botón "Ejecutar ahora" con dry-run ⬜
+## Fase 3 — Lanzamiento manual: botón "Ejecutar ahora" con dry-run ✅ IMPLEMENTADO
 
 Permite a un admin **verificar el funcionamiento** sin esperar al cron y
 sin aplicar cambios.
@@ -112,7 +115,7 @@ proceso.
 
 ---
 
-## Fase 4 — Programación por cron (scheduled task) ⬜
+## Fase 4 — Programación por cron (scheduled task) ✅ IMPLEMENTADO
 
 Configuración de **cuándo** se lanza el proceso, usando el sistema nativo de
 tareas programadas de Moodle (los admins ya saben gestionarlo y se ve en
@@ -131,7 +134,7 @@ Moodle la lanza a esa hora en el modo configurado.
 
 ---
 
-## Fase 5 — Logs, historial y estado de la última ejecución ⬜
+## Fase 5 — Logs, historial y estado de la última ejecución ✅ IMPLEMENTADO
 
 La parte de **auditoría**: que cualquier admin vea de un vistazo si el
 proceso va bien y pueda revisar el detalle.
@@ -152,7 +155,7 @@ leer el log completo de cualquiera sin salir de Moodle.
 
 ---
 
-## Fase 6 — Tests, CI y documentación ⬜
+## Fase 6 — Tests, CI y documentación 🟡 (tests y docs hechos; CI pendiente)
 
 | # | Tarea | Detalle |
 |---|-------|---------|
@@ -163,7 +166,7 @@ leer el log completo de cualquiera sin salir de Moodle.
 
 ---
 
-## Fase 7 — Despliegue y activación ⬜
+## Fase 7 — Despliegue y activación ⬜ PENDIENTE
 
 | # | Tarea | Detalle |
 |---|-------|---------|

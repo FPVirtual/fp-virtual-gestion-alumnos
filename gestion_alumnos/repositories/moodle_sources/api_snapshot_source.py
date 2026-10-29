@@ -1,7 +1,7 @@
-"""MoodleSource que consume el plugin PHP local_fparagon.
+"""MoodleSource que consume el plugin PHP local_fpvirtual_gestion_alumnado.
 
-Requiere que esté instalado el plugin `local_fparagon` en Moodle,
-que expone la función REST `local_fparagon_get_snapshot`.
+Requiere que esté instalado el plugin `local_fpvirtual_gestion_alumnado` en Moodle,
+que expone la función REST `local_fpvirtual_gestion_alumnado_get_snapshot`.
 
 Con una sola llamada obtiene usuarios, cursos y matriculaciones.
 """
@@ -51,18 +51,18 @@ class APISnapshotMoodleSource(BaseMoodleSource):
     def extract_all(self) -> MoodleSnapshot:
         """Llama al plugin PHP y devuelve snapshot completo."""
         try:
-            result = self._repo._call("local_fparagon_get_snapshot", {})
+            result = self._repo._call("local_fpvirtual_gestion_alumnado_get_snapshot", {})
         except MoodleError as e:
             if "functionnotavailable" in str(e).lower() or "invalidparameter" in str(e).lower():
                 raise MoodleError(
-                    mensaje="Plugin local_fparagon no instalado o función no disponible. "
+                    mensaje="Plugin local_fpvirtual_gestion_alumnado no instalado o función no disponible. "
                             "Despliega el plugin en Moodle o usa APICourseBasedMoodleSource.",
                     detalles=str(e),
                 ) from e
             raise
 
         if not isinstance(result, dict):
-            raise MoodleError(mensaje="Respuesta inesperada de local_fparagon_get_snapshot")
+            raise MoodleError(mensaje="Respuesta inesperada de local_fpvirtual_gestion_alumnado_get_snapshot")
 
         users_raw = result.get("usuarios", [])
         enrolments_raw = result.get("matriculas", [])

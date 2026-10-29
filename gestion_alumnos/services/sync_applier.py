@@ -345,7 +345,7 @@ class SyncApplier:
                 except Exception:
                     pass
                 logger.warning(
-                    "suspend_enrolment no implementado, se requiere plugin local_fparagon",
+                    "suspend_enrolment no implementado, se requiere plugin local_fpvirtual_gestion_alumnado",
                     username=delta.documento,
                 )
             except Exception as e:

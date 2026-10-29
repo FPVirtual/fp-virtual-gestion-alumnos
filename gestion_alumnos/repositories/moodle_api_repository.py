@@ -366,7 +366,7 @@ class APIMoodleRepository(MoodleRepository):
         Requiere plugin PHP custom o acceso directo a BD.
         """
         raise NotImplementedError(
-            "suspend_enrolment requiere plugin local_fparagon o SQL directo. "
+            "suspend_enrolment requiere plugin local_fpvirtual_gestion_alumnado o SQL directo. "
             "La API REST estándar no soporta suspender matrículas individuales."
         )
 
@@ -377,7 +377,7 @@ class APIMoodleRepository(MoodleRepository):
         Requiere plugin PHP custom o acceso directo a BD.
         """
         raise NotImplementedError(
-            "reactivate_enrolment requiere plugin local_fparagon o SQL directo. "
+            "reactivate_enrolment requiere plugin local_fpvirtual_gestion_alumnado o SQL directo. "
             "La API REST estándar no soporta reactivar matrículas individuales."
         )
 
@@ -418,6 +418,6 @@ class APIMoodleRepository(MoodleRepository):
             if "functionnotavailable" in str(e).lower() or "invalidparameter" in str(e).lower():
                 raise NotImplementedError(
                     "core_cohort_delete_cohort_members no disponible en este Moodle. "
-                    "Requiere plugin local_fparagon o moosh."
+                    "Requiere plugin local_fpvirtual_gestion_alumnado o moosh."
                 ) from e
             raise

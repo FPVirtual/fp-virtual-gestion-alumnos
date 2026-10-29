@@ -48,7 +48,7 @@ gestion_alumnos/
 ├── services/              # SyncAnalyzer, SyncApplier, SyncOrchestrator
 └── templates/             # Plantillas Jinja2 de email (base.html + includes + img/logo.png)
 
-moodle_plugin/             # Plugin PHP local_fparagon (para extracción snapshot)
+moodle_plugin/             # Plugin PHP fpvirtual_gestion_alumnado (snapshot + panel de admin)
 archive/                   # Código legacy v0.2
 ```
 
@@ -240,17 +240,17 @@ Para configurar Moodle y la aplicación cuando se usa `MOODLE_DRIVER=api`, consu
 
 Incluye los pasos en la interfaz web de Moodle, las sentencias SQL equivalentes, las funciones REST necesarias, las capacidades del rol de servicio y la verificación con `curl`.
 
-## Plugin PHP local_fparagon
+## Plugin PHP fpvirtual_gestion_alumnado
 
 Para usar la estrategia `api-snapshot`, instala el plugin en Moodle:
 
 ```bash
 # Copiar a Moodle
-cp -r moodle_plugin/local_fparagon /ruta/a/moodle/local/
+cp -r moodle_plugin/fpvirtual_gestion_alumnado /ruta/a/moodle/local/fpvirtual_gestion_alumnado
 # Instalar desde Administración de Moodle
 ```
 
-Expone `local_fparagon_get_snapshot` que devuelve usuarios + matriculaciones en una sola llamada.
+Expone `local_fpvirtual_gestion_alumnado_get_snapshot` que devuelve usuarios + matriculaciones en una sola llamada, y añade un panel de administración para lanzar el proceso en dry-run/apply, programarlo por cron y consultar logs y estado de la última ejecución. Ver `moodle_plugin/fpvirtual_gestion_alumnado/README.md`.
 
 ## Logging e Informes
 

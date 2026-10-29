@@ -162,17 +162,17 @@ class TestAPISnapshotMoodleSource:
         assert len(snapshot.courses) == 0  # snapshot no incluye cursos
         assert isinstance(snapshot.users[0], MoodleUserRecord)
         assert isinstance(snapshot.enrolments[0], MoodleEnrolmentRecord)
-        mock_repo._call.assert_called_once_with("local_fparagon_get_snapshot", {})
+        mock_repo._call.assert_called_once_with("local_fpvirtual_gestion_alumnado_get_snapshot", {})
 
     def test_extract_all_plugin_not_installed(self, mock_repo):
         mock_repo._call.side_effect = MoodleError(
             mensaje="error: functionnotavailable",
-            comando="local_fparagon_get_snapshot",
+            comando="local_fpvirtual_gestion_alumnado_get_snapshot",
         )
         source = APISnapshotMoodleSource(repo=mock_repo)
         with pytest.raises(MoodleError) as exc_info:
             source.extract_all()
-        assert "local_fparagon no instalado" in str(exc_info.value)
+        assert "local_fpvirtual_gestion_alumnado no instalado" in str(exc_info.value)
 
     def test_extract_all_unexpected_response(self, mock_repo):
         mock_repo._call.return_value = ["not", "a", "dict"]

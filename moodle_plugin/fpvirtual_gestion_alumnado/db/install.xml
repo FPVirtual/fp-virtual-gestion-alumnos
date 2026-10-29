@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/fpvirtual_gestion_alumnado/db" VERSION="20261029" COMMENT="XMLDB file for Moodle local/fpvirtual_gestion_alumnado plugin">
+  <TABLES>
+    <TABLE NAME="local_fpvirtual_gestion_alumnado_run" COMMENT="Historial de ejecuciones del proceso de sincronizacion">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="origen" TYPE="char" LENGTH="10" NOTNULL="true" DEFAULT="manual" COMMENT="manual o cron"/>
+        <FIELD NAME="modo" TYPE="char" LENGTH="10" NOTNULL="true" DEFAULT="dry" COMMENT="dry o apply"/>
+        <FIELD NAME="timestart" TYPE="int" LENGTH="10" NOTNULL="true" COMMENT="Inicio de la ejecucion (epoch)"/>
+        <FIELD NAME="timeend" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Fin de la ejecucion (epoch); NULL si sigue en curso"/>
+        <FIELD NAME="exitcode" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Codigo de salida del proceso; NULL si aun ejecutando"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="running" COMMENT="running, success o error"/>
+        <FIELD NAME="summary" TYPE="text" NOTNULL="false" COMMENT="Resumen JSON de la ejecucion (estadisticas)"/>
+        <FIELD NAME="logfile" TYPE="char" LENGTH="1333" NOTNULL="false" COMMENT="Ruta del fichero de log completo"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="timestart" UNIQUE="false" FIELDS="timestart"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>
