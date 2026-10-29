@@ -331,6 +331,22 @@ class MooshMoodleRepository(MoodleRepository):
         """MoodleSink alias."""
         return self.matricular_en_curso(username, course_id)
 
+    def unenrol_user_from_course(self, username: str, course_id: str) -> bool:
+        """MoodleSink alias."""
+        return self.desmatricular_de_curso(username, course_id)
+
+    def suspend_user(self, username: str) -> bool:
+        """MoodleSink alias."""
+        return self.suspender_usuario(username)
+
+    def reactivate_user(self, username: str) -> bool:
+        """MoodleSink alias."""
+        return self.reactivar_usuario(username)
+
+    def enrol_user_to_cohort(self, username: str, cohort_name: str) -> bool:
+        """MoodleSink alias."""
+        return self.matricular_en_cohorte(username, cohort_name)
+
     def suspend_enrolment(self, username: str, course_id: str) -> bool:
         """Suspende una matrícula individual.
 

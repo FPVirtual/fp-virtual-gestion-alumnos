@@ -2,10 +2,10 @@
 
 > **Rama:** `v0.3-estructura-paquete-con-logs`  
 > **Versión:** `0.4.1`  
-> **Tests:** `62/62 ✅`  
+> **Tests:** `129/129 ✅`  
 > **Propósito:** Paquete Python autocontenido para gestión de alumnos Moodle. Cero SQL directo.  
 > **Arquitectura:** Repository Pattern + Dependency Injection + Pydantic Settings + structlog + DuckDB  
-> **Última actualización:** Junio 2026
+> **Última actualización:** Octubre 2026 (portación curso2627)
 
 ---
 
@@ -174,13 +174,17 @@ SMTP_PORT=587
 SMTP_USER=...
 SMTP_PASSWORD=...
 SMTP_USE_TLS=true
+SMTP_TIMEOUT=30
+EMAIL_PAUSA_SEGUNDOS=2
+EMAIL_MAX_INTENTOS=3
+# BIENVENIDA_TO=gestion@fpvirtualaragon.es
 
 # Modo de envío de emails
 EMAIL_MODE=direct   # "direct" = SMTP inmediato | "queue" = CSV para procesamiento externo
 
 # Reportes
 REPORT_TO="email1@ejemplo.com email2@ejemplo.com"
-MAX_EMAILS_DIARIOS=10
+MAX_EMAILS_DIARIOS=1000   # en producción (www); en otros entornos el límite es 10
 
 # Seguridad — CSV de usuarios protegidos (uno por entorno si es necesario)
 USUARIOS_PROTEGIDOS_CSV=gestion_alumnos/data/usuarios_protegidos.csv
@@ -366,9 +370,15 @@ Métodos adicionales (no en el protocolo base):
 
 Formato del CSV (`csvs/email_queue.csv`):
 ```csv
-id,template_name,recipient,subject,template_data,status,created_at,sent_at,error
-uuid-1,nuevoUsuario.html,juan@ejemplo.com,FP virtual...,{"nombre":"Juan",...},pending,2026-06-05T10:00:00,,
+id,template_name,recipient,subject,template_data,status,intentos,tipo,created_at,sent_at,error
+uuid-1,nuevoUsuario.html,juan@ejemplo.com,FP virtual...,{"nombre":"Juan",...},pending,0,aviso,2026-06-05T10:00:00,,
 ```
+
+- `tipo`: `aviso` o `informe` — los informes se procesan antes que los avisos.
+- `intentos`: fallos de envío acumulados; el email queda `pending` hasta
+  agotar `EMAIL_MAX_INTENTOS` (por defecto 3) y entonces pasa a `failed`.
+- `process-emails` admite `--solo-informes` y `--dry-run`, usa un bloqueo
+  `flock` por subdominio y sale con código 1 si hay fallos.
 
 ---
 
@@ -493,13 +503,13 @@ Esto permite tener un CSV diferente por entorno (test, preproducción, producci�
 | **SyncAnalyzer (DuckDB)** | ✅ | **6/6** |
 | MoodleSource (API Course-based) | ✅ | — |
 | MoodleSource (API Snapshot) | ✅ | Requiere plugin PHP |
-| SyncApplier | 🟡 Implementado | Pendiente tests |
-| SyncOrchestrator | ✅ | — |
+| SyncApplier | ✅ | Tests dedicados (`test_sync_applier.py`) |
+| SyncOrchestrator | ✅ | Incluye guarda de SIGAD vacío |
 | CLI (`--apply`, `--source-strategy`, `report`, `process-emails`) | ✅ | — |
 | ReportLogger (informes `.md`) | ✅ **Nuevo** | **6/6** |
 | Zipapp | ✅ | Funcional |
 
-**Total tests: 84/84 ✅**
+**Total tests: 129/129 ✅**
 
 ---
 
@@ -512,6 +522,8 @@ Esto permite tener un CSV diferente por entorno (test, preproducción, producci�
 5. ~~**Generar informes Markdown** del `SyncReport`~~ ✅ Completado (`ReportLogger` + `SyncReport.to_markdown()`)
 6. ~~**Cola de emails en CSV**~~ ✅ Completado (`EmailQueueRepository` + `EmailQueueProcessor`)
 7. **Tag `v0.4.1`** y merge a `main`
+8. ~~**Portar mejoras de `curso2627`**~~ ✅ Lotes 1, 2, 4 y 5 completados el 2026-10-29 (ver [`roadmap-portacion-curso2627.md`](roadmap-portacion-curso2627.md)): SMTP timeout, texto plano, reintentos, prioridad de informes, lock, BIENVENIDA_TO, guard de colisión en renombres, reactivación de suspendidos y parada forzosa si SIGAD devuelve 0 alumnos
+9. ~~**Resolver hallazgos de la revisión de seguridad y calidad (2026-10-29)**~~ ✅ Resueltos en la portación: fallback de desmatriculación, apellido con `replace`, escape HTML en el render y SQL interpolado. **Pendiente: token de API commiteado en `tests/test_moodle_api_integration.py` y `.env.test`** (revocar/rotar y purgar historial) y migración de plantillas a Jinja2 (lote 3) — ver [`revision-seguridad-calidad-v0.3.md`](revision-seguridad-calidad-v0.3.md)
 
 ---
 

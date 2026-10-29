@@ -60,6 +60,15 @@ class EnrolmentDelta(BaseModel):
     course_id: int | None = None
 
 
+class ReactivationDelta(BaseModel):
+    """Usuario suspendido en Moodle que vuelve a estar activo en SIGAD.
+
+    Hay que reactivar su cuenta y devolverlo a la cohorte de alumnado.
+    """
+
+    user: MoodleUserRecord
+
+
 class SyncReport(BaseModel):
     """Reporte completo de diferencias entre SIGAD y Moodle."""
 
@@ -70,6 +79,7 @@ class SyncReport(BaseModel):
     email_changes: list[EmailChangeDelta] = Field(default_factory=list)
     name_changes: list[NameChangeDelta] = Field(default_factory=list)
     username_changes: list[UsernameChangeDelta] = Field(default_factory=list)
+    reactivations: list[ReactivationDelta] = Field(default_factory=list)
     new_enrolments: list[EnrolmentDelta] = Field(default_factory=list)
     removed_enrolments: list[EnrolmentDelta] = Field(default_factory=list)
 
@@ -82,6 +92,7 @@ class SyncReport(BaseModel):
             self.email_changes,
             self.name_changes,
             self.username_changes,
+            self.reactivations,
             self.new_enrolments,
             self.removed_enrolments,
         ])
@@ -100,6 +111,7 @@ class SyncReport(BaseModel):
             f"| Cambios de email | {len(self.email_changes)} |",
             f"| Cambios de nombre/apellidos | {len(self.name_changes)} |",
             f"| Cambios de username (DNI/NIE) | {len(self.username_changes)} |",
+            f"| Reactivaciones | {len(self.reactivations)} |",
             f"| Nuevas matrículas | {len(self.new_enrolments)} |",
             f"| Matrículas eliminadas | {len(self.removed_enrolments)} |",
         ]
@@ -140,6 +152,13 @@ class SyncReport(BaseModel):
             lines.extend(["", "## Cambios de username (DNI/NIE)", ""])
             for delta in self.username_changes:
                 lines.append(f"- `{delta.old_username}` → `{delta.new_documento}` — email: {delta.email or 'N/A'}")
+
+        # Reactivaciones
+        if self.reactivations:
+            lines.extend(["", "## Reactivaciones: usuarios que vuelven a SIGAD", ""])
+            for delta in self.reactivations:
+                u = delta.user
+                lines.append(f"- `{u.username}` — {u.firstname} {u.lastname} — id: {u.id}")
 
         # Nuevas matrículas
         if self.new_enrolments:

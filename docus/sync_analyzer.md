@@ -528,9 +528,10 @@ Esto es el comportamiento esperado y seguro.
 | 2 | **Bajas** | `moodle LEFT JOIN sigad` | `sigad.documento IS NULL` + no protegido | Documento normalizado |
 | 3 | **Email** | `sigad INNER JOIN moodle` | `email` personal diferente del custom field `emailsigad` (case-insensitive) | Documento normalizado |
 | 4 | **Nombre** | `sigad INNER JOIN moodle` | `nombre` o `apellidos` diferente | Documento normalizado |
-| 5 | **Username** | `moodle INNER JOIN sigad` | `username <> documento` cruzado por **IdSIGAD** | IdSIGAD (id_alumno) |
-| 6 | **Matrículas nuevas** | `sigad_enrol LEFT JOIN moodle_enrol` | `moodle.course_id IS NULL` | Documento + siglas módulo |
-| 7 | **Matrículas eliminadas** | `moodle_enrol LEFT JOIN sigad_enrol` | `sigad.documento IS NULL` | Documento + siglas módulo |
+| 5 | **Username** | `moodle INNER JOIN sigad` | `username <> documento` cruzado por **IdSIGAD**; se omite si el username nuevo ya existe en Moodle (colisión) | IdSIGAD (id_alumno) |
+| 6 | **Reactivaciones** | `moodle INNER JOIN sigad` | `m.suspended = 1` y el usuario está presente en SIGAD (por documento o IdSIGAD) | Documento + IdSIGAD |
+| 7 | **Matrículas nuevas** | `sigad_enrol LEFT JOIN moodle_enrol` | `moodle.course_id IS NULL` | Documento + siglas módulo |
+| 8 | **Matrículas eliminadas** | `moodle_enrol LEFT JOIN sigad_enrol` | `sigad.documento IS NULL` | Documento + siglas módulo |
 
 ### Matriz de decisión
 

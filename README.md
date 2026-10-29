@@ -7,7 +7,7 @@ Aplicación para la gestión automática del alumnado en **CampusDigitalFP** (Mo
 | Métrica | Valor |
 |---------|-------|
 | Versión | `0.4.1` |
-| Tests | **84/84 ✅** |
+| Tests | **129/129 ✅** |
 | Python | `3.10+` |
 | Distribución | Poetry + zipapp (`.pyz`) |
 
@@ -22,7 +22,10 @@ Aplicación para la gestión automática del alumnado en **CampusDigitalFP** (Mo
 - **Dual estrategia de extracción**: `api-course-based` (itera cursos) o `api-snapshot` (plugin PHP)
 - **Dry-run por defecto**: `sync` solo analiza; `sync --apply` escribe en Moodle
 - **Usuarios protegidos desde CSV**: configurable por entorno
-- **Cola de emails en CSV**: envío diferido vía `process-emails` para evitar límites SMTP
+- **Cola de emails en CSV**: envío diferido vía `process-emails` para evitar límites SMTP, con reintentos, prioridad de informes, lock concurrente y `--solo-informes`/`--dry-run`
+- **Notificaciones conectadas a la sync**: bienvenidas, cambios de usuario (NIE→DNI) y nuevas matrículas
+- **Reactivación de suspendidos**: los alumnos que vuelven a SIGAD se reactivan y reincorporan a la cohorte `alumnado`
+- **Guardas de seguridad**: parada forzosa si SIGAD devuelve 0 alumnos y omisión de renombres de usuario que colisionarían
 - **Report logging**: informes markdown con timestamp en `logs/`
 - **Zero SQL directo**
 - **Tests con mocks** (requests-mock, monkeypatch)

@@ -2,7 +2,7 @@
 
 > **Rama:** `v0.3-estructura-paquete-con-logs`  
 > **Versión actual:** `0.4.1`  
-> **Tests:** `62/62 ✅`  
+> **Tests:** `129/129 ✅` (tras portación curso2627, 2026-10-29)  
 > **Zipapp:** `dist/gestion_alumnos.pyz ✅`
 
 ---
@@ -36,7 +36,8 @@
 | 5 — Pipeline de sincronización | ✅ Completa | 6/6 SyncAnalyzer |
 | 6 — Report logging | ✅ Completa | 6/6 ReportLogger |
 | 7 — Cola de emails | ✅ Completa | 15/15 EmailQueue |
-| 8 — Tests | ✅ Completa | 84/84 |
+| 8 — Tests | ✅ Completa | 129/129 |
+| 9 — Portación curso2627 | ✅ Completa (lotes 1, 2, 4, 5) | 21 nuevos tests |
 | 9 — Zipapp | ✅ Completa | Funcional |
 | 10 — Documentación | ✅ Completa | — |
 
@@ -167,7 +168,7 @@
 | 8.11 | Tests `sync_analyzer.py` | ✅ | `test_sync_analyzer.py` — 6/6 |
 | 8.12 | Tests conformidad Protocols | ✅ | Verificado en `test_core_container.py` |
 
-**Resultado: 84/84 tests pasan** ✅
+**Resultado: 129/129 tests pasan** ✅ (108 previos + 21 de la portación de `curso2627`)
 
 ```bash
 pytest tests/ -v

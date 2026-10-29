@@ -216,6 +216,10 @@ class MoodleSink(Protocol):
         """Matricula un usuario en un curso."""
         ...
 
+    def unenrol_user_from_course(self, username: str, course_id: str) -> bool:
+        """Desmatricula (elimina la matrícula de) un usuario de un curso."""
+        ...
+
     def suspend_enrolment(self, username: str, course_id: str) -> bool:
         """Suspende la matrícula de un usuario en un curso."""
         ...

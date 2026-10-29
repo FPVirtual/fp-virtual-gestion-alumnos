@@ -238,3 +238,98 @@ class TestSyncAnalyzer:
         analyzer = SyncAnalyzer(registro_sigad, snapshot_moodle)
         report = analyzer.analyze()
         assert report.username_changes == []
+
+
+class TestSyncAnalyzerPortaciones:
+    """Valida las mejoras portadas desde curso2627."""
+
+    def test_reactivaciones_detectadas(self):
+        """Usuario suspendido en Moodle que sigue en SIGAD → reactivación."""
+        registro = Registro.model_validate({
+            "fecha": "15/12/2025",
+            "hora": "11:42:28",
+            "alumnos": [
+                {
+                    "idAlumno": 16839,
+                    "idTipoDocumento": 1,
+                    "documento": "78842153Q",
+                    "nombre": "Valeria",
+                    "apellido1": "Torres",
+                    "email": "valeria@ejemplo.com",
+                    "centros": [],
+                }
+            ],
+        })
+        snapshot = MoodleSnapshot(
+            users=[
+                MoodleUserRecord(
+                    id=101,
+                    username="78842153q",
+                    email="78842153q@fpvirtualaragon.es",
+                    firstname="Valeria",
+                    lastname="Torres",
+                    suspended=1,
+                    id_sigad=16839,
+                    email_sigad="valeria@ejemplo.com",
+                ),
+            ],
+            courses=[],
+            enrolments=[],
+        )
+        analyzer = SyncAnalyzer(registro, snapshot, usuarios_protegidos=set())
+        report = analyzer.analyze()
+
+        assert len(report.reactivations) == 1
+        assert report.reactivations[0].user.username == "78842153q"
+
+    def test_sin_reactivaciones_si_no_suspendidos(self, registro_sigad, snapshot_moodle):
+        analyzer = SyncAnalyzer(registro_sigad, snapshot_moodle)
+        report = analyzer.analyze()
+        assert report.reactivations == []
+
+    def test_username_change_omitido_si_colisiona(self):
+        """Si el username nuevo ya existe en Moodle, no se genera rename."""
+        registro = Registro.model_validate({
+            "fecha": "15/12/2025",
+            "hora": "11:42:28",
+            "alumnos": [
+                {
+                    "idAlumno": 99999,
+                    "idTipoDocumento": 1,
+                    "documento": "NEW12345Z",
+                    "nombre": "Pepe",
+                    "apellido1": "Viyuela",
+                    "email": "nuevo@ejemplo.com",
+                    "centros": [],
+                }
+            ],
+        })
+        snapshot = MoodleSnapshot(
+            users=[
+                # Usuario que debería renombrarse a NEW12345Z
+                MoodleUserRecord(
+                    id=201,
+                    username="old12345z",
+                    email="old12345z@fpvirtualaragon.es",
+                    firstname="Pepe",
+                    lastname="Viyuela",
+                    suspended=0,
+                    id_sigad=99999,
+                ),
+                # Pero NEW12345Z ya lo tiene otro usuario
+                MoodleUserRecord(
+                    id=202,
+                    username="new12345z",
+                    email="otro@ejemplo.es",
+                    firstname="Otro",
+                    lastname="Usuario",
+                    suspended=0,
+                ),
+            ],
+            courses=[],
+            enrolments=[],
+        )
+        analyzer = SyncAnalyzer(registro, snapshot, usuarios_protegidos=set())
+        report = analyzer.analyze()
+
+        assert report.username_changes == []

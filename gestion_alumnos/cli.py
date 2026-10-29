@@ -70,7 +70,17 @@ def crear_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("report", help="Generar informe sin modificar datos")
 
     # process-emails
-    subparsers.add_parser("process-emails", help="Procesar cola de emails pendientes")
+    emails_parser = subparsers.add_parser("process-emails", help="Procesar cola de emails pendientes")
+    emails_parser.add_argument(
+        "--solo-informes",
+        action="store_true",
+        help="Procesa solo los informes y deja los avisos pendientes",
+    )
+    emails_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Renderiza los emails pero no los envía ni cambia estados",
+    )
 
     return parser
 
@@ -144,17 +154,27 @@ def main(args: list[str] | None = None) -> int:
             report = orchestrator.run()
             logger.info("Informe generado", changes=report.has_changes)
             print(report.to_markdown())
-            if orchestrator._report_logger and orchestrator._report_logger.filename:
-                print(f"\n📄 Informe guardado en: {orchestrator._report_logger.filename}")
+            if orchestrator.report_filename:
+                print(f"\n📄 Informe guardado en: {orchestrator.report_filename}")
             return 0
 
         elif ns.comando == "process-emails":
             from gestion_alumnos.services.email_queue_processor import EmailQueueProcessor
+            from gestion_alumnos.utils.helpers import bloqueo_ejecucion
 
             processor = EmailQueueProcessor()
-            stats = processor.process_all()
+            lock_path = settings.csv_dir / f".{settings.subdomain}.lock"
+            try:
+                with bloqueo_ejecucion(lock_path):
+                    stats = processor.process_all(
+                        solo_informes=ns.solo_informes,
+                        dry_run=ns.dry_run,
+                    )
+            except RuntimeError as e:
+                logger.warning(str(e))
+                return 0
             print(f"\n📧 Emails procesados: {stats['enviados']} enviados, {stats['fallidos']} fallidos, {stats['saltados']} saltados")
-            return 0
+            return 1 if stats["fallidos"] else 0
 
         else:
             parser.print_help()

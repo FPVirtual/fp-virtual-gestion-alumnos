@@ -2,18 +2,24 @@
 
 Recibe un SyncReport y un MoodleSink, y ejecuta las operaciones
 necesarias en el orden correcto, con manejo de errores por bloque.
+
+Notifica por email los altas, cambios de username y nuevas matrículas
+cuando se le inyecta un EmailRepository.
 """
 
 from __future__ import annotations
 
 import secrets
 import string
+from collections.abc import Callable
 
 from gestion_alumnos.core.logging import get_logger
-from gestion_alumnos.models import SyncReport
-from gestion_alumnos.repositories.protocols import MoodleSink
+from gestion_alumnos.models import Alumno, SyncReport
+from gestion_alumnos.repositories.protocols import EmailRepository, MoodleSink
 
 logger = get_logger(__name__)
+
+COHORTE_ALUMNADO = "alumnado"
 
 
 def default_customfields(
@@ -48,11 +54,13 @@ class SyncApplier:
     """Aplica un SyncReport sobre Moodle mediante un MoodleSink.
 
     Orden de aplicación:
-      1. Altas (crear usuarios)
+      1. Altas (crear usuarios) + email de bienvenida
       2. Cambios de datos personales (email, nombre, username)
-      3. Nuevas matrículas
-      4. Matrículas eliminadas/suspendidas
-      5. Bajas (suspender usuarios no existentes en SIGAD)
+         + aviso de cambio de usuario
+      3. Reactivaciones (usuarios que vuelven a SIGAD)
+      4. Nuevas matrículas + aviso consolidado por alumno
+      5. Matrículas eliminadas/suspendidas
+      6. Bajas (suspender usuarios no existentes en SIGAD)
     """
 
     def __init__(
@@ -60,10 +68,14 @@ class SyncApplier:
         report: SyncReport,
         sink: MoodleSink,
         course_mapping: dict[str, str] | None = None,
+        email_repo: EmailRepository | None = None,
+        alumno_por_documento: Callable[[str], Alumno | None] | None = None,
     ) -> None:
         self._report = report
         self._sink = sink
         self._course_mapping = course_mapping or {}
+        self._email_repo = email_repo
+        self._alumno_por_documento = alumno_por_documento
 
     def apply(self) -> dict:
         """Ejecuta todas las operaciones y devuelve estadísticas."""
@@ -76,6 +88,8 @@ class SyncApplier:
             "names_updated_errors": [],
             "usernames_updated": 0,
             "usernames_updated_errors": [],
+            "users_reactivated": 0,
+            "users_reactivated_errors": [],
             "enrolments_created": 0,
             "enrolments_created_errors": [],
             "enrolments_removed": 0,
@@ -88,11 +102,65 @@ class SyncApplier:
         self._apply_email_changes(stats)
         self._apply_name_changes(stats)
         self._apply_username_changes(stats)
+        self._apply_reactivations(stats)
         self._apply_new_enrolments(stats)
         self._apply_removed_enrolments(stats)
         self._apply_removed_users(stats)
 
         return stats
+
+    # ------------------------------------------------------------------
+    # Notificaciones por email (nunca bloquean la sincronización)
+    # ------------------------------------------------------------------
+
+    def _notificar_bienvenida(self, alumno: Alumno, password: str) -> None:
+        if self._email_repo is None:
+            return
+        try:
+            matriculas = [
+                m.siglas for m in alumno.obtener_todos_modulos() if m.siglas
+            ]
+            self._email_repo.enviar_bienvenida_nuevo_usuario(
+                alumno, password, matriculas
+            )
+        except Exception as e:
+            logger.error(f"Error enviando bienvenida: {e}", username=alumno.username_moodle)
+
+    def _notificar_cambio_username(self, delta) -> None:
+        if self._email_repo is None:
+            return
+        try:
+            alumno = Alumno(
+                idAlumno=0,
+                idTipoDocumento=0,
+                documento=delta.new_documento,
+                email=delta.email,
+            )
+            self._email_repo.enviar_actualizacion_usuario(
+                alumno, delta.old_username
+            )
+        except Exception as e:
+            logger.error(
+                f"Error enviando aviso de cambio de usuario: {e}",
+                username=delta.old_username,
+            )
+
+    def _notificar_nuevas_matriculas(self, documento: str, matriculas: list[str]) -> None:
+        if self._email_repo is None or self._alumno_por_documento is None:
+            return
+        try:
+            alumno = self._alumno_por_documento(documento.upper())
+            if alumno is None:
+                return
+            self._email_repo.enviar_nuevas_matriculas(alumno, matriculas)
+        except Exception as e:
+            logger.error(
+                f"Error enviando aviso de matrículas: {e}", username=documento
+            )
+
+    # ------------------------------------------------------------------
+    # Operaciones
+    # ------------------------------------------------------------------
 
     def _apply_new_users(self, stats: dict) -> None:
         for delta in self._report.new_users:
@@ -110,7 +178,9 @@ class SyncApplier:
                     username=alumno.username_moodle,
                     email=alumno.email_institucional,
                     nombre=alumno.nombre or "",
-                    apellido=alumno.nombre_completo.replace(alumno.nombre or "", "").strip(),
+                    apellido=" ".join(
+                        filter(None, [alumno.apellido1, alumno.apellido2])
+                    ),
                     password=password,
                     customfields=customfields,
                 )
@@ -120,6 +190,7 @@ class SyncApplier:
                     username=alumno.username_moodle,
                     id_sigad=alumno.id_alumno,
                 )
+                self._notificar_bienvenida(alumno, password)
             except Exception as e:
                 stats["users_created_errors"].append(
                     f"{alumno.username_moodle}: {e}"
@@ -184,13 +255,34 @@ class SyncApplier:
                     old=delta.old_username,
                     new=delta.new_documento,
                 )
+                self._notificar_cambio_username(delta)
             except Exception as e:
                 stats["usernames_updated_errors"].append(
                     f"{delta.old_username}->{delta.new_documento}: {e}"
                 )
                 logger.error(f"Error actualizando username: {e}", old=delta.old_username)
 
+    def _apply_reactivations(self, stats: dict) -> None:
+        """Reactiva usuarios suspendidos que vuelven a estar en SIGAD."""
+        for delta in self._report.reactivations:
+            user = delta.user
+            try:
+                self._sink.reactivate_user(user.username)
+                self._sink.enrol_user_to_cohort(user.username, COHORTE_ALUMNADO)
+                stats["users_reactivated"] += 1
+                logger.info("Usuario reactivado", username=user.username)
+            except NotImplementedError as e:
+                stats["users_reactivated_errors"].append(f"{user.username}: {e}")
+                logger.warning(
+                    "Reactivación parcial: el sink no soporta alguna operación",
+                    username=user.username,
+                )
+            except Exception as e:
+                stats["users_reactivated_errors"].append(f"{user.username}: {e}")
+                logger.error(f"Error reactivando usuario: {e}", username=user.username)
+
     def _apply_new_enrolments(self, stats: dict) -> None:
+        matriculas_por_alumno: dict[str, list[str]] = {}
         for delta in self._report.new_enrolments:
             course_id = self._course_mapping.get(delta.course_shortname)
             if not course_id:
@@ -207,11 +299,17 @@ class SyncApplier:
                     username=delta.documento,
                     course=delta.course_shortname,
                 )
+                matriculas_por_alumno.setdefault(delta.documento, []).append(
+                    delta.course_shortname
+                )
             except Exception as e:
                 stats["enrolments_created_errors"].append(
                     f"{delta.documento} -> {delta.course_shortname}: {e}"
                 )
                 logger.error(f"Error matriculando: {e}", username=delta.documento)
+
+        for documento, matriculas in matriculas_por_alumno.items():
+            self._notificar_nuevas_matriculas(documento, matriculas)
 
     def _apply_removed_enrolments(self, stats: dict) -> None:
         for delta in self._report.removed_enrolments:
@@ -235,7 +333,15 @@ class SyncApplier:
             except NotImplementedError:
                 # Fallback: desmatricular completamente si no hay soporte para suspender
                 try:
-                    self._sink.enrol_user_to_course(delta.documento.lower(), str(course_id))
+                    self._sink.unenrol_user_from_course(
+                        delta.documento.lower(), str(course_id)
+                    )
+                    stats["enrolments_removed"] += 1
+                    logger.info(
+                        "Matrícula eliminada (suspend_enrolment no disponible)",
+                        username=delta.documento,
+                        course=delta.course_shortname,
+                    )
                 except Exception:
                     pass
                 logger.warning(

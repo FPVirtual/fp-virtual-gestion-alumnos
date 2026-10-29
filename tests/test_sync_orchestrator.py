@@ -333,3 +333,30 @@ class TestSyncOrchestratorApply:
         assert report.has_changes is False
         mock_moodle_sink.create_user.assert_not_called()
         mock_moodle_sink.update_user.assert_not_called()
+
+
+class TestGuardaSigadVacio:
+    """Portado desde curso2627 (commit 77e6352): abortar si SIGAD está vacío."""
+
+    def test_aborta_si_sigad_no_devuelve_alumnos(
+        self, mock_moodle_source, mock_moodle_sink
+    ):
+        from gestion_alumnos.core.exceptions import APIError
+        from gestion_alumnos.models import Registro
+
+        registro_vacio = Registro(fecha="15/12/2025", hora="11:42:28", alumnos=[])
+        sigad_repo = MagicMock()
+        sigad_repo.obtener_registro.return_value = registro_vacio
+
+        orchestrator = SyncOrchestrator(
+            sigad_repo=sigad_repo,
+            moodle_source=mock_moodle_source,
+            moodle_sink=mock_moodle_sink,
+            dry_run=False,
+        )
+        with pytest.raises(APIError, match="no ha devuelto alumnos"):
+            orchestrator.run()
+
+        # No se debe haber tocado nada de Moodle
+        mock_moodle_source.extract_all.assert_not_called()
+        mock_moodle_sink.suspend_user.assert_not_called()

@@ -29,7 +29,7 @@ class EmailQueueRepository:
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or Settings()
         self._csv_path = self._settings.csv_dir / "email_queue.csv"
-        self._limite = 1000 if self._settings.subdomain == "www" else 10
+        self._limite = self._settings.email_limit
 
     def _ensure_csv_dir(self) -> None:
         self._csv_path.parent.mkdir(parents=True, exist_ok=True)
@@ -62,6 +62,21 @@ class EmailQueueRepository:
                     count += 1
         return count
 
+    def _leer_jobs(self) -> list[EmailJob]:
+        """Lee todos los trabajos del CSV."""
+        if not self._csv_path.exists():
+            return []
+        with open(self._csv_path, "r", encoding="utf-8") as f:
+            return [EmailJob.from_csv_row(row) for row in csv.DictReader(f)]
+
+    def _escribir_jobs(self, jobs: list[EmailJob]) -> None:
+        """Reescribe el CSV completo con los trabajos dados."""
+        with open(self._csv_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=EmailJob.csv_header())
+            writer.writeheader()
+            for job in jobs:
+                writer.writerow(job.to_csv_row())
+
     # ------------------------------------------------------------------
     # Implementación del protocolo EmailRepository
     # ------------------------------------------------------------------
@@ -73,7 +88,6 @@ class EmailQueueRepository:
         matriculas: list[str],
     ) -> bool:
         """Encola email de bienvenida."""
-        matriculado_en_texto = "<br/>".join(matriculas)
         job = EmailJob(
             template_name="nuevoUsuario.html",
             recipient=alumno.email or "",
@@ -84,8 +98,8 @@ class EmailQueueRepository:
                 "subdomain": self._settings.subdomain,
                 "usuario": alumno.username_moodle,
                 "contrasena": password,
-                "matriculado_en_texto": matriculado_en_texto,
                 "email": alumno.email or "",
+                "matriculas": matriculas,
             },
         )
         self._append_job(job)
@@ -102,9 +116,12 @@ class EmailQueueRepository:
             recipient=alumno.email or "",
             subject="FP virtual - Aragón - Usuario actualizado",
             template_data={
+                "nombre": alumno.nombre or "",
+                "apellidos": f"{alumno.apellido1 or ''} {alumno.apellido2 or ''}".strip(),
                 "subdomain": self._settings.subdomain,
                 "usuario": alumno.username_moodle,
                 "oldUsuario": username_anterior,
+                "email": alumno.email_institucional or "",
             },
         )
         self._append_job(job)
@@ -116,7 +133,6 @@ class EmailQueueRepository:
         nuevas_matriculas: list[str],
     ) -> bool:
         """Encola notificación de nuevas matrículas."""
-        matriculado_en_texto = "<br/>".join(nuevas_matriculas)
         job = EmailJob(
             template_name="matriculasAnadidas.html",
             recipient=alumno.email or "",
@@ -125,7 +141,7 @@ class EmailQueueRepository:
                 "nombre": alumno.nombre or "",
                 "apellidos": f"{alumno.apellido1 or ''} {alumno.apellido2 or ''}".strip(),
                 "subdomain": self._settings.subdomain,
-                "matriculado_en_texto": matriculado_en_texto,
+                "matriculas": nuevas_matriculas,
             },
         )
         self._append_job(job)
@@ -144,6 +160,7 @@ class EmailQueueRepository:
                 template_name="_raw_html",
                 recipient=destinatario,
                 subject=asunto,
+                tipo="informe",
                 template_data={
                     "contenido_html": contenido,
                     "adjuntos": adjuntos or [],
@@ -160,17 +177,19 @@ class EmailQueueRepository:
     # Métodos adicionales para gestión de la cola
     # ------------------------------------------------------------------
 
-    def obtener_pendientes(self) -> list[EmailJob]:
-        """Devuelve todos los trabajos pendientes."""
-        if not self._csv_path.exists():
-            return []
-        pendientes: list[EmailJob] = []
-        with open(self._csv_path, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                job = EmailJob.from_csv_row(row)
-                if job.status == "pending":
-                    pendientes.append(job)
+    def obtener_pendientes(self, solo_informes: bool = False) -> list[EmailJob]:
+        """Devuelve los trabajos pendientes.
+
+        Los informes se devuelven antes que los avisos para que lleguen
+        cuanto antes. Con ``solo_informes=True`` solo se devuelven los
+        informes (útil tras un fallo de la sincronización).
+        """
+        pendientes = [
+            job for job in self._leer_jobs() if job.status == "pending"
+        ]
+        if solo_informes:
+            pendientes = [job for job in pendientes if job.tipo == "informe"]
+        pendientes.sort(key=lambda j: 0 if j.tipo == "informe" else 1)
         return pendientes
 
     def actualizar_estado(
@@ -184,44 +203,39 @@ class EmailQueueRepository:
         Reescribe el archivo completo. Dado que el CSV es pequeño
         (cientos de filas como mucho), esto es aceptable.
         """
-        if not self._csv_path.exists():
-            return
+        jobs = self._leer_jobs()
+        for job in jobs:
+            if job.id == job_id:
+                if status == "sent":
+                    job.mark_sent()
+                elif status == "failed":
+                    job.mark_failed(error or "")
+                else:
+                    job.status = "pending"
+                break
+        self._escribir_jobs(jobs)
 
-        jobs: list[EmailJob] = []
-        with open(self._csv_path, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                job = EmailJob.from_csv_row(row)
-                if job.id == job_id:
-                    job.status = status
-                    if status == "sent":
-                        job.mark_sent()
-                    elif status == "failed" and error:
-                        job.mark_failed(error)
-                jobs.append(job)
+    def registrar_fallo(self, job_id: str, error: str, max_intentos: int) -> bool:
+        """Registra un intento de envío fallido.
 
-        with open(self._csv_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=EmailJob.csv_header())
-            writer.writeheader()
-            for job in jobs:
-                writer.writerow(job.to_csv_row())
+        Returns:
+            True si se agotaron los intentos (estado ``failed``);
+            False si el email queda ``pending`` para reintentar.
+        """
+        jobs = self._leer_jobs()
+        agotado = False
+        for job in jobs:
+            if job.id == job_id:
+                agotado = job.registrar_intento(error, max_intentos)
+                break
+        self._escribir_jobs(jobs)
+        return agotado
 
     def obtener_estadisticas(self) -> dict:
         """Retorna estadísticas de la cola."""
-        if not self._csv_path.exists():
-            return {
-                "pendientes": 0,
-                "enviados": 0,
-                "fallidos": 0,
-                "limite": self._limite,
-                "disponibles": self._limite,
-            }
         counts = {"pending": 0, "sent": 0, "failed": 0}
-        with open(self._csv_path, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                status = row.get("status", "pending")
-                counts[status] = counts.get(status, 0) + 1
+        for job in self._leer_jobs():
+            counts[job.status] = counts.get(job.status, 0) + 1
         pendientes = counts["pending"]
         return {
             "pendientes": pendientes,

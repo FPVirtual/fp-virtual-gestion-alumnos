@@ -138,6 +138,7 @@ class DIContainer:
             settings=self._settings,
             dry_run=dry_run,
             report_logger=self.report_logger(),
+            email_repo=self.email_repository(),
         )
 
     # ==========================================

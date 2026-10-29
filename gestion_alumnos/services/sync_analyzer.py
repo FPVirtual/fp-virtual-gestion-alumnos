@@ -24,6 +24,7 @@ from gestion_alumnos.models import (
     NewUserDelta,
     Registro,
     RemovedUserDelta,
+    ReactivationDelta,
     SyncReport,
     UsernameChangeDelta,
 )
@@ -74,8 +75,15 @@ class SyncAnalyzer:
         self._snapshot = snapshot
         self._usuarios_protegidos = usuarios_protegidos or cargar_usuarios_protegidos()
         self._con = duckdb.connect(":memory:")
+        self._cargar_protegidos()
         self._cargar_sigad()
         self._cargar_moodle()
+
+    def _cargar_protegidos(self) -> None:
+        """Carga los IDs protegidos en una tabla para consultas seguras."""
+        ids = sorted(self._usuarios_protegidos)
+        df = pd.DataFrame({"id": pd.Series(ids, dtype="Int64")})
+        self._con.execute("CREATE OR REPLACE TABLE protegidos AS SELECT * FROM df")
 
     # ------------------------------------------------------------------
     # Carga en DuckDB
@@ -107,7 +115,14 @@ class SyncAnalyzer:
                             "id_materia": modulo.id_materia,
                             "siglas_modulo": modulo.siglas,
                         })
-        df_users = pd.DataFrame(usuarios)
+        df_users = pd.DataFrame(usuarios).astype({
+            "id_alumno": "Int64",
+            "id_tipo_documento": "Int64",
+            "nombre": "string",
+            "apellido1": "string",
+            "apellido2": "string",
+            "email": "string",
+        })
         if matriculas:
             df_enrol = pd.DataFrame(matriculas)
         else:
@@ -156,6 +171,9 @@ class SyncAnalyzer:
         df_users = pd.DataFrame(users).astype({
             "id_sigad": "Int64",
             "email_sigad": "string",
+            "email": "string",
+            "firstname": "string",
+            "lastname": "string",
         })
         if enrolments:
             df_enrol = pd.DataFrame(enrolments)
@@ -208,14 +226,13 @@ class SyncAnalyzer:
         IdSIGAD (el usuario podría haber cambiado de documento pero seguir
         estando en SIGAD con el mismo IdSIGAD).
         """
-        protegidos = ",".join(str(i) for i in self._usuarios_protegidos) if self._usuarios_protegidos else "-1"
-        df = self._con.execute(f"""
+        df = self._con.execute("""
             SELECT m.id, m.username, m.email, m.firstname, m.lastname, m.suspended
             FROM moodle_users m
             LEFT JOIN sigad_users s ON lower(s.documento) = m.username
             LEFT JOIN sigad_users s2 ON s2.id_alumno = m.id_sigad AND m.id_sigad IS NOT NULL
             WHERE s.documento IS NULL AND s2.id_alumno IS NULL
-              AND m.id NOT IN ({protegidos})
+              AND m.id NOT IN (SELECT id FROM protegidos)
         """).fetchdf()
 
         if df.empty:
@@ -303,6 +320,10 @@ class SyncAnalyzer:
         Buscamos pares donde el IdSIGAD coincida pero el username de Moodle
         no coincida con el documento actual de SIGAD. El IdSIGAD es inmutable
         y permite detectar cambios de DNI/NIE/pasaporte.
+
+        Si el username nuevo ya existe en Moodle (de otro usuario), se omite
+        el rename para no colisionar (la cuenta queda reflejada en el
+        informe como pendiente de resolución manual).
         """
         df = self._con.execute("""
             SELECT
@@ -313,6 +334,7 @@ class SyncAnalyzer:
             JOIN sigad_users s ON s.id_alumno = m.id_sigad
             WHERE m.username <> lower(s.documento)
               AND m.id_sigad IS NOT NULL
+              AND lower(s.documento) NOT IN (SELECT username FROM moodle_users)
         """).fetchdf()
 
         if df.empty:
@@ -322,6 +344,37 @@ class SyncAnalyzer:
                 old_username=row["old_username"],
                 new_documento=row["new_documento"],
                 email=row["email"] if pd.notna(row["email"]) else None,
+            )
+            for _, row in df.iterrows()
+        ]
+
+    def _find_reactivations(self) -> list[ReactivationDelta]:
+        """Usuarios suspendidos en Moodle que vuelven a estar en SIGAD.
+
+        Cuando un alumno se reincorpora, su usuario Moodle sigue existiendo
+        suspendido; hay que reactivarlo y devolverlo a la cohorte de alumnado.
+        """
+        df = self._con.execute("""
+            SELECT DISTINCT m.id, m.username, m.email, m.firstname, m.lastname, m.suspended
+            FROM moodle_users m
+            JOIN sigad_users s
+              ON lower(s.documento) = m.username
+              OR (m.id_sigad IS NOT NULL AND s.id_alumno = m.id_sigad)
+            WHERE m.suspended = 1
+        """).fetchdf()
+
+        if df.empty:
+            return []
+        return [
+            ReactivationDelta(
+                user=MoodleUserRecord(
+                    id=row["id"],
+                    username=row["username"],
+                    email=row["email"],
+                    firstname=row["firstname"],
+                    lastname=row["lastname"],
+                    suspended=row["suspended"],
+                )
             )
             for _, row in df.iterrows()
         ]
@@ -386,6 +439,7 @@ class SyncAnalyzer:
             email_changes=self._find_email_changes(),
             name_changes=self._find_name_changes(),
             username_changes=self._find_username_changes(),
+            reactivations=self._find_reactivations(),
             new_enrolments=self._find_new_enrolments(),
             removed_enrolments=self._find_removed_enrolments(),
         )
@@ -395,6 +449,7 @@ class SyncAnalyzer:
             f"{len(report.email_changes)} email_changes, "
             f"{len(report.name_changes)} name_changes, "
             f"{len(report.username_changes)} username_changes, "
+            f"{len(report.reactivations)} reactivaciones, "
             f"{len(report.new_enrolments)} matrículas nuevas, "
             f"{len(report.removed_enrolments)} matrículas eliminadas"
         )

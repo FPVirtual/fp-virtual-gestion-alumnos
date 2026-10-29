@@ -93,6 +93,22 @@ class Settings(BaseSettings):
         default=True,
         description="Usar TLS para conexión SMTP"
     )
+    smtp_timeout: int = Field(
+        default=30,
+        description="Timeout en segundos para la conexión SMTP"
+    )
+    email_pausa_segundos: int = Field(
+        default=2,
+        description="Pausa entre envíos de correo para no saturar el servidor"
+    )
+    email_max_intentos: int = Field(
+        default=3,
+        description="Máximo de intentos de envío antes de marcar un email como fallido"
+    )
+    bienvenida_to: str | None = Field(
+        default=None,
+        description="Destinatario alternativo para bienvenidas fuera del subdominio www"
+    )
 
     # ==========================================
     # Configuración Reportes
@@ -102,8 +118,8 @@ class Settings(BaseSettings):
         description="Lista de emails para reportes separados por espacios"
     )
     max_emails_diarios: int = Field(
-        default=10,
-        description="Límite de emails diarios según entorno"
+        default=1000,
+        description="Límite de emails diarios en producción (subdominio www)"
     )
 
     # ==========================================
@@ -211,8 +227,12 @@ class Settings(BaseSettings):
 
     @property
     def email_limit(self) -> int:
-        """Límite de emails según el entorno."""
-        return 1000 if self.subdomain == "www" else 10
+        """Límite de emails según el entorno.
+
+        En producción (www) se usa ``max_emails_diarios`` (configurable);
+        en el resto de entornos se limita a 10 para evitar envíos accidentales.
+        """
+        return self.max_emails_diarios if self.subdomain == "www" else 10
 
     def ensure_directories(self) -> None:
         """Crea los directorios necesarios si no existen."""

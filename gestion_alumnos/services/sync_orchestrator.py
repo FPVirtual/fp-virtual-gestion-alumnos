@@ -10,9 +10,11 @@ Coordina las cuatro capas:
 from __future__ import annotations
 
 from gestion_alumnos.core.config import Settings
+from gestion_alumnos.core.exceptions import APIError
 from gestion_alumnos.core.logging import ReportLogger, get_logger
 from gestion_alumnos.models import MoodleSnapshot, SyncReport
 from gestion_alumnos.repositories.protocols import (
+    EmailRepository,
     EstudianteRepository,
     MoodleSink,
     MoodleSource,
@@ -34,6 +36,7 @@ class SyncOrchestrator:
         settings: Settings | None = None,
         dry_run: bool = True,
         report_logger: ReportLogger | None = None,
+        email_repo: "EmailRepository | None" = None,
     ) -> None:
         self._sigad_repo = sigad_repo
         self._moodle_source = moodle_source
@@ -41,6 +44,14 @@ class SyncOrchestrator:
         self._settings = settings or Settings()
         self._dry_run = dry_run
         self._report_logger = report_logger
+        self._email_repo = email_repo
+
+    @property
+    def report_filename(self) -> str | None:
+        """Ruta del último informe generado (si hay ReportLogger)."""
+        if self._report_logger is not None:
+            return str(self._report_logger.filename)
+        return None
 
     def run(self) -> SyncReport:
         """Ejecuta el flujo completo.
@@ -54,6 +65,11 @@ class SyncOrchestrator:
         logger.info("Extrayendo datos de SIGAD...")
         registro = self._sigad_repo.obtener_registro()
         logger.info(f"SIGAD: {registro.total_alumnos} alumnos")
+        if registro.total_alumnos == 0:
+            raise APIError(
+                "SIGAD no ha devuelto alumnos; se aborta la sincronización "
+                "para evitar suspensiones masivas en Moodle"
+            )
 
         # 2. Extraer datos de Moodle
         logger.info("Extrayendo datos de Moodle...")
@@ -77,7 +93,13 @@ class SyncOrchestrator:
                 c.shortname: str(c.id)
                 for c in snapshot.courses
             }
-            applier = SyncApplier(report, self._moodle_sink, course_mapping)
+            applier = SyncApplier(
+                report,
+                self._moodle_sink,
+                course_mapping,
+                email_repo=self._email_repo,
+                alumno_por_documento=registro.buscar_por_documento,
+            )
             stats = applier.apply()
             logger.info(f"Estadísticas de aplicación: {stats}")
         elif self._dry_run:

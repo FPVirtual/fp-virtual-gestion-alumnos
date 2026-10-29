@@ -348,7 +348,7 @@ flowchart TD
     A[enviar_bienvenida_nuevo_usuario] --> B[_cargar_template<br/>nuevoUsuario.html]
     B --> C[Reemplazar placeholders<br/>nombre, apellidos, usuario, contraseña, módulos]
 
-    C --> D[_enviar destinatario, asunto, contenido]
+    C --> D[_enviar destinatario, asunto, contenido<br/>valores escapados con html.escape]
     D --> E[_verificar_limite]
     E --> F{¿emails_enviados<br/>>= limite?}
     F -->|Sí| G[Lanzar EmailLimitExceeded]
@@ -358,7 +358,7 @@ flowchart TD
     I -->|Sí| J[Usar email_real]
     I -->|No| K[Redirigir a<br/>gestion@fpvirtualaragon.es]
 
-    J --> L[Crear MIMEMultipart HTML]
+    J --> L[Crear EmailMessage<br/>texto plano + alternativa HTML]
     K --> L
     L --> M[Conectar SMTP<br/>starttls + login]
     M --> N[send_message]
@@ -377,6 +377,13 @@ flowchart TD
 ```
 
 Cuando `EMAIL_MODE=queue`, los emails no se envían por SMTP inmediatamente. En su lugar se escriben en `csvs/email_queue.csv` y se procesan posteriormente con el comando `process-emails`.
+
+Comportamiento portado desde `curso2627`:
+- Los **informes se procesan antes que los avisos** (campo `tipo` del `EmailJob`).
+- Un envío fallido **queda `pending` y se reintenta** hasta `EMAIL_MAX_INTENTOS` (por defecto 3); solo entonces pasa a `failed`.
+- `process-emails` admite `--solo-informes` (tras un fallo de la sync) y `--dry-run` (renderiza sin enviar).
+- La ejecución está **protegida con un lock `flock`** por subdominio contra ejecuciones concurrentes.
+- Entre envío y envío se espera `EMAIL_PAUSA_SEGUNDOS` (por defecto 2s) y el comando sale con **código 1 si hay fallos**.
 
 ```mermaid
 flowchart TD
@@ -398,7 +405,7 @@ flowchart TD
     A[enviar_bienvenida_nuevo_usuario] --> B[_cargar_template<br/>nuevoUsuario.html]
     B --> C[Reemplazar placeholders<br/>nombre, apellidos, usuario, contraseña, módulos]
 
-    C --> D[_enviar destinatario, asunto, contenido]
+    C --> D[_enviar destinatario, asunto, contenido<br/>valores escapados con html.escape]
     D --> E[_verificar_limite]
     E --> F{¿emails_enviados<br/>>= limite?}
     F -->|Sí| G[Lanzar EmailLimitExceeded]
@@ -408,7 +415,7 @@ flowchart TD
     I -->|Sí| J[Usar email_real]
     I -->|No| K[Redirigir a<br/>gestion@fpvirtualaragon.es]
 
-    J --> L[Crear MIMEMultipart HTML]
+    J --> L[Crear EmailMessage<br/>texto plano + alternativa HTML]
     K --> L
     L --> M[Conectar SMTP<br/>starttls + login]
     M --> N[send_message]
@@ -438,22 +445,24 @@ flowchart TD
     D -->|No| E[Log: cola vacía]
     D -->|Sí| F[Iterar EmailJobs]
 
+    A --> Z[Bloqueo flock<br/>.SUBDOMAIN.lock]
+
     F --> G{¿limite alcanzado?}
     G -->|Sí| H[Skip resto<br/>saltados++]
     G -->|No| I[Cargar template HTML]
-    I --> J[Renderizar con datos]
-    J --> K[EmailRepositoryImpl._enviar]
+    I --> J[Renderizar con datos<br/>valores escapados]
+    J --> K[EmailRepositoryImpl._enviar<br/>texto plano + HTML]
     K --> L{¿Éxito?}
-    L -->|Sí| M[actualizar_estado → sent]
-    L -->|No| N[actualizar_estado → failed]
+    L -->|Sí| M[actualizar_estado → sent<br/>pausa EMAIL_PAUSA_SEGUNDOS]
+    L -->|No| N[registrar_fallo<br/>pending hasta agotar<br/>EMAIL_MAX_INTENTOS]
 
     M --> O[enviados++]
-    N --> P[fallidos++]
+    N --> P[fallidos++ si agotado]
     H --> Q[Fin iteración]
     O --> Q
     P --> Q
 
-    Q --> R[Log estadísticas]
+    Q --> R[Log estadísticas<br/>exit 1 si fallidos]
 
     style A fill:#e3f2fd
     style R fill:#c8e6c9
