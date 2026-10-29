@@ -523,7 +523,7 @@ Esto permite tener un CSV diferente por entorno (test, preproducción, producci�
 
 ## 13. Próximos Pasos Sugeridos
 
-1. **Desplegar plugin PHP** `local_fparagon` en Moodle (producción + preproducción)
+1. **Implementar y desplegar el plugin PHP** `fpvirtual_gestion_alumnado` en Moodle (producción + preproducción) — ver [`roadmap-plugin-fpvirtual_gestion_alumnado.md`](roadmap-plugin-fpvirtual_gestion_alumnado.md): renombrado (`local_fparagon` → `fpvirtual_gestion_alumnado`), función webservice snapshot, panel de admin con lanzamiento dry-run manual, programación por cron (scheduled tasks), logs y estado de la última ejecución
 2. **Tests de integración** para `APICourseBasedMoodleSource` y `APISnapshotMoodleSource`
 3. **Tests end-to-end** del `SyncOrchestrator` con mocks completos
 4. **Mejorar `SyncApplier`** con batching de matrículas y reintentos
