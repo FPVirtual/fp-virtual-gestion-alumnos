@@ -55,9 +55,11 @@ if (!$run) {
     echo html_writer::tag('p', get_string('status:noruns', $component));
 } else {
     $estados = [
-        'success' => ['text' => get_string('status:success', $component), 'class' => 'badge badge-success'],
-        'error' => ['text' => get_string('status:error', $component), 'class' => 'badge badge-danger'],
-        'running' => ['text' => get_string('status:running', $component), 'class' => 'badge badge-warning'],
+        // Se incluyen las clases de Bootstrap 4 (badge-*) y Bootstrap 5
+        // (text-bg-*) para que el distintivo tenga color en Moodle 4.x y 5.x.
+        'success' => ['text' => get_string('status:success', $component), 'class' => 'badge badge-success text-bg-success'],
+        'error' => ['text' => get_string('status:error', $component), 'class' => 'badge badge-danger text-bg-danger'],
+        'running' => ['text' => get_string('status:running', $component), 'class' => 'badge badge-warning text-bg-warning'],
     ];
     $estado = $estados[$run->status] ?? $estados['running'];
 
