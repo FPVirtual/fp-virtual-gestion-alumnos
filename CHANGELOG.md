@@ -17,7 +17,12 @@
   - **Parada forzosa si SIGAD devuelve 0 alumnos**: se aborta la sincronización antes de tocar Moodle (evita suspensiones masivas).
   - **Aviso de cambio de usuario mejorado**: plantilla con saludo personalizado, párrafo "su correo no cambia este curso" y enlace a soporte.
 - **Emails conectados al flujo de sincronización**: `SyncApplier` recibe un `EmailRepository` (según `EMAIL_MODE`) y notifica altas (bienvenida), cambios de username y nuevas matrículas; los errores de email nunca bloquean la sync.
-- **Escape HTML en plantillas de email**: `gestion_alumnos/utils/plantillas.py` escapa los valores de SIGAD al renderizar (mitiga inyección HTML hasta la migración a Jinja2).
+- **Migración de plantillas de email a Jinja2** (lote 3, cierra la portación de `curso2627`):
+  - **Herencia de `base.html`**: las 5 plantillas usan bloques (`titulo`/`preheader`/`contenido`/`pie`) y `_aviso_automatico.html` como include; se elimina el layout duplicado.
+  - **Preheader oculto** en todos los correos (texto de previsualización de la bandeja de entrada); no aparece en la parte text/plain.
+  - **Logo incrustado** (`cid:logo`) con `add_related` en los emails; `base.html` muestra el logo o un texto de marca si no está disponible.
+  - **Render con autoescape de Jinja2** vía `DictLoader` cargado con `importlib.resources` (compatible con el zipapp); se eliminan `HTMLSeguro` y `matriculas_a_html`.
+  - Nueva dependencia: `jinja2>=3.1.0`. Nuevos tests en `tests/test_plantillas.py`.
 - **Custom fields en alta de usuarios**: al crear un usuario en Moodle se rellenan automáticamente los campos personalizados:
   - `IdSIGAD` → `idAlumno` de SIGAD.
   - `tipoDocumento` → `idTipoDocumento` de SIGAD.

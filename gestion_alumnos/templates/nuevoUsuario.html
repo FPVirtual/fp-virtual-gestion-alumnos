@@ -1,34 +1,67 @@
-<p>Bienvenido/a {nombre} {apellidos},</p>
+{% extends "base.html" %}
+{% block titulo %}Bienvenido/a a FP virtual Aragón{% endblock %}
+{% block preheader %}{{ nombre }}, aquí tiene sus datos de acceso a FP virtual Aragón: cuenta de correo, plataforma Moodle y matrículas.{% endblock %}
+{% block contenido %}
 
-<p>su cuenta se ha creado en https://{subdomain}.fpvirtualaragon.es/ y sus datos de acceso son los siguientes:</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#fff8db;border:1px solid #f0d878;border-radius:6px;padding:12px 16px;font-size:16px;color:#6b5900;">
+      <strong>IMPORTANTE:</strong> lea en detalle las instrucciones que se le proporcionan a continuación.
+    </td>
+  </tr>
+</table>
 
-<p>usuario: <b>{usuario}</b></p>
+<p>Bienvenido/a {{ nombre }} {{ apellidos }}.</p>
 
-<p>contraseña (es recomendable que la cambie): <b>{contrasena}</b></p>
+<p>Se le han creado las siguientes cuentas:</p>
 
-<p>También se le creará la cuenta <b>{email}</b> con contraseña (deberá cambiarla al acceder) <b>{contrasena}</b><br> Esta cuenta de correo es la que le dará acceso a las videoconferencias de la plataforma y también a la propia plataforma. <strong>La cuenta puede tardar hasta 72 horas lectivas en estar disponible</strong>.</p>
+<h1>Cuenta administrada de correo electrónico de Gmail: <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:inherit;color:#22303f;">{{ email }}</code></h1>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#fff8db;border:1px solid #f0d878;border-radius:6px;padding:12px 16px;font-size:16px;color:#6b5900;">
+      La cuenta puede tardar hasta 72 horas lectivas en estar disponible desde el envío de este mensaje.
+    </td>
+  </tr>
+</table>
+
+<p>Su contraseña (deberá cambiarla tras acceder la primera vez) es: <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:15px;color:#22303f;">{{ contrasena }}</code>.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#eaf2fb;border:1px solid #bcd6f0;border-radius:6px;padding:12px 16px;font-size:16px;color:#1a4971;">
+      Si en algún momento necesita recuperar la contraseña de está cuenta (<code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:15px;color:#22303f;">{{ email }}</code>) el correo de recuperación se enviará a la dirección de correo electrónico en la que está recibiendo este email.
+    </td>
+  </tr>
+</table>
+
+<p>Esta cuenta de correo es la que le dará acceso a las videoconferencias de la plataforma.</p>
+
+<h1>Cuenta de acceso a la plataforma Moodle de FP virtual Aragón (<a href="https://{{ subdomain }}.fpvirtualaragon.es/">{{ subdomain }}.fpvirtualaragon.es/</a>): <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:inherit;color:#22303f;">{{ usuario }}</code></h1>
+
+<p>Su contraseña (deberá cambiarla tras acceder la primera vez) es: <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:15px;color:#22303f;">{{ contrasena }}</code>.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+  <tr>
+    <td style="background:#eaf2fb;border:1px solid #bcd6f0;border-radius:6px;padding:12px 16px;font-size:16px;color:#1a4971;">
+      Puede recuperar la contraseña de la plataforma <a href="https://{{ subdomain }}.fpvirtualaragon.es/">{{ subdomain }}.fpvirtualaragon.es/</a> haciendo uso de su cuenta de correo de <code style="background:#eef1f4;border:1px solid #dde1e6;border-radius:4px;padding:2px 6px;font-family:Consolas,Menlo,Monaco,monospace;font-size:15px;color:#22303f;">{{ email }}</code> y el enlace <a href="https://{{ subdomain }}.fpvirtualaragon.es/login/forgot_password.php">{{ subdomain }}.fpvirtualaragon.es/login/forgot_password.php</a>.
+    </td>
+  </tr>
+</table>
+
+<p>El curso comienza el 1 de octubre, por lo que la creación de las cuentas del alumnado puede demorarse hasta dicha fecha. No todos los estudiantes serán dados de alta a la vez, se trata de un proceso paulatino.</p>
+
+<h1>Matriculaciones</h1>
 
 <p>Ha sido matriculado/a en:</p>
 
-<p>{matriculado_en_texto}</p>
+<ul>
+{% for matricula in matriculado_en %}  <li>{{ matricula }}</li>
+{% endfor %}</ul>
 
-<p>Puede recuperar su contraseña en cualquier momento a través de https://{subdomain}.fpvirtualaragon.es/login/forgot_password.php<br/>Dispone de un curso de ayuda dónde encontrar información sobre el uso de la plataforma en <a href="https://{subdomain}.fpvirtualaragon.es/course/view.php?id=654">https://{subdomain}.fpvirtualaragon.es/course/view.php?id=654</a></p>
+<h1>Si necesita ayuda...</h1>
 
-<p>No responda a esta cuenta de correo electrónico pues se trata de una cuenta automatizada no atendida. En caso de cualquier problema consulte con su coordinador/a de ciclo o acuda a la sección de <a href="https://{subdomain}.fpvirtualaragon.es/soporte/">ayuda/incidencias</a>.</p>
+<p>Dispone del curso Ayuda (al que puede acceder como usuario invitado) donde encontrar información sobre el uso de la plataforma en <a href="https://{{ subdomain }}.fpvirtualaragon.es/course/view.php?id=654">https://{{ subdomain }}.fpvirtualaragon.es/course/view.php?id=654</a>.</p>
 
-<p>Saludos</p>
-
-<p>------</p>
-
-<p>FP Virtual Aragón</p>
-
-<p>
-    <a href="https://www.instagram.com/campusdigitalfp/" target="_blank" ><img src="https://campusdigitalfp.com/wp-content/uploads/2023/11/logo-ig.png" alt="instagram" width="36" height="36"></a>
-
-    <a href="https://www.linkedin.com/company/campusdigitalfp/" target="_blank"><img src="https://campusdigitalfp.com/wp-content/uploads/2023/11/logo-lk.png" alt="" width="36" height="36"></a>
-
-    <a href="https://twitter.com/CampusDigitalFP" target="_blank"><img src="https://campusdigitalfp.com/wp-content/uploads/2023/11/logo-x.png" alt="logo x" width="36" height="36"></a>
-
-    <a href="https://www.youtube.com/@CampusDigitalFP" target="_blank"><img src="https://campusdigitalfp.com/wp-content/uploads/2024/06/logo-yt.png" alt="youtube logo" width="36" height="36"></a>
-</p>
-    
+{% include "_aviso_automatico.html" %}
+{% endblock %}

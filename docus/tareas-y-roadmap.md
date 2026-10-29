@@ -2,7 +2,7 @@
 
 > **Rama:** `v0.3-estructura-paquete-con-logs`  
 > **Versión actual:** `0.4.1`  
-> **Tests:** `129/129 ✅` (tras portación curso2627, 2026-10-29)  
+> **Tests:** `138/138 ✅` (tras portación curso2627 completa, 2026-10-29)  
 > **Zipapp:** `dist/gestion_alumnos.pyz ✅`
 
 ---
@@ -36,8 +36,8 @@
 | 5 — Pipeline de sincronización | ✅ Completa | 6/6 SyncAnalyzer |
 | 6 — Report logging | ✅ Completa | 6/6 ReportLogger |
 | 7 — Cola de emails | ✅ Completa | 15/15 EmailQueue |
-| 8 — Tests | ✅ Completa | 129/129 |
-| 9 — Portación curso2627 | ✅ Completa (lotes 1, 2, 4, 5) | 21 nuevos tests |
+| 8 — Tests | ✅ Completa | 138/138 |
+| 9 — Portación curso2627 | ✅ Completa (lotes 1, 2, 3, 4 y 5) | 30 nuevos tests |
 | 9 — Zipapp | ✅ Completa | Funcional |
 | 10 — Documentación | ✅ Completa | — |
 
@@ -163,12 +163,12 @@
 | 8.6 | Tests `moodle_moosh_repository.py` | ✅ | `test_repositories_moosh.py` — 3/3 |
 | 8.7 | Tests `moodle_api_repository.py` | ⬜ | Pendiente |
 | 8.8 | Tests `sigad_repository.py` | ✅ | `test_repositories_sigad.py` — 6/6 |
-| 8.9 | Tests `email_repository.py` | ⬜ | Pendiente |
+| 8.9 | Tests `email_repository.py` | ✅ | `test_plantillas.py` — 9/9 (render Jinja2, autoescape, logo cid) |
 | 8.10 | Tests `email_queue` | ✅ | `test_email_queue.py` — 15/15 |
 | 8.11 | Tests `sync_analyzer.py` | ✅ | `test_sync_analyzer.py` — 6/6 |
 | 8.12 | Tests conformidad Protocols | ✅ | Verificado en `test_core_container.py` |
 
-**Resultado: 129/129 tests pasan** ✅ (108 previos + 21 de la portación de `curso2627`)
+**Resultado: 138/138 tests pasan** ✅ (108 previos + 30 de la portación de `curso2627`, incluida la migración de plantillas a Jinja2)
 
 ```bash
 pytest tests/ -v

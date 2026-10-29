@@ -1,8 +1,8 @@
 # Sistema de Testing
 
 > **Última actualización:** Octubre 2026  
-> **Tests totales:** 129  
-> **Estado:** 129/129 ✅
+> **Tests totales:** 138  
+> **Estado:** 138/138 ✅
 
 ---
 
@@ -19,7 +19,8 @@
 - [8. Tests de SyncAnalyzer](#8-tests-de-syncanalyzer)
 - [9. Tests de Logging](#9-tests-de-logging)
 - [10. Tests de Email Queue](#10-tests-de-email-queue)
-- [11. Tests End-to-End del SyncOrchestrator](#11-tests-end-to-end-del-syncorchestrator)
+- [11. Tests de Plantillas de Email](#11-tests-de-plantillas-de-email)
+- [12. Tests End-to-End del SyncOrchestrator](#12-tests-end-to-end-del-syncorchestrator)
 - [Fixtures Principales](#fixtures-principales-testsconftestpy)
 - [Comandos Rápidos](#comandos-rápidos)
 
@@ -285,7 +286,22 @@ pytest tests/test_email_queue.py -v
 
 ---
 
-## 11. Tests End-to-End del SyncOrchestrator
+## 11. Tests de Plantillas de Email
+
+**Archivo:** `tests/test_plantillas.py`  
+**Tests:** 9
+
+Validan el render Jinja2: herencia de `base.html` (preheader oculto, pie), autoescape de datos de SIGAD, matrículas como lista y logo incrustado con `cid:logo`.
+
+| Test | Descripción |
+|------|-------------|
+| `TestRenderizadoPlantillas` | Estructura heredada, preheader personalizado, logo vs. fallback de texto |
+| `TestAutoescapeJinja` | Escape de `<script>` en nombre y matrículas; matrículas como `<li>` |
+| `TestLogoIncrustado` | `EmailRepositoryImpl._enviar` adjunta `image/png` con `Content-ID: <logo>` |
+
+---
+
+## 12. Tests End-to-End del SyncOrchestrator
 
 **Archivo:** `tests/test_sync_orchestrator.py`  
 **Tests:** 10

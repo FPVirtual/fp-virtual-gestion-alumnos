@@ -3,6 +3,7 @@
 import smtplib
 import ssl
 from email.message import EmailMessage
+from importlib import resources
 from pathlib import Path
 
 from gestion_alumnos.core.config import Settings
@@ -10,7 +11,7 @@ from gestion_alumnos.core.exceptions import EmailError, EmailLimitExceeded
 from gestion_alumnos.core.logging import get_logger
 from gestion_alumnos.models import Alumno
 from gestion_alumnos.utils.html_to_text import html_a_texto
-from gestion_alumnos.utils.plantillas import matriculas_a_html, renderizar_plantilla
+from gestion_alumnos.utils.plantillas import logo_disponible, renderizar_plantilla
 
 logger = get_logger(__name__)
 
@@ -29,11 +30,14 @@ class EmailRepositoryImpl:
         self._limite = self._settings.email_limit
 
     def _cargar_template(self, template_nombre: str, **kwargs: str) -> str:
-        """Carga una template HTML del paquete y reemplaza placeholders.
+        """Carga una template Jinja2 del paquete con el contexto dado.
 
-        Los valores se escapan para evitar inyección HTML con datos de SIGAD.
+        Jinja2 autoescapea los valores para evitar inyección HTML con datos
+        de SIGAD. ``logo`` indica a base.html si incrustar la imagen del logo.
         """
-        return renderizar_plantilla(template_nombre, **kwargs)
+        return renderizar_plantilla(
+            template_nombre, logo=logo_disponible(), **kwargs
+        )
 
     def _verificar_limite(self) -> None:
         """Verifica que no se haya alcanzado el límite."""
@@ -82,6 +86,19 @@ class EmailRepositoryImpl:
             msg["To"] = destinatario
             msg.set_content(html_a_texto(contenido_html))
             msg.add_alternative(contenido_html, subtype="html")
+            if logo_disponible():
+                logo = (
+                    resources.files("gestion_alumnos.templates")
+                    / "img"
+                    / "logo.png"
+                ).read_bytes()
+                msg.get_payload()[-1].add_related(
+                    logo,
+                    maintype="image",
+                    subtype="png",
+                    cid="<logo>",
+                    filename="logo.png",
+                )
             for filepath in adjuntos or []:
                 with open(filepath, "rb") as f:
                     msg.add_attachment(
@@ -133,7 +150,7 @@ class EmailRepositoryImpl:
             subdomain=self._settings.subdomain,
             usuario=alumno.username_moodle,
             contrasena=password,
-            matriculado_en_texto=matriculas_a_html(matriculas),
+            matriculado_en=matriculas,
             email=alumno.email or "",
         )
         return self._enviar(alumno.email, asunto, contenido)
@@ -168,7 +185,7 @@ class EmailRepositoryImpl:
             nombre=alumno.nombre or "",
             apellidos=f"{alumno.apellido1 or ''} {alumno.apellido2 or ''}".strip(),
             subdomain=self._settings.subdomain,
-            matriculado_en_texto=matriculas_a_html(nuevas_matriculas),
+            matriculado_en=nuevas_matriculas,
         )
         return self._enviar(alumno.email, asunto, contenido)
 

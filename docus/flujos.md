@@ -346,9 +346,9 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[enviar_bienvenida_nuevo_usuario] --> B[_cargar_template<br/>nuevoUsuario.html]
-    B --> C[Reemplazar placeholders<br/>nombre, apellidos, usuario, contraseña, módulos]
+    B --> C[Render Jinja2 nuevoUsuario.html<br/>hereda base.html: preheader, logo cid]
 
-    C --> D[_enviar destinatario, asunto, contenido<br/>valores escapados con html.escape]
+    C --> D[_enviar destinatario, asunto, contenido<br/>valores autoescapeados por Jinja2<br/>+ logo incrustado cid:logo si existe]
     D --> E[_verificar_limite]
     E --> F{¿emails_enviados<br/>>= limite?}
     F -->|Sí| G[Lanzar EmailLimitExceeded]
@@ -387,10 +387,9 @@ Comportamiento portado desde `curso2627`:
 
 ```mermaid
 flowchart TD
-    A[enviar_bienvenida_nuevo_usuario] --> B[_cargar_template<br/>nuevoUsuario.html]
-    B --> C[Reemplazar placeholders]
-    C --> D[Crear EmailJob]
-    D --> E[Serializar a CSV<br/>csvs/email_queue.csv]
+    A[enviar_bienvenida_nuevo_usuario] --> B[Guardar template_name<br/>y datos del contexto]
+    B --> C[Crear EmailJob]
+    C --> E[Serializar a CSV<br/>csvs/email_queue.csv]
     E --> F[Log: Email encolado]
     F --> G[Retornar True]
 
@@ -403,9 +402,9 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[enviar_bienvenida_nuevo_usuario] --> B[_cargar_template<br/>nuevoUsuario.html]
-    B --> C[Reemplazar placeholders<br/>nombre, apellidos, usuario, contraseña, módulos]
+    B --> C[Render Jinja2 nuevoUsuario.html<br/>hereda base.html: preheader, logo cid]
 
-    C --> D[_enviar destinatario, asunto, contenido<br/>valores escapados con html.escape]
+    C --> D[_enviar destinatario, asunto, contenido<br/>valores autoescapeados por Jinja2<br/>+ logo incrustado cid:logo si existe]
     D --> E[_verificar_limite]
     E --> F{¿emails_enviados<br/>>= limite?}
     F -->|Sí| G[Lanzar EmailLimitExceeded]
@@ -449,8 +448,8 @@ flowchart TD
 
     F --> G{¿limite alcanzado?}
     G -->|Sí| H[Skip resto<br/>saltados++]
-    G -->|No| I[Cargar template HTML]
-    I --> J[Renderizar con datos<br/>valores escapados]
+    G -->|No| I[Render Jinja2<br/>hereda base.html]
+    I --> J[Autoescape de datos SIGAD<br/>matriculado_en como lista]
     J --> K[EmailRepositoryImpl._enviar<br/>texto plano + HTML]
     K --> L{¿Éxito?}
     L -->|Sí| M[actualizar_estado → sent<br/>pausa EMAIL_PAUSA_SEGUNDOS]

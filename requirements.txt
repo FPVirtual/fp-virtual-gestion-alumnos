@@ -10,6 +10,9 @@ structlog>=25.1.0
 # --- HTTP / API ---
 requests>=2.32.0
 
+# --- Plantillas de email ---
+jinja2>=3.1.0
+
 # --- Análisis ---
 duckdb>=1.1.0
 pandas>=2.0.0

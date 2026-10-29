@@ -3,12 +3,9 @@
 > **Origen:** análisis comparativo realizado el 2026-10-28 entre
 > `origin/curso2627` (línea legacy) y `v0.3-estructura-paquete-con-logs`.
 >
-> **Progreso (2026-10-29):** implementados los lotes 1, 2, 4 y 5
-> (más los fixes detectados en la revisión de seguridad) con 129 tests
-> en verde. **Pendiente: Lote 3** (migración de plantillas a Jinja2 con
-> `base.html`, preheader y logo incrustado) y el punto 5.3, que dependen
-> de añadir `jinja2` como dependencia y resolver la carga de plantillas
-> dentro del zipapp (`importlib.resources`).
+> **Progreso (2026-10-29):** implementados los lotes 1, 2, 3, 4 y 5
+> (más los fixes detectados en la revisión de seguridad) con 138 tests
+> en verde. La portación está **completa**; queda tag y merge a `main`.
 >
 > **Contexto de diseño que condiciona varios puntos:**
 > - En `curso2627` el username de Moodle es el documento y el email
@@ -44,20 +41,19 @@
 | 2.6 | **`--solo-informes` en `process-emails`** | b30a9b9 | `EmailJob.tipo` explícito (`aviso`/`informe`); filtro en `obtener_pendientes(solo_informes=True)` | ✅ |
 | 2.7 | **Priorización de informes en la cola** | prefijos `0-informe` / `1-aviso` | `obtener_pendientes` ordena informes primero (orden estable) | ✅ |
 
-## Lote 3 — Email: plantillas Jinja2 (esfuerzo mayor) ⬜ PENDIENTE
+## Lote 3 — Email: plantillas Jinja2 (esfuerzo mayor) ✅ IMPLEMENTADO
 
 La migración más grande; además corrige un **defecto de seguridad residual**:
-el render actual con `str.format()` escapa los valores (mitigado con
-`gestion_alumnos/utils/plantillas.py`), pero la herencia de plantillas y el
-preheader requieren Jinja2.
+el render anterior con `str.format()` escapaba los valores, pero la herencia
+de plantillas y el preheader requieren Jinja2.
 
 | # | Mejora | Origen curso2627 | Acción en v0.3 | Estado |
 |---|--------|------------------|----------------|--------|
-| 3.1 | **Migrar render a Jinja2 con autoescape** | 10c4033, `select_autoescape(["html"])` | Añadir `jinja2` a dependencias; `Environment` con `PackageLoader`/`DictLoader` vía `importlib.resources` (⚠️ `FileSystemLoader` no sirve dentro del zipapp); sustituir el render de `plantillas.py` | ⬜ |
-| 3.2 | **`base.html` con herencia de bloques** | `base.html` (layout 600px, Roboto, bloques `titulo`/`preheader`/`contenido`/`pie`, footer RRSS) | Reescribir las 5 plantillas a herencia; elimina el footer de RRSS duplicado en cada una | ⬜ |
-| 3.3 | **Preheader oculto** | baa978b | Bloque `preheader` en `base.html` | ⬜ |
-| 3.4 | **Logo incrustado inline (`cid:logo`)** | baa978b | Copiar `logo.png` a `gestion_alumnos/templates/img/`, verificar que `scripts/build_zipapp.py` incluya binarios; `add_related(...cid="<logo>")` | ⬜ |
-| 3.5 | **Plantilla `nuevoUsuario.html` mejorada** | 24cdac1 / 80896da | Versión curso2627 con explicación de las dos cuentas, recuperación de contraseña y matrículas como `<ul><li>` | ⬜ |
+| 3.1 | **Migrar render a Jinja2 con autoescape** | 10c4033, `select_autoescape(["html"])` | `jinja2` añadida a dependencias; `Environment` con `DictLoader` cargado vía `importlib.resources` (funciona dentro del zipapp, a diferencia de `FileSystemLoader`); entorno cacheado con `lru_cache` en `utils/plantillas.py` | ✅ |
+| 3.2 | **`base.html` con herencia de bloques** | `base.html` (layout 600px, Roboto, bloques `titulo`/`preheader`/`contenido`/`pie`, footer RRSS) | Las 5 plantillas reescritas a herencia; `_aviso_automatico.html` como include compartido | ✅ |
+| 3.3 | **Preheader oculto** | baa978b | Bloque `preheader` en `base.html`; el extractor de texto plano omite `display:none`, así que no aparece en la parte text/plain | ✅ |
+| 3.4 | **Logo incrustado inline (`cid:logo`)** | baa978b | `logo.png` copiado a `gestion_alumnos/templates/img/`; `add_related(...cid="<logo>")` en `EmailRepositoryImpl._enviar`; `logo_disponible()` decide entre imagen y texto en `base.html` | ✅ |
+| 3.5 | **Plantilla `nuevoUsuario.html` mejorada** | 24cdac1 / 80896da | Versión curso2627 con explicación de las dos cuentas, recuperación de contraseña y matrículas como `<ul><li>` (variable `matriculado_en` como lista) | ✅ |
 
 ## Lote 4 — DNI/documento: sincronización (esfuerzo medio) ✅ IMPLEMENTADO
 
@@ -73,7 +69,7 @@ preheader requieren Jinja2.
 |---|--------|------------------|----------------|--------|
 | 5.1 | **Cablear el aviso al flujo de sync** | — | `SyncApplier` recibe `EmailRepository` (inyectado por el orquestador según `EMAIL_MODE`) y notifica altas, cambios de username y matrículas nuevas; errores de email nunca bloquean la sync | ✅ |
 | 5.2 | **Contenido mejorado del aviso NIE→DNI** | d16d329 | `nombreUsuarioActualizado.html` portada (saludo con nombre/apellidos, "su correo {email} NO cambia durante este curso", enlace a soporte); los contextos pasan `nombre`/`apellidos`/`email` | ✅ |
-| 5.3 | **Aviso con plantilla Jinja2** | d16d329 | Pendiente del lote 3 (la plantilla actual ya usa el contenido de curso2627 adaptado a `str.format` escapado) | ⬜ |
+| 5.3 | **Aviso con plantilla Jinja2** | d16d329 | `nombreUsuarioActualizado.html` migrada a herencia de `base.html` con el resto (lote 3) | ✅ |
 
 ## Ya cubierto en v0.3 — no portar
 
@@ -95,14 +91,14 @@ preheader requieren Jinja2.
 - **Zipapp**: cualquier plantilla Jinja2 o `logo.png` debe cargarse con
   `importlib.resources` (`PackageLoader`); `FileSystemLoader` falla dentro del
   `.pyz`. Verificar `scripts/build_zipapp.py` para datos binarios.
-- **Tests**: suite en verde (129 tests tras la portación). Cada lote
+- **Tests**: suite en verde (138 tests tras la portación). Cada lote
   añadió sus tests (`test_email_queue.py`, `test_sync_analyzer.py`,
-  `test_sync_applier.py`, `test_sync_orchestrator.py`).
+  `test_sync_applier.py`, `test_sync_orchestrator.py`, `test_plantillas.py`).
 - **Hallazgos de la revisión de seguridad resueltos en esta portación**:
   fallback de desmatriculación que rematriculaba, apellido corrupto con
   `replace`, escape HTML en el render y SQL interpolado en
   `_find_removed_users`. Ver `docus/revision-seguridad-calidad-v0.3.md`.
-- **Orden recomendado restante**: Lote 3 (Jinja2) → tag y merge a `main`.
+- **Orden recomendado restante**: tag `v0.4.x` y merge a `main`.
 
 ## Fuentes
 

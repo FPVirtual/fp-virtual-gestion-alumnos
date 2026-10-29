@@ -12,7 +12,7 @@ from gestion_alumnos.core.logging import get_logger
 from gestion_alumnos.repositories.email_queue_repository import EmailQueueRepository
 from gestion_alumnos.repositories.email_repository import EmailRepositoryImpl
 from gestion_alumnos.repositories.protocols import EmailRepository
-from gestion_alumnos.utils.plantillas import matriculas_a_html, renderizar_plantilla
+from gestion_alumnos.utils.plantillas import logo_disponible, renderizar_plantilla
 
 logger = get_logger(__name__)
 
@@ -99,7 +99,8 @@ class EmailQueueProcessor:
         datos = dict(job.template_data)
         matriculas = datos.pop("matriculas", None)
         if matriculas is not None:
-            datos["matriculado_en_texto"] = matriculas_a_html(matriculas)
+            datos["matriculado_en"] = matriculas
+        datos.setdefault("logo", logo_disponible())
         return renderizar_plantilla(job.template_name, **datos), None
 
     def _process_single(self, job, dry_run: bool = False) -> None:

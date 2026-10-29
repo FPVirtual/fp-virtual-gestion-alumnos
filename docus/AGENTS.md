@@ -2,7 +2,7 @@
 
 > **Rama:** `v0.3-estructura-paquete-con-logs`  
 > **Versión:** `0.4.1`  
-> **Tests:** `129/129 ✅`  
+> **Tests:** `138/138 ✅`  
 > **Propósito:** Paquete Python autocontenido para gestión de alumnos Moodle. Cero SQL directo.  
 > **Arquitectura:** Repository Pattern + Dependency Injection + Pydantic Settings + structlog + DuckDB  
 > **Última actualización:** Octubre 2026 (portación curso2627)
@@ -66,6 +66,7 @@ El orquestador (`SyncOrchestrator`) **no sabe** qué implementaciones usa; las r
 **Dependencias nuevas en v0.4:**
 - ✅ `duckdb>=1.1.0` — análisis de deltas
 - ✅ `pandas>=2.0.0` — carga de datos en DuckDB
+- ✅ `jinja2>=3.1.0` — plantillas de email con herencia y autoescape
 
 ---
 
@@ -109,15 +110,21 @@ gestion_alumnos/
 │   ├── sync_analyzer.py   # Motor de comparación DuckDB
 │   ├── sync_applier.py    # Aplicador de cambios sobre MoodleSink
 │   └── sync_orchestrator.py  # Orquestador de las 4 capas
-├── templates/             # HTML empaquetados
+├── templates/             # Plantillas Jinja2 de email (heredan de base.html)
+│   ├── base.html              # Layout 600px, preheader oculto, logo (cid:logo) y pie RRSS
+│   ├── _aviso_automatico.html # Include compartido (aviso de cuenta automatizada)
 │   ├── haFalladoElInforme.html
 │   ├── informeAutomatizado.html
 │   ├── matriculasAnadidas.html
 │   ├── nombreUsuarioActualizado.html
-│   └── nuevoUsuario.html
+│   ├── nuevoUsuario.html
+│   └── img/
+│       └── logo.png           # Logo incrustado en los correos
 ├── utils/
 │   ├── __init__.py
-│   └── helpers.py
+│   ├── helpers.py       # generar_password, get_curso_academico, normalizar_documento, bloqueo_ejecucion
+│   ├── html_to_text.py  # Convierte el HTML del correo en texto plano (omite head/style y display:none)
+│   └── plantillas.py    # Render Jinja2 (DictLoader vía importlib.resources) + logo_disponible()
 └── data/
     └── usuarios_protegidos.csv   # IDs de usuarios no borrables (configurable por entorno)
 
@@ -497,7 +504,8 @@ Esto permite tener un CSV diferente por entorno (test, preproducción, producci�
 | SIGAD Repository | ✅ | 6/6 |
 | Moosh Repository | ✅ | 3/3 |
 | API Repository | ✅ Implementado | Pendiente tests de integración |
-| Email Repository (SMTP directo) | ✅ Implementado | Pendiente tests |
+| Email Repository (SMTP directo) | ✅ Implementado | Tests en `test_plantillas.py` (logo cid, estructura base) |
+| **Plantillas de email (Jinja2)** | ✅ **Nuevo** | **9/9** (`test_plantillas.py`) |
 | **EmailQueueRepository (CSV)** | ✅ **Nuevo** | **15/15** |
 | **EmailQueueProcessor** | ✅ **Nuevo** | Incluido en tests de cola |
 | **SyncAnalyzer (DuckDB)** | ✅ | **6/6** |
@@ -509,7 +517,7 @@ Esto permite tener un CSV diferente por entorno (test, preproducción, producci�
 | ReportLogger (informes `.md`) | ✅ **Nuevo** | **6/6** |
 | Zipapp | ✅ | Funcional |
 
-**Total tests: 129/129 ✅**
+**Total tests: 138/138 ✅**
 
 ---
 
@@ -522,8 +530,8 @@ Esto permite tener un CSV diferente por entorno (test, preproducción, producci�
 5. ~~**Generar informes Markdown** del `SyncReport`~~ ✅ Completado (`ReportLogger` + `SyncReport.to_markdown()`)
 6. ~~**Cola de emails en CSV**~~ ✅ Completado (`EmailQueueRepository` + `EmailQueueProcessor`)
 7. **Tag `v0.4.1`** y merge a `main`
-8. ~~**Portar mejoras de `curso2627`**~~ ✅ Lotes 1, 2, 4 y 5 completados el 2026-10-29 (ver [`roadmap-portacion-curso2627.md`](roadmap-portacion-curso2627.md)): SMTP timeout, texto plano, reintentos, prioridad de informes, lock, BIENVENIDA_TO, guard de colisión en renombres, reactivación de suspendidos y parada forzosa si SIGAD devuelve 0 alumnos
-9. ~~**Resolver hallazgos de la revisión de seguridad y calidad (2026-10-29)**~~ ✅ Resueltos en la portación: fallback de desmatriculación, apellido con `replace`, escape HTML en el render y SQL interpolado. **Pendiente: token de API commiteado en `tests/test_moodle_api_integration.py` y `.env.test`** (revocar/rotar y purgar historial) y migración de plantillas a Jinja2 (lote 3) — ver [`revision-seguridad-calidad-v0.3.md`](revision-seguridad-calidad-v0.3.md)
+8. ~~**Portar mejoras de `curso2627`**~~ ✅ Completados **todos** los lotes (1, 2, 3, 4 y 5) el 2026-10-29 (ver [`roadmap-portacion-curso2627.md`](roadmap-portacion-curso2627.md)): SMTP timeout, texto plano, reintentos, prioridad de informes, lock, BIENVENIDA_TO, guard de colisión en renombres, reactivación de suspendidos, parada forzosa si SIGAD devuelve 0 alumnos y **migración de plantillas a Jinja2** (base.html, preheader, logo incrustado)
+9. ~~**Resolver hallazgos de la revisión de seguridad y calidad (2026-10-29)**~~ ✅ Resueltos en la portación: fallback de desmatriculación, apellido con `replace`, escape HTML en el render y SQL interpolado. **Pendiente: token de API commiteado en `tests/test_moodle_api_integration.py` y `.env.test`** (revocar/rotar y purgar historial) — ver [`revision-seguridad-calidad-v0.3.md`](revision-seguridad-calidad-v0.3.md)
 
 ---
 

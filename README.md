@@ -7,7 +7,7 @@ Aplicación para la gestión automática del alumnado en **CampusDigitalFP** (Mo
 | Métrica | Valor |
 |---------|-------|
 | Versión | `0.4.1` |
-| Tests | **129/129 ✅** |
+| Tests | **138/138 ✅** |
 | Python | `3.10+` |
 | Distribución | Poetry + zipapp (`.pyz`) |
 
@@ -24,6 +24,7 @@ Aplicación para la gestión automática del alumnado en **CampusDigitalFP** (Mo
 - **Usuarios protegidos desde CSV**: configurable por entorno
 - **Cola de emails en CSV**: envío diferido vía `process-emails` para evitar límites SMTP, con reintentos, prioridad de informes, lock concurrente y `--solo-informes`/`--dry-run`
 - **Notificaciones conectadas a la sync**: bienvenidas, cambios de usuario (NIE→DNI) y nuevas matrículas
+- **Plantillas de email Jinja2**: herencia de `base.html`, preheader oculto y logo incrustado (`cid:logo`), con autoescape de los datos
 - **Reactivación de suspendidos**: los alumnos que vuelven a SIGAD se reactivan y reincorporan a la cohorte `alumnado`
 - **Guardas de seguridad**: parada forzosa si SIGAD devuelve 0 alumnos y omisión de renombres de usuario que colisionarían
 - **Report logging**: informes markdown con timestamp en `logs/`
@@ -45,7 +46,7 @@ gestion_alumnos/
 │   ├── moodle_moosh_repository.py
 │   └── email_repository.py
 ├── services/              # SyncAnalyzer, SyncApplier, SyncOrchestrator
-└── templates/             # HTML empaquetados
+└── templates/             # Plantillas Jinja2 de email (base.html + includes + img/logo.png)
 
 moodle_plugin/             # Plugin PHP local_fparagon (para extracción snapshot)
 archive/                   # Código legacy v0.2
