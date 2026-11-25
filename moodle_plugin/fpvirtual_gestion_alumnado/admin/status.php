@@ -7,7 +7,7 @@ $component = 'local_fpvirtual_gestion_alumnado';
 
 require_login();
 $context = context_system::instance();
-require_capability($component . ':viewstatus', $context);
+require_capability('local/fpvirtual_gestion_alumnado:viewstatus', $context);
 
 $PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/local/fpvirtual_gestion_alumnado/admin/status.php'));
@@ -20,12 +20,20 @@ echo $OUTPUT->heading(get_string('status:heading', $component));
 // --- Configuración relevante.
 $configtable = new html_table();
 $configtable->attributes['class'] = 'generaltable';
+$config = \local_fpvirtual_gestion_alumnado\config::load();
 $configtable->data = [
-    [get_string('setting:enabled', $component), get_config($component, 'enabled') ? get_string('yes') : get_string('no')],
-    [get_string('setting:launchmode', $component), get_string('mode:' . ((string)get_config($component, 'launchmode') ?: 'dry'), $component)],
-    [get_string('setting:command', $component), s((string)get_config($component, 'command'))],
-    [get_string('setting:timeout', $component), (int)get_config($component, 'timeout') . ' s'],
+    [get_string('setting:enabled', $component), $config->bool('enabled') ? get_string('yes') : get_string('no')],
+    [get_string('setting:launchmode', $component), get_string('mode:' . $config->str('launchmode'), $component)],
+    [get_string('setting:engine', $component), get_string('engine:' . $config->str('engine'), $component)],
 ];
+if ($config->str('engine') === 'external') {
+    $configtable->data[] = [get_string('setting:command', $component), s($config->str('command'))];
+} else {
+    $configtable->data[] = [get_string('setting:sigad_user', $component),
+        $config->str('sigad_user') !== '' ? s($config->str('sigad_user')) : '—'];
+    $configtable->data[] = [get_string('setting:notifyredirect', $component),
+        $config->str('notifyredirect') !== '' ? s($config->str('notifyredirect')) : '—'];
+}
 
 echo $OUTPUT->heading(get_string('status:config', $component), 3);
 echo html_writer::table($configtable);
@@ -54,14 +62,6 @@ $run = \local_fpvirtual_gestion_alumnado\run_store::latest();
 if (!$run) {
     echo html_writer::tag('p', get_string('status:noruns', $component));
 } else {
-    $estados = [
-        // Se incluyen las clases de Bootstrap 4 (badge-*) y Bootstrap 5
-        // (text-bg-*) para que el distintivo tenga color en Moodle 4.x y 5.x.
-        'success' => ['text' => get_string('status:success', $component), 'class' => 'badge badge-success text-bg-success'],
-        'error' => ['text' => get_string('status:error', $component), 'class' => 'badge badge-danger text-bg-danger'],
-        'running' => ['text' => get_string('status:running', $component), 'class' => 'badge badge-warning text-bg-warning'],
-    ];
-    $estado = $estados[$run->status] ?? $estados['running'];
 
     $runtable = new html_table();
     $runtable->attributes['class'] = 'generaltable';
@@ -72,18 +72,12 @@ if (!$run) {
         [get_string('setting:launchmode', $component), get_string('mode:' . $run->modo, $component)],
         [get_string('status:field_start', $component), userdate($run->timestart)],
         [get_string('status:field_duration', $component), $duracion],
-        [get_string('status:field_result', $component), html_writer::span($estado['text'], $estado['class'])],
+        [get_string('status:field_result', $component), \local_fpvirtual_gestion_alumnado\output\helper::status_badge($run->status)],
         [get_string('status:field_exitcode', $component), $run->exitcode === null ? '—' : $run->exitcode],
     ];
     echo html_writer::table($runtable);
 
-    if (!empty($run->summary)) {
-        $resumen = json_decode($run->summary);
-        if ($resumen !== null) {
-            echo $OUTPUT->heading(get_string('status:summary', $component), 4);
-            echo html_writer::tag('pre', s(json_encode($resumen, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)));
-        }
-    }
+    echo \local_fpvirtual_gestion_alumnado\output\helper::summary($run);
 
     $logurl = new moodle_url('/local/fpvirtual_gestion_alumnado/admin/logs.php', ['runid' => $run->id]);
     echo html_writer::div(html_writer::link($logurl, get_string('status:viewlog', $component)), 'mt-2');
@@ -93,7 +87,7 @@ if (!$run) {
 $logsurl = new moodle_url('/local/fpvirtual_gestion_alumnado/admin/logs.php');
 $launchurl = new moodle_url('/local/fpvirtual_gestion_alumnado/admin/launch.php');
 $links = html_writer::link($logsurl, get_string('menu:logs', $component));
-if (has_capability($component . ':launch', $context)) {
+if (has_capability('local/fpvirtual_gestion_alumnado:launch', $context)) {
     $links .= ' | ' . html_writer::link($launchurl, get_string('menu:launch', $component));
 }
 echo html_writer::div($links, 'mt-3');

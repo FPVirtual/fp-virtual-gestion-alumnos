@@ -89,8 +89,12 @@ class config {
      * @return self
      */
     public static function load(): self {
-        $stored = (array)get_config(self::COMPONENT);
-        return new self(array_intersect_key($stored, self::DEFAULTS));
+        $stored = array_intersect_key((array)get_config(self::COMPONENT), self::DEFAULTS);
+        // La contraseña de SIGAD se guarda cifrada (admin_setting_encryptedpassword).
+        if (!empty($stored['sigad_password']) && preg_match('/^(sodium|openssl):/', $stored['sigad_password'])) {
+            $stored['sigad_password'] = \core\encryption::decrypt($stored['sigad_password']);
+        }
+        return new self($stored);
     }
 
     /**

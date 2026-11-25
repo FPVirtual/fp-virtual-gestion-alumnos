@@ -7,7 +7,7 @@ $component = 'local_fpvirtual_gestion_alumnado';
 
 require_login();
 $context = context_system::instance();
-require_capability($component . ':launch', $context);
+require_capability('local/fpvirtual_gestion_alumnado:launch', $context);
 
 $PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/local/fpvirtual_gestion_alumnado/admin/launch.php'));
@@ -33,12 +33,12 @@ if (data_submitted() && confirm_sesskey()) {
 echo $OUTPUT->header();
 
 $modoactual = (string)get_config($component, 'launchmode') ?: 'dry';
-$comando = trim((string)get_config($component, 'command'));
+$config = \local_fpvirtual_gestion_alumnado\config::load();
 
 echo $OUTPUT->heading(get_string('launch:heading', $component));
 echo html_writer::tag('p', get_string('launch:intro', $component));
 
-if ($comando === '') {
+if ($config->str('engine') === 'external' && $config->str('command') === '') {
     echo $OUTPUT->notification(get_string('error:nocommand', $component), \core\output\notification::NOTIFY_WARNING);
 }
 
@@ -61,7 +61,7 @@ echo html_writer::empty_tag('hr');
 echo html_writer::start_tag('form', [
     'method' => 'post',
     'action' => $PAGE->url->out(),
-    'onsubmit' => 'return confirm("' . get_string('launch:confirm_apply', $component) . '");',
+    'onsubmit' => 'return confirm(' . json_encode(get_string('launch:confirm_apply', $component)) . ');',
 ]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'modo', 'value' => 'apply']);

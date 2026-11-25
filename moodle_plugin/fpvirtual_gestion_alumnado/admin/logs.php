@@ -2,16 +2,19 @@
 // Página de historial de ejecuciones y visualización/descarga de logs.
 
 require_once(__DIR__ . '/../../../config.php');
+require_once($CFG->libdir . '/filelib.php');
 
 $component = 'local_fpvirtual_gestion_alumnado';
 
 require_login();
 $context = context_system::instance();
-require_capability($component . ':viewstatus', $context);
+require_capability('local/fpvirtual_gestion_alumnado:viewstatus', $context);
 
 $runid = optional_param('runid', 0, PARAM_INT);
 $page = optional_param('page', 0, PARAM_INT);
 $download = optional_param('download', 0, PARAM_BOOL);
+$file = optional_param('file', 'log', PARAM_ALPHA);
+$runstore = \local_fpvirtual_gestion_alumnado\run_store::class;
 
 $PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/local/fpvirtual_gestion_alumnado/admin/logs.php'));
@@ -20,11 +23,16 @@ $PAGE->set_heading(get_string('menu:logs', $component));
 
 // --- Descarga del log de una ejecución.
 if ($runid && $download) {
-    $run = \local_fpvirtual_gestion_alumnado\run_store::get($runid);
-    if (!$run || empty($run->logfile) || !is_file($run->logfile)) {
+    $run = $runstore::get($runid);
+    $artifact = $runstore::ARTIFACTS[$file] ?? null;
+    if ($artifact && $artifact[2]) {
+        require_capability('local/fpvirtual_gestion_alumnado:launch', $context);
+    }
+    $path = $run ? $runstore::artifact($run, $file) : null;
+    if (!$path) {
         throw new moodle_exception('error:nolog', $component);
     }
-    send_file($run->logfile, 'run_' . $runid . '.log', true);
+    send_file($path, 'run_' . $runid . '_' . $artifact[0], 0, 0, false, true, $artifact[1]);
 }
 
 echo $OUTPUT->header();
@@ -43,24 +51,42 @@ if ($runid) {
         [get_string('status:field_start', $component), userdate($run->timestart)],
         [get_string('status:field_origen', $component), get_string('origen:' . $run->origen, $component)],
         [get_string('setting:launchmode', $component), get_string('mode:' . $run->modo, $component)],
-        [get_string('status:field_result', $component), $run->status],
+        [get_string('status:field_result', $component), \local_fpvirtual_gestion_alumnado\output\helper::status_badge($run->status)],
     ];
     echo html_writer::table($meta);
 
-    $contenido = \local_fpvirtual_gestion_alumnado\run_store::read_log($run);
+    echo \local_fpvirtual_gestion_alumnado\output\helper::summary($run);
+
+    // Ficheros descargables.
+    echo $OUTPUT->heading(get_string('logs:artifacts', $component), 4);
+    $links = [];
+    foreach ($runstore::ARTIFACTS as $key => [$filename, $mime, $restricted]) {
+        if ($restricted && !has_capability('local/fpvirtual_gestion_alumnado:launch', $context)) {
+            continue;
+        }
+        if ($runstore::artifact($run, $key)) {
+            $url = new moodle_url($PAGE->url, ['runid' => $runid, 'download' => 1, 'file' => $key]);
+            $links[] = html_writer::link($url, get_string('artifact:' . $key, $component));
+        }
+    }
+    echo html_writer::alist($links);
+
+    // Informe renderizado.
+    $reportfile = $runstore::artifact($run, 'report');
+    if ($reportfile) {
+        echo html_writer::div(format_text(file_get_contents($reportfile), FORMAT_MARKDOWN, ['context' => $context]),
+            'border rounded p-3 mb-3', ['style' => 'max-height: 70vh; overflow: auto;']);
+    }
+
+    $contenido = $runstore::read_log($run);
     if ($contenido === '') {
         echo html_writer::tag('p', get_string('logs:empty', $component));
     } else {
-        echo html_writer::tag('pre', s($contenido), ['style' => 'max-height: 60vh; overflow: auto;']);
+        echo html_writer::tag('details', html_writer::tag('summary', get_string('artifact:log', $component))
+            . html_writer::tag('pre', s($contenido), ['style' => 'max-height: 60vh; overflow: auto;']));
     }
 
-    $downloadurl = new moodle_url($PAGE->url, ['runid' => $runid, 'download' => 1]);
-    $listurl = new moodle_url($PAGE->url);
-    echo html_writer::div(
-        html_writer::link($downloadurl, get_string('logs:download', $component))
-        . ' | ' . html_writer::link($listurl, get_string('logs:back', $component)),
-        'mt-2'
-    );
+    echo html_writer::div(html_writer::link(new moodle_url($PAGE->url), get_string('logs:back', $component)), 'mt-2');
 
     echo $OUTPUT->footer();
     exit;
@@ -95,7 +121,7 @@ if (!$runs) {
             userdate($run->timestart),
             get_string('origen:' . $run->origen, $component),
             get_string('mode:' . $run->modo, $component),
-            $run->status,
+            \local_fpvirtual_gestion_alumnado\output\helper::status_badge($run->status),
             $duracion,
             html_writer::link($detailurl, get_string('logs:view', $component)),
         ];

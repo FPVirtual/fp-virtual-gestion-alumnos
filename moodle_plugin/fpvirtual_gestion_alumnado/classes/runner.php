@@ -1,9 +1,9 @@
 <?php
-// Lanzador del proceso Python (zipapp) de gestión de alumnado.
+// Punto de ejecución único compartido por el lanzamiento manual y la tarea cron.
 //
-// Único punto de ejecución compartido por el lanzamiento manual y la
-// tarea cron. El plugin no implementa la sincronización: ejecuta el
-// comando configurado y registra el resultado.
+// Motor 'php' (por defecto): la sincronización se ejecuta dentro de Moodle
+// (sync\engine). Motor 'external' (transición): lanza el comando configurado
+// (paquete Python) y registra su salida.
 
 namespace local_fpvirtual_gestion_alumnado;
 
@@ -26,6 +26,12 @@ class runner {
      * @throws \moodle_exception si falta el comando configurado
      */
     public static function ejecutar(string $modo, string $origen): int {
+        $config = config::load();
+        if ($config->str('engine') !== 'external') {
+            $engine = new sync\engine($config, null, fn(string $line) => mtrace($line));
+            return $engine->run($modo, $origen)['exitcode'];
+        }
+
         $runid = run_store::start($origen, $modo);
 
         try {
