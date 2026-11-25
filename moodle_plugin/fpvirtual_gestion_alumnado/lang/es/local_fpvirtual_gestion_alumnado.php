@@ -76,3 +76,7 @@ $string['fpvirtual_gestion_alumnado:usewebservice'] = 'Consultar el snapshot de 
 $string['fpvirtual_gestion_alumnado:viewstatus'] = 'Ver el estado y el historial de la gestión de alumnado';
 $string['fpvirtual_gestion_alumnado:launch'] = 'Lanzar manualmente la gestión de alumnado';
 $string['error:sigad'] = 'Error de SIGAD: {$a}';
+$string['error:usernotcreated'] = 'El usuario {$a} no se pudo crear en esta ejecución.';
+$string['error:usernametaken'] = 'El nombre de usuario {$a} ya existe en Moodle.';
+$string['error:nomanualenrol'] = 'El curso {$a} no tiene un método de matriculación manual activo.';
+$string['error:nostudentrole'] = 'No existe ningún rol con arquetipo de estudiante.';

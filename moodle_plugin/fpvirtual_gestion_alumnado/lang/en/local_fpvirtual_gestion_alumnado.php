@@ -76,3 +76,7 @@ $string['fpvirtual_gestion_alumnado:usewebservice'] = 'Read the users and enrolm
 $string['fpvirtual_gestion_alumnado:viewstatus'] = 'View student management status and history';
 $string['fpvirtual_gestion_alumnado:launch'] = 'Launch student management manually';
 $string['error:sigad'] = 'SIGAD error: {$a}';
+$string['error:usernotcreated'] = 'User {$a} could not be created in this run.';
+$string['error:usernametaken'] = 'Username {$a} already exists in Moodle.';
+$string['error:nomanualenrol'] = 'Course {$a} has no enabled manual enrolment method.';
+$string['error:nostudentrole'] = 'There is no role with the student archetype.';
