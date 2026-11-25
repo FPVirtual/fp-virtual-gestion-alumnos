@@ -1,0 +1,49 @@
+{{!
+    @template local_fpvirtual_gestion_alumnado/email_welcome
+
+    Bienvenida a un alumno recién creado (R18), con sus credenciales y matrículas.
+
+    Example context (json):
+    {
+        "siteurl": "https://www.fpvirtualaragon.es",
+        "supporturl": "https://www.fpvirtualaragon.es/soporte/",
+        "forgoturl": "https://www.fpvirtualaragon.es/login/forgot_password.php",
+        "helpcourseurl": "https://www.fpvirtualaragon.es/course/view.php?id=654",
+        "nombre": "Ana",
+        "apellidos": "De la Fuente Gil",
+        "username": "00000001r",
+        "password": "Abc123xyz9",
+        "institutionalemail": "00000001r@fpvirtualaragon.es",
+        "modules": ["CPIFP Test - DAW - Programación"],
+        "hasmodules": true
+    }
+}}
+{{< local_fpvirtual_gestion_alumnado/email_base}}
+{{$titulo}}Bienvenido/a a FP virtual Aragón{{/titulo}}
+{{$preheader}}{{nombre}}, aquí tiene sus datos de acceso a FP virtual Aragón: cuenta de correo, plataforma Moodle y matrículas.{{/preheader}}
+{{$contenido}}
+<p style="background:#fff8db;border:1px solid #f0d878;border-radius:6px;padding:12px 16px;color:#6b5900;"><strong>IMPORTANTE:</strong> lea en detalle las instrucciones que se le proporcionan a continuación.</p>
+<p>Bienvenido/a {{nombre}} {{apellidos}}.</p>
+<p>Se le han creado las siguientes cuentas:</p>
+
+<h2 style="font-size:20px;color:#17253d;">Cuenta de correo electrónico: <code>{{institutionalemail}}</code></h2>
+<p>La cuenta puede tardar hasta 72 horas lectivas en estar disponible desde el envío de este mensaje.</p>
+<p>Su contraseña inicial (deberá cambiarla tras acceder la primera vez) es: <code>{{password}}</code></p>
+<p>Si en algún momento necesita recuperar la contraseña de esta cuenta, el correo de recuperación se enviará a la dirección en la que está recibiendo este mensaje. Esta cuenta le dará acceso a las videoconferencias de la plataforma.</p>
+
+<h2 style="font-size:20px;color:#17253d;">Cuenta de la plataforma Moodle (<a href="{{siteurl}}">{{siteurl}}</a>): <code>{{username}}</code></h2>
+<p>Su contraseña inicial (deberá cambiarla tras acceder la primera vez) es: <code>{{password}}</code></p>
+<p>Puede recuperarla con su cuenta de correo <code>{{institutionalemail}}</code> desde <a href="{{forgoturl}}">{{forgoturl}}</a>.</p>
+
+{{#hasmodules}}
+<h2 style="font-size:20px;color:#17253d;">Matriculaciones</h2>
+<p>Ha sido matriculado/a en:</p>
+<ul>
+{{#modules}}<li>{{.}}</li>{{/modules}}
+</ul>
+{{/hasmodules}}
+
+<h2 style="font-size:20px;color:#17253d;">Si necesita ayuda…</h2>
+<p>Dispone del curso de Ayuda (accesible como invitado) con información sobre el uso de la plataforma: <a href="{{helpcourseurl}}">{{helpcourseurl}}</a>.</p>
+{{/contenido}}
+{{/local_fpvirtual_gestion_alumnado/email_base}}

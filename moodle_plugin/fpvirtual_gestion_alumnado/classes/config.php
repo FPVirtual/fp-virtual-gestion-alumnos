@@ -65,8 +65,10 @@ class config {
         'notifyenabled' => 1,
         'notifyredirect' => '',
         'dailyemaillimit' => 1000,
+        'emailpause' => 1,
         'reportto' => '',
         'helpcourseid' => 654,
+        'supporturl' => '',
     ];
 
     /** @var array Valores efectivos. */

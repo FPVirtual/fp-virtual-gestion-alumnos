@@ -1,0 +1,27 @@
+{{!
+    @template local_fpvirtual_gestion_alumnado/email_new_enrolments
+
+    Aviso de nuevas matrículas a un alumno existente (R18).
+
+    Example context (json):
+    {
+        "siteurl": "https://www.fpvirtualaragon.es",
+        "supporturl": "https://www.fpvirtualaragon.es/soporte/",
+        "forgoturl": "https://www.fpvirtualaragon.es/login/forgot_password.php",
+        "nombre": "Ana",
+        "apellidos": "Gil",
+        "modules": ["Programación"]
+    }
+}}
+{{< local_fpvirtual_gestion_alumnado/email_base}}
+{{$titulo}}Nuevas matrículas en FP virtual Aragón{{/titulo}}
+{{$preheader}}{{nombre}}, se han añadido nuevas matrículas a su cuenta de FP virtual Aragón.{{/preheader}}
+{{$contenido}}
+<p>Hola {{nombre}} {{apellidos}},</p>
+<p>a su cuenta en <a href="{{siteurl}}">{{siteurl}}</a> se le han añadido las siguientes matrículas:</p>
+<ul>
+{{#modules}}<li>{{.}}</li>{{/modules}}
+</ul>
+<p>Puede recuperar su contraseña en cualquier momento en <a href="{{forgoturl}}">{{forgoturl}}</a>.</p>
+{{/contenido}}
+{{/local_fpvirtual_gestion_alumnado/email_base}}

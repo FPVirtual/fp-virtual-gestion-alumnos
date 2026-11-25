@@ -1,0 +1,30 @@
+{{!
+    @template local_fpvirtual_gestion_alumnado/email_report
+
+    Informe de una ejecución para los responsables (R19).
+
+    Example context (json):
+    {
+        "siteurl": "https://www.fpvirtualaragon.es",
+        "supporturl": "https://www.fpvirtualaragon.es/soporte/",
+        "ok": true,
+        "estado": "Correcta",
+        "modo": "apply",
+        "runid": 12,
+        "runurl": "https://www.fpvirtualaragon.es/local/fpvirtual_gestion_alumnado/admin/logs.php?id=12",
+        "lineas": [{"etiqueta": "Altas", "valor": 3}],
+        "mensaje": ""
+    }
+}}
+{{< local_fpvirtual_gestion_alumnado/email_base}}
+{{$titulo}}Informe de gestión de alumnado{{/titulo}}
+{{$preheader}}Ejecución #{{runid}} ({{modo}}): {{estado}}.{{/preheader}}
+{{$contenido}}
+<h2 style="font-size:20px;color:{{#ok}}#17253d{{/ok}}{{^ok}}#b42318{{/ok}};">Ejecución #{{runid}} ({{modo}}): {{estado}}</h2>
+{{#mensaje}}<p><strong>{{mensaje}}</strong></p>{{/mensaje}}
+<table role="presentation" cellpadding="4" cellspacing="0" style="border-collapse:collapse;">
+{{#lineas}}<tr><td style="border-bottom:1px solid #e3e6ea;">{{etiqueta}}</td><td style="border-bottom:1px solid #e3e6ea;text-align:right;"><strong>{{valor}}</strong></td></tr>{{/lineas}}
+</table>
+<p>Se adjunta el informe completo. También puede consultarlo en <a href="{{runurl}}">{{runurl}}</a>.</p>
+{{/contenido}}
+{{/local_fpvirtual_gestion_alumnado/email_base}}

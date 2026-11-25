@@ -1,0 +1,31 @@
+{{!
+    @template local_fpvirtual_gestion_alumnado/email_username_changed
+
+    Aviso de cambio de nombre de usuario por cambio de documento (R12).
+
+    Example context (json):
+    {
+        "siteurl": "https://www.fpvirtualaragon.es",
+        "supporturl": "https://www.fpvirtualaragon.es/soporte/",
+        "forgoturl": "https://www.fpvirtualaragon.es/login/forgot_password.php",
+        "nombre": "Luis",
+        "apellidos": "Pérez",
+        "username": "12345678z",
+        "oldusername": "x1234567l",
+        "institutionalemail": "x1234567l@fpvirtualaragon.es"
+    }
+}}
+{{< local_fpvirtual_gestion_alumnado/email_base}}
+{{$titulo}}Su usuario de FP virtual Aragón ha cambiado{{/titulo}}
+{{$preheader}}Su nuevo usuario de FP virtual Aragón es {{username}}. La contraseña no cambia.{{/preheader}}
+{{$contenido}}
+<p>Hola {{nombre}} {{apellidos}},</p>
+<p>su cuenta en <a href="{{siteurl}}">{{siteurl}}</a> se ha actualizado tras el cambio de su documento de identidad:</p>
+<ul>
+  <li>nuevo usuario: <strong>{{username}}</strong> (en lugar de {{oldusername}})</li>
+  <li>contraseña: <strong>no</strong> ha cambiado</li>
+</ul>
+<p>Puede recuperar su contraseña en cualquier momento en <a href="{{forgoturl}}">{{forgoturl}}</a>.</p>
+{{#institutionalemail}}<p>Su cuenta de correo <code>{{institutionalemail}}</code> no cambia durante este curso. Si vuelve a matricularse el curso que viene, sí cambiará.</p>{{/institutionalemail}}
+{{/contenido}}
+{{/local_fpvirtual_gestion_alumnado/email_base}}

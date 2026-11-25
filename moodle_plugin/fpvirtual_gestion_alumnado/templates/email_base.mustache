@@ -1,0 +1,47 @@
+{{!
+    @template local_fpvirtual_gestion_alumnado/email_base
+
+    Maquetación común de los correos (tablas e estilos en línea para clientes de correo).
+    Las plantillas hijas rellenan los bloques "titulo", "preheader" y "contenido".
+
+    Example context (json):
+    {
+        "siteurl": "https://www.fpvirtualaragon.es",
+        "supporturl": "https://www.fpvirtualaragon.es/soporte/"
+    }
+}}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{$titulo}}FP virtual Aragón{{/titulo}}</title>
+</head>
+<body style="margin:0;padding:0;background:#f2f4f7;">
+<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">{{$preheader}}{{/preheader}}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f4f7;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;font-family:Roboto,Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#222222;">
+        <tr>
+          <td style="padding:20px 32px;border-bottom:4px solid #2975c1;">
+            <span style="color:#2975c1;font-size:22px;font-weight:700;">FP virtual Aragón</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;">
+            {{$contenido}}{{/contenido}}
+            <p style="font-size:14px;color:#555555;">No responda a este correo: se envía desde una cuenta automatizada no atendida. Si tiene cualquier problema, consulte con su coordinador/a de ciclo o acuda a la sección de <a href="{{supporturl}}" style="color:#2975c1;">ayuda e incidencias</a>.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 32px;background:#f8f9fb;border-top:1px solid #e3e6ea;font-size:13px;color:#555555;">
+            <strong>FP virtual Aragón</strong> · <a href="{{siteurl}}" style="color:#2975c1;">{{siteurl}}</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
