@@ -43,14 +43,23 @@ tarea cron / botón admin / CLI
      1. sigad\client      → JSON de SIGAD (2 llamadas + espera + reintentos)
      2. sigad\parser      → dataset normalizado (alumnos, matrículas, ciclos)
      3. guardas           → aborta si SIGAD = 0 alumnos o dataset inválido
-     4. sync\analyzer     → carga dataset en tablas temporales, cruza con
-                            {user}, {user_info_data}, {user_enrolments},
-                            {enrol}, {course}, {cohort_members} → sync\plan
+     4. sync\moodle_state → lee {user}, {user_info_data}, {user_enrolments}, {enrol},
+                            {course}, {cohort}, {cohort_members} con recordsets de $DB
+        sync\analyzer     → cruza SIGAD y Moodle en memoria (arrays indexados) → sync\plan
      5. guardas de plan   → aborta si las bajas/suspensiones superan umbrales
      6. sync\applier      → (solo apply) ejecuta el plan con APIs de Moodle
      7. sync\notifier     → encola emails (tareas adhoc) con límite diario
      8. sync\report       → informe Markdown + resumen JSON en run_store
 ```
+
+**Decisión técnica (fase 4):** en lugar de tablas temporales y JOINs, el estado de
+Moodle se lee con SQL vía `$DB` y el cruce se hace en PHP con arrays indexados. Es O(n),
+cabe holgadamente en memoria (~13 000 usuarios / ~60 000 matrículas), es independiente del
+motor de BD (MariaDB compara sin distinguir mayúsculas; PostgreSQL sí) y es más fácil de testear.
+
+**Decisión (fase 6):** los correos se envían de forma síncrona durante la ejecución (pausa
+y límite diario), no con tareas adhoc, para que la contraseña inicial no quede guardada en
+la cola de tareas de la base de datos.
 
 El **plan** (`sync\plan`) es la frontera clave: es un objeto serializable a JSON
 con todas las operaciones calculadas. En `dry` se calcula y se informa; en
@@ -117,40 +126,43 @@ plugin para poder cambiarlas sin tocar código.
 - `get_snapshot`: `get_recordset_sql` (hoy `get_records_sql` colapsa filas por la primera
   columna: una sola matrícula por usuario y campos de perfil perdidos). Test de regresión.
 
-### Fase 3 — SIGAD
+### Fase 3 — SIGAD ✅
 - `sigad\client`: 2 llamadas (solicitud + datos), espera, reintentos, timeout, curl de Moodle.
   Credenciales en `admin_setting_encryptedpassword`. Errores sin volcar la respuesta.
 - `sigad\parser`: valida y normaliza el JSON (incluye el `estudiantes` anidado como string)
   a un `sigad\dataset`. Construye los shortnames (R3) y cohortes (R6).
 - Modo fichero (`--sigad-file`) para pruebas y reproducción de incidencias.
 
-### Fase 4 — Análisis
-- `sync\analyzer`: carga el dataset en tablas temporales (`create_temp_table`) y calcula
-  el plan con SQL (R2–R16). Sin escrituras.
+### Fase 4 — Análisis ✅
+- `sync\moodle_state` + `sync\analyzer`: lectura con recordsets y cruce en memoria (R2–R16).
+  Sin escrituras. Añadido: relleno de `IdSIGAD` en usuarios antiguos y renombrado de
+  respaldo por email único (usuarios sin `IdSIGAD`).
 - `sync\plan`: operaciones tipadas, conteos, serialización JSON.
 - Guardas R17.
 
-### Fase 5 — Aplicación
+### Fase 5 — Aplicación ✅
 - `sync\applier`: ejecuta el plan con APIs de Moodle, en el orden: altas → datos personales
   → renombres → reactivaciones → cohortes → matrículas (nuevas/reactivar) → suspensiones →
   bajas → limpieza de agosto. Errores aislados por operación; resultado por operación.
 
-### Fase 6 — Notificaciones
-- Plantillas Mustache (portadas de las Jinja2), `email_to_user` desde un usuario remitente
-  configurable, envío diferido con tareas adhoc (reintentos nativos), límite diario,
-  redirección fuera de producción.
+### Fase 6 — Notificaciones ✅
+- Plantillas Mustache (portadas de las Jinja2), `email_to_user` con el remitente noreply,
+  envío síncrono con pausa y límite diario compartido entre ejecuciones, redirección
+  fuera de producción.
 
-### Fase 7 — Informe, panel y CLI
+### Fase 7 — Informe, panel y CLI ✅
 - `sync\report`: Markdown (R19) + CSV de Google (R20) guardados en dataroot y vinculados a la ejecución.
 - `runner` pasa a ejecutar el motor PHP en proceso (se mantiene el modo "comando externo"
   solo durante la transición).
 - `cli/sync.php` (`--mode=dry|apply`, `--sigad-file`, `--plan-out`).
 - Panel: resumen por tipo de operación y descarga de plan/informe/CSV.
 
-### Fase 8 — Tests y calidad
-- PHPUnit: parser, cada regla del analizador (R2–R16) con generadores de Moodle, applier,
-  guardas, notificador, engine end-to-end con fichero SIGAD sintético.
-- Privacy provider actualizado (el informe contiene datos personales: retención y borrado).
+### Fase 8 — Tests y calidad ✅ (privacy provider pendiente de revisión con el DPD)
+- 48 tests PHPUnit (parser, cliente, cada regla del analizador, applier con prueba de
+  idempotencia, notificador, motor de extremo a extremo, snapshot). Code checker de Moodle
+  sin errores ni avisos. Prueba manual en un sitio 4.5 real (CLI y panel por HTTP).
+- Pendiente: revisar el privacy provider con el DPD (los artefactos de cada ejecución
+  contienen datos personales; hoy se documenta la retención en el motivo del null_provider).
 
 ### Fase 9 — Validación en preproducción
 - Instalar, configurar SIGAD y ejecutar `dry` a diario en paralelo con el legacy durante
@@ -162,6 +174,23 @@ plugin para poder cambiarlas sin tocar código.
 - Desactivar el legacy (`curso2627`) y retirar `gestion_alumnos/` (Python), `zipapp` y la
   función webservice si nadie más la usa. Tag `v1.0.0` del plugin.
 
+## Fallos encontrados durante la portación
+
+Detectados al escribir los tests o al probar en un Moodle 4.5 real. Los del paquete Python
+no se corrigen allí (queda congelado) pero ninguno se ha portado.
+
+| Dónde | Fallo | Estado |
+|-------|-------|--------|
+| Python `SyncAnalyzer` | Cruza matrículas por `siglasModulo` en vez de `{centro}-{ciclo}-{idMateria}`: marcaría todas las matrículas como nuevas y eliminadas | Corregido en PHP |
+| Python `SyncAnalyzer` | No excluye profesorado (`prof*`), curso `ayuda` ni tutorías; ignora el estado de la matrícula; re-suspende suspendidos; un renombrado genera bajas y altas de matrículas | Corregido en PHP |
+| Python `SIGADRepository` | Pide el año natural en lugar del curso académico (de enero a agosto, curso equivocado) | Corregido en PHP |
+| Python emails | Bienvenida muestra el email personal como cuenta institucional; aviso de cambio de usuario muestra un email institucional inexistente | Corregido en PHP |
+| Plugin `get_snapshot` | `get_records_sql` colapsaba filas: una matrícula por usuario y campos de perfil perdidos | Corregido |
+| Plugin `get_snapshot` | `lib/externallib.php` no se puede incluir en 4.5 | Migrado a `core_external` |
+| Plugin `access.php` | Cualquier usuario autenticado podía leer el snapshot completo | Sin arquetipos + `RISK_PERSONAL` |
+| Plugin panel | Capacidades `local_x:cap` (inexistentes) y `send_file()` sin `filelib.php`: el panel nunca funcionó | Corregido |
+| Legacy/moosh | La contraseña alfanumérica no cumple la política del sitio (moosh se la saltaba) | Contraseña conforme a la política |
+
 ## Estado
 
 | Fase | Estado |
@@ -169,11 +198,11 @@ plugin para poder cambiarlas sin tocar código.
 | 0 — Higiene | ✅ (purga de historial pendiente de decisión) |
 | 1 — Entorno y CI | ✅ |
 | 2 — Snapshot | ✅ |
-| 3 — SIGAD | ⬜ |
-| 4 — Análisis | ⬜ |
-| 5 — Aplicación | ⬜ |
-| 6 — Notificaciones | ⬜ |
-| 7 — Informe, panel y CLI | ⬜ |
-| 8 — Tests | ⬜ (se hacen junto a cada fase) |
+| 3 — SIGAD | ✅ |
+| 4 — Análisis | ✅ |
+| 5 — Aplicación | ✅ |
+| 6 — Notificaciones | ✅ |
+| 7 — Informe, panel y CLI | ✅ |
+| 8 — Tests y calidad | ✅ (48 tests; privacy provider por revisar) |
 | 9 — Preproducción | ⬜ requiere acceso a entornos |
 | 10 — Producción | ⬜ |
