@@ -1,5 +1,26 @@
 <?php
-// Página de estado: última ejecución, configuración y próxima ejecución cron.
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Página de estado: última ejecución, configuración y próxima ejecución cron.
+ *
+ * @package    local_fpvirtual_gestion_alumnado
+ * @copyright  2026 FP virtual Aragón
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 require_once(__DIR__ . '/../../../config.php');
 
@@ -17,7 +38,7 @@ $PAGE->set_heading(get_string('menu:status', $component));
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('status:heading', $component));
 
-// --- Configuración relevante.
+// Configuración relevante.
 $configtable = new html_table();
 $configtable->attributes['class'] = 'generaltable';
 $config = \local_fpvirtual_gestion_alumnado\config::load();
@@ -38,7 +59,7 @@ if ($config->str('engine') === 'external') {
 echo $OUTPUT->heading(get_string('status:config', $component), 3);
 echo html_writer::table($configtable);
 
-// --- Tarea programada: estado y próxima ejecución.
+// Tarea programada: estado y próxima ejecución.
 echo $OUTPUT->heading(get_string('status:cron', $component), 3);
 $synctask = \core\task\manager::get_scheduled_task($component . '\task\sync_task');
 if ($synctask) {
@@ -48,7 +69,10 @@ if ($synctask) {
     $crontable->data = [
         [get_string('status:cron_disabled', $component), $synctask->get_disabled() ? get_string('yes') : get_string('no')],
         [get_string('status:cron_nextrun', $component), $nextrun ? userdate($nextrun) : '—'],
-        [get_string('status:cron_lastrun', $component), $synctask->get_last_run_time() ? userdate($synctask->get_last_run_time()) : '—'],
+        [
+            get_string('status:cron_lastrun', $component),
+            $synctask->get_last_run_time() ? userdate($synctask->get_last_run_time()) : '—',
+        ],
     ];
     echo html_writer::table($crontable);
     echo html_writer::tag('p', get_string('status:cron_hint', $component), ['class' => 'text-muted']);
@@ -56,13 +80,12 @@ if ($synctask) {
     echo $OUTPUT->notification(get_string('status:cron_missing', $component), \core\output\notification::NOTIFY_WARNING);
 }
 
-// --- Última ejecución registrada.
+// Datos de la última ejecución registrada.
 echo $OUTPUT->heading(get_string('status:lastrun', $component), 3);
 $run = \local_fpvirtual_gestion_alumnado\run_store::latest();
 if (!$run) {
     echo html_writer::tag('p', get_string('status:noruns', $component));
 } else {
-
     $runtable = new html_table();
     $runtable->attributes['class'] = 'generaltable';
     $duracion = $run->timeend ? format_time($run->timeend - $run->timestart) : '—';
@@ -72,7 +95,10 @@ if (!$run) {
         [get_string('setting:launchmode', $component), get_string('mode:' . $run->modo, $component)],
         [get_string('status:field_start', $component), userdate($run->timestart)],
         [get_string('status:field_duration', $component), $duracion],
-        [get_string('status:field_result', $component), \local_fpvirtual_gestion_alumnado\output\helper::status_badge($run->status)],
+        [
+            get_string('status:field_result', $component),
+            \local_fpvirtual_gestion_alumnado\output\helper::status_badge($run->status),
+        ],
         [get_string('status:field_exitcode', $component), $run->exitcode === null ? '—' : $run->exitcode],
     ];
     echo html_writer::table($runtable);
@@ -83,7 +109,7 @@ if (!$run) {
     echo html_writer::div(html_writer::link($logurl, get_string('status:viewlog', $component)), 'mt-2');
 }
 
-// --- Enlaces.
+// Enlaces.
 $logsurl = new moodle_url('/local/fpvirtual_gestion_alumnado/admin/logs.php');
 $launchurl = new moodle_url('/local/fpvirtual_gestion_alumnado/admin/launch.php');
 $links = html_writer::link($logsurl, get_string('menu:logs', $component));

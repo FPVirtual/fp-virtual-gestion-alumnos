@@ -34,7 +34,6 @@ use local_fpvirtual_gestion_alumnado\config;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class client {
-
     /** @var config */
     protected config $config;
 

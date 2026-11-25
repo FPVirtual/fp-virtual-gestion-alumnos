@@ -29,7 +29,6 @@ use local_fpvirtual_gestion_alumnado\sigad\parser;
  * @covers     \local_fpvirtual_gestion_alumnado\sync\applier
  */
 final class applier_test extends \advanced_testcase {
-
     /** @var \stdClass[] Cursos por shortname. */
     private array $courses = [];
 
@@ -91,12 +90,30 @@ final class applier_test extends \advanced_testcase {
         $notifier = new class implements notifier_interface {
             /** @var array */
             public array $calls = [];
+            /**
+             * Registra la bienvenida.
+             *
+             * @param array $user
+             * @param string $password
+             * @param array $modules
+             */
             public function welcome(array $user, string $password, array $modules): void {
                 $this->calls[] = ['welcome', $user['username'], $password, $modules];
             }
+            /**
+             * Registra el cambio de usuario.
+             *
+             * @param array $op
+             */
             public function username_changed(array $op): void {
                 $this->calls[] = ['renamed', $op['username']];
             }
+            /**
+             * Registra el aviso de matrículas.
+             *
+             * @param array $student
+             * @param array $modules
+             */
             public function new_enrolments(array $student, array $modules): void {
                 $this->calls[] = ['enrolments', $student['username'], $modules];
             }

@@ -24,7 +24,6 @@ namespace local_fpvirtual_gestion_alumnado\sync;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 interface notifier_interface {
-
     /**
      * Bienvenida a un usuario recién creado, con sus credenciales y matrículas.
      *

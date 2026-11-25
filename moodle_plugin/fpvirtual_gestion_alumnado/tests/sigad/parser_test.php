@@ -25,7 +25,6 @@ namespace local_fpvirtual_gestion_alumnado\sigad;
  * @covers     \local_fpvirtual_gestion_alumnado\sigad\parser
  */
 final class parser_test extends \basic_testcase {
-
     /**
      * Dataset del fichero de ejemplo.
      *

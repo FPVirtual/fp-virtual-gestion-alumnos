@@ -30,7 +30,6 @@ use local_fpvirtual_gestion_alumnado\sync\report;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class helper {
-
     /**
      * Distintivo de estado de una ejecución.
      *

@@ -1,24 +1,22 @@
-# Plugin Moodle `fpvirtual_gestion_alumnado`
+# Plugin Moodle `local_fpvirtual_gestion_alumnado`
 
-Plugin `local` para Moodle que acompaña al paquete Python
-[`gestion_alumnos`](../../gestion_alumnos): sirve el *snapshot* de Moodle
-vía webservice y ofrece al administrador un panel para lanzar, programar
-y auditar el proceso de sincronización de alumnado.
+Sincroniza el alumnado de **SIGAD** con **Moodle** desde dentro de Moodle:
+altas, cambios de documento, datos personales, cohortes, matrículas,
+suspensiones, correos al alumnado e informe a los responsables.
 
-> **Límite de responsabilidad:** el plugin **no** implementa la
-> sincronización (extracción SIGAD, deltas, altas/bajas, emails). Toda esa
-> lógica vive en el paquete Python. Este plugin solo:
->
-> 1. **Sirve datos**: función webservice `local_fpvirtual_gestion_alumnado_get_snapshot`.
-> 2. **Orquesta ejecuciones**: lanza el comando configurado (zipapp) en modo
->    dry-run o apply, manualmente o por cron.
-> 3. **Audita**: registra cada ejecución y guarda sus logs, visibles en el admin.
+- **Lecturas** con SQL a través de `$DB` (sin moosh ni MySQL externo).
+- **Escrituras** solo con las APIs internas de Moodle (eventos, cachés y contextos correctos).
+- **Plan revisable**: cada ejecución calcula un plan; en *dry-run* solo se informa.
+- **Guardas de seguridad**: aborta si SIGAD no devuelve alumnos o si el plan supera los límites.
+
+Reglas de negocio, decisiones y fases: [`docus/roadmap-v0.4-plugin-php.md`](../../docus/roadmap-v0.4-plugin-php.md).
 
 ## Requisitos
 
 - Moodle 4.2+ (`$plugin->requires = 2023042400`). Producción: 4.5.
-- El paquete Python desplegado y accesible desde el servidor Moodle
-  (p. ej. `/opt/gestion_alumnos.pyz` con sus dependencias o entorno).
+- Campos de perfil `IdSIGAD`, `emailsigad` (y opcionalmente `tipoDocumento`, `consentimientoCDD`).
+- Cohortes `alumnado` y `{codigoCentro}-{siglasCiclo}`; cursos `{codigoCentro}-{siglasCiclo}-{idMateria}`
+  con matriculación manual activa.
 
 ## Instalación
 
@@ -26,89 +24,63 @@ y auditar el proceso de sincronización de alumnado.
 cp -r moodle_plugin/fpvirtual_gestion_alumnado /ruta/a/moodle/local/
 ```
 
-A continuación, en Moodle: **Administración del sitio > Notificaciones** y
-completa la instalación.
+Después, **Administración del sitio > Notificaciones** para completar la instalación.
 
 ## Configuración
 
-**Administración del sitio > Plugins > Local > FP Virtual: gestión de alumnado**
+**Administración del sitio > Plugins > Plugins locales > FP Virtual: gestión de alumnado**
 
-| Ajuste | Descripción |
-|--------|-------------|
-| Activar ejecución programada | Habilita la tarea cron (el lanzamiento manual es independiente) |
-| Modo de ejecución | `dry` (por defecto) o `apply` |
-| Comando del proceso | P. ej. `python3 /opt/gestion_alumnos.pyz` (el plugin añade `sync [--apply]`) |
-| Variables de entorno adicionales | Un `VAR=valor` por línea |
-| Timeout (segundos) | Máximo de ejecución (por defecto 600) |
-| Retención de logs (días) | Purgar automáticamente (por defecto 30) |
+| Sección | Ajustes principales |
+|---------|---------------------|
+| Ejecución | Activar tarea programada, modo (`dry`/`apply`), motor (integrado / comando externo), retención |
+| Conexión con SIGAD | URL base, usuario, contraseña (cifrada), timeout, espera y reintentos |
+| Reglas | Dominio del email, prefijos excluidos (`prof`), usuarios protegidos, cursos excluidos (`ayuda`), cohorte general, sincronizar nombres, limpieza anual (agosto) |
+| Límites de seguridad | Máximo de usuarios suspendidos y % de matrículas suspendidas por ejecución |
+| Notificaciones | Activar, redirigir a un buzón de pruebas, límite diario, pausa, destinatarios del informe, curso de ayuda, URL de soporte |
 
-### Configurar el servicio web del snapshot
+> **Preproducción:** rellena *Redirigir los correos del alumnado a* para que ningún correo llegue a alumnos reales.
 
-1. Crea/edita el **servicio web externo** usado por el paquete Python y
-   añade la función `local_fpvirtual_gestion_alumnado_get_snapshot`
-   (ver [`docus/conexion_moodle_api.md`](../../docus/conexion_moodle_api.md)).
-2. En Python, usa `MOODLE_SOURCE_STRATEGY=api-snapshot`.
+El horario se ajusta en **Administración del sitio > Servidor > Tareas programadas**
+(`local_fpvirtual_gestion_alumnado\task\sync_task`, por defecto a las 04:00).
 
-### Configurar el cron
+## Uso
 
-La tarea `local_fpvirtual_gestion_alumnado\task\sync_task` aparece en
-**Administración del sitio > Servidor > Tareas programadas**, donde se
-ajusta hora y frecuencia. El modo (dry/apply) y el interruptor general
-están en los ajustes del plugin.
+### Panel
 
-El cron de Moodle debe estar activo en el servidor (`cron.php` vía
-crontab del sistema), como para cualquier tarea programada.
+- **Gestión alumnado: ejecutar ahora** — lanza un dry-run o un apply en segundo plano (tarea adhoc).
+- **Gestión alumnado: estado** — configuración, tarea programada y resumen de la última ejecución.
+- **Gestión alumnado: historial** — cada ejecución con su resumen, informe y ficheros descargables
+  (log, informe, plan; el CSV de altas y la copia de SIGAD solo con la capacidad `:launch`).
 
-## Uso del panel
+### Línea de comandos
 
-- **Gestión alumnado: ejecutar ahora** — botones para lanzar un dry-run o
-  un apply inmediatos (en segundo plano vía tarea adhoc).
-- **Gestión alumnado: estado** — configuración actual, estado y próxima
-  ejecución de la tarea cron, y resultado de la última ejecución.
-- **Gestión alumnado: logs** — historial paginado de ejecuciones con
-  visualización y descarga de cada log.
+```bash
+sudo -u www-data php local/fpvirtual_gestion_alumnado/cli/sync.php --mode=dry
+sudo -u www-data php local/fpvirtual_gestion_alumnado/cli/sync.php --mode=apply
+sudo -u www-data php local/fpvirtual_gestion_alumnado/cli/sync.php --mode=dry --sigad-file=/ruta/sigad.json
+sudo -u www-data php local/fpvirtual_gestion_alumnado/cli/sync.php --mode=apply --force   # ignora los límites
+```
+
+Códigos de salida: `0` correcta, `1` error, `2` detenida por una guarda de seguridad.
+
+### Artefactos de cada ejecución
+
+En `{dataroot}/fpvirtual_gestion_alumnado/runs/{id}/`: `output.log`, `informe.md`, `plan.json`,
+`altas_google.csv` (permisos 0600, contiene contraseñas iniciales) y `sigad.json`. Se purgan
+con la retención configurada.
 
 ## Permisos
 
-| Capacidad | Quién la tiene por defecto | Para qué |
-|-----------|---------------------------|----------|
-| `local/fpvirtual_gestion_alumnado:usewebservice` | Nadie (asignar al rol del usuario de servicio) | Consumir el snapshot (datos personales: `RISK_PERSONAL`) |
-| `local/fpvirtual_gestion_alumnado:viewstatus` | Manager | Ver estado e historial |
-| `local/fpvirtual_gestion_alumnado:launch` | Manager | Lanzar el proceso manualmente |
+| Capacidad | Por defecto | Para qué |
+|-----------|-------------|----------|
+| `local/fpvirtual_gestion_alumnado:viewstatus` | Manager | Ver estado, historial e informes |
+| `local/fpvirtual_gestion_alumnado:launch` | Manager | Lanzar manualmente; descargar CSV de altas y copia de SIGAD |
+| `local/fpvirtual_gestion_alumnado:usewebservice` | Nadie | Función webservice `get_snapshot` (solo para el motor externo en transición) |
 
-El rol de administrador dispone de todas.
+## Desarrollo y tests
 
-## Estructura
-
-```
-fpvirtual_gestion_alumnado/
-├── version.php
-├── settings.php             # Ajustes + entradas del menú admin
-├── db/
-│   ├── access.php           # Capacidades
-│   ├── install.xml          # Tabla de ejecuciones
-│   ├── services.php         # Función webservice del snapshot
-│   └── tasks.php            # Tareas cron (sync + limpieza)
-├── classes/
-│   ├── external/get_snapshot.php  # local_fpvirtual_gestion_alumnado_get_snapshot
-│   ├── runner.php           # Ejecuta el proceso Python (común a manual y cron)
-│   ├── run_store.php        # Registro de ejecuciones + logs en dataroot
-│   ├── task/sync_task.php       # Tarea programada
-│   ├── task/adhoc_sync_task.php # Lanzamiento manual en segundo plano
-│   ├── task/cleanup_task.php    # Purgar historial antiguo
-│   └── privacy/provider.php
-├── admin/
-│   ├── launch.php           # Botones dry-run / apply
-│   ├── status.php           # Última ejecución + próxima ejecución cron
-│   └── logs.php             # Historial y visualización de logs
-├── lang/en/, lang/es/
-└── tests/external/get_snapshot_test.php
-```
-
-## Tests
-
-Entorno Docker reproducible en [`../dev/`](../dev/) (Moodle limpio + MariaDB 10.11 +
-PHP 8.2). Necesita un código fuente de Moodle **limpio** (nunca el de producción):
+Entorno Docker reproducible en [`../dev/`](../dev/) (Moodle limpio + MariaDB 10.11 + PHP 8.2).
+Necesita un código fuente de Moodle **limpio** (nunca el de producción):
 
 ```bash
 git clone --depth 1 -b MOODLE_405_STABLE https://github.com/moodle/moodle.git ~/moodle405
@@ -118,19 +90,36 @@ scripts/plugin-test.sh --filter analyzer  # argumentos extra para phpunit
 scripts/plugin-test.sh --down             # parar y borrar el entorno
 ```
 
-La primera ejecución construye la imagen, instala las dependencias de Composer de
-Moodle e inicializa la base de tests. Si cambia `version.php`, reinicializa con
+Si cambia `version.php`, reinicializa con
 `docker compose -f moodle_plugin/dev/docker-compose.yml exec php php admin/tool/phpunit/cli/init.php`.
 
-En GitHub Actions se ejecuta `moodle-plugin-ci` contra Moodle 4.2 y 4.5
-(`.github/workflows/moodle-plugin-ci.yml`).
+En GitHub Actions se ejecuta `moodle-plugin-ci` (lint, validate, phpcs, PHPUnit) contra Moodle 4.2 y 4.5.
+
+## Estructura
+
+```
+fpvirtual_gestion_alumnado/
+├── classes/
+│   ├── config.php              # Ajustes con valores por defecto
+│   ├── sigad/                  # client (HTTP), parser, dataset
+│   ├── sync/                   # moodle_state, analyzer, plan, applier, notifier, report, engine
+│   ├── runner.php              # Punto de entrada común (cron/manual)
+│   ├── run_store.php           # Historial y artefactos
+│   ├── output/helper.php       # Fragmentos del panel
+│   ├── task/                   # sync_task, adhoc_sync_task, cleanup_task
+│   └── external/get_snapshot.php
+├── cli/sync.php
+├── admin/                      # status, logs, launch
+├── templates/                  # Correos (Mustache)
+├── db/ lang/ tests/
+```
 
 ## Troubleshooting
 
 | Síntoma | Causa probable | Solución |
 |---------|----------------|----------|
-| `functionnotavailable` desde Python | La función no está añadida al servicio web | Añadir `local_fpvirtual_gestion_alumnado_get_snapshot` al servicio externo |
-| El cron no ejecuta | Tarea deshabilitada o cron del sistema sin configurar | Activar en Tareas programadas; revisar crontab → `cron.php` |
-| Ejecuciones con código 124 | Timeout alcanzado | Aumentar el timeout o revisar duración real del proceso |
-| `error:nocommand` | Comando sin configurar | Ajustes del plugin > Comando del proceso |
-| La dry-run está bien pero apply no aplica | `modo_lanzamiento = dry` | Cambiar el modo en los ajustes |
+| Ejecución «Detenida por seguridad» | SIGAD sin alumnos o plan por encima de los límites | Revisar el informe; si es correcto, `cli/sync.php --mode=apply --force` |
+| «Faltan las credenciales de SIGAD» | Usuario/contraseña vacíos | Ajustes > Conexión con SIGAD |
+| Avisos «Cursos que no existen en Moodle» | Curso `{centro}-{ciclo}-{idMateria}` no creado | Crear el curso; la matrícula se hará en la siguiente ejecución |
+| Errores `create_user` por contraseña | Política de contraseñas muy estricta | Se usa `generate_password()` si la alfanumérica no cumple; revisar política |
+| No llegan correos | Correo de Moodle sin configurar, redirección activa o límite diario | Revisar SMTP de Moodle y los ajustes de notificaciones |

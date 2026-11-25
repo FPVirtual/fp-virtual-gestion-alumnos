@@ -27,7 +27,6 @@ use local_fpvirtual_gestion_alumnado\config;
  * @covers     \local_fpvirtual_gestion_alumnado\sync\notifier
  */
 final class notifier_test extends \advanced_testcase {
-
     /** @var \phpunit_message_sink */
     private $sink;
 

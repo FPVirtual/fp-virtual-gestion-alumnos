@@ -33,7 +33,6 @@ use local_fpvirtual_gestion_alumnado\sigad\dataset;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class applier {
-
     /** @var config */
     protected config $config;
 
@@ -66,8 +65,12 @@ class applier {
      * @param notifier_interface|null $notifier
      * @param callable|null $log
      */
-    public function __construct(config $config, ?dataset $sigad = null, ?notifier_interface $notifier = null,
-            ?callable $log = null) {
+    public function __construct(
+        config $config,
+        ?dataset $sigad = null,
+        ?notifier_interface $notifier = null,
+        ?callable $log = null
+    ) {
         global $CFG;
         require_once($CFG->dirroot . '/user/lib.php');
         require_once($CFG->dirroot . '/user/profile/lib.php');
@@ -103,8 +106,12 @@ class applier {
                     ($this->log)("ERROR {$type} " . ($op['username'] ?? '') . ': ' . $e->getMessage());
                 }
             }
-            ($this->log)(sprintf('%s: %d correctas, %d errores', $type,
-                $this->result->done[$type] ?? 0, $this->result->failed[$type] ?? 0));
+            ($this->log)(sprintf(
+                '%s: %d correctas, %d errores',
+                $type,
+                $this->result->done[$type] ?? 0,
+                $this->result->failed[$type] ?? 0
+            ));
         }
 
         $this->notify_enrolments($newenrolments);
@@ -171,8 +178,10 @@ class applier {
 
         if ($this->notifier) {
             $student = $this->student($op['username']) ?? [];
-            $modules = array_values(array_map(fn($m) => $m['centro'] . ' - ' . $m['ciclo'] . ' - ' . $m['modulo'],
-                $student['modules'] ?? []));
+            $modules = array_values(array_map(
+                fn($m) => $m['centro'] . ' - ' . $m['ciclo'] . ' - ' . $m['modulo'],
+                $student['modules'] ?? []
+            ));
             $this->notifier->welcome($op + ['institutionalemail' => $user->email], $password, $modules);
         }
     }

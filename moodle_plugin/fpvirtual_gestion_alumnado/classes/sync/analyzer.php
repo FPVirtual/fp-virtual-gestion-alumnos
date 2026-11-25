@@ -29,7 +29,6 @@ use local_fpvirtual_gestion_alumnado\sigad\dataset;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class analyzer {
-
     /** @var dataset */
     protected dataset $sigad;
 
@@ -229,8 +228,10 @@ class analyzer {
         if ($student['idsigad'] && $user['idsigad'] !== $student['idsigad']) {
             $fields[moodle_state::FIELD_IDSIGAD] = (string)$student['idsigad'];
         }
-        if ($student['email'] !== null
-                && \core_text::strtolower($student['email']) !== \core_text::strtolower($user['emailsigad'])) {
+        if (
+            $student['email'] !== null
+                && \core_text::strtolower($student['email']) !== \core_text::strtolower($user['emailsigad'])
+        ) {
             $fields[moodle_state::FIELD_EMAILSIGAD] = $student['email'];
         }
         if ($fields) {
@@ -242,8 +243,10 @@ class analyzer {
         }
 
         // R14: nombre y apellidos.
-        if ($this->config->bool('syncnames') && $student['nombre'] !== null && $student['apellido1'] !== null
-                && ($student['nombre'] !== $user['firstname'] || $student['apellidos'] !== $user['lastname'])) {
+        if (
+            $this->config->bool('syncnames') && $student['nombre'] !== null && $student['apellido1'] !== null
+                && ($student['nombre'] !== $user['firstname'] || $student['apellidos'] !== $user['lastname'])
+        ) {
             $this->plan->add(plan::UPDATE_NAME, $ref + [
                 'firstname' => $student['nombre'], 'lastname' => $student['apellidos'],
                 'oldfirstname' => $user['firstname'], 'oldlastname' => $user['lastname'],

@@ -24,7 +24,6 @@ namespace local_fpvirtual_gestion_alumnado\sync;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class report {
-
     /** @var string[] Títulos de cada sección del plan. */
     public const TITLES = [
         plan::CREATE_USER => 'Altas de usuario',
@@ -93,13 +92,15 @@ class report {
         $md[] = '';
         $md[] = '| Datos | Valor |';
         $md[] = '|---|---:|';
-        foreach ([
+        foreach (
+            [
             'sigad_students' => 'Alumnos en SIGAD',
             'sigad_modules' => 'Matrículas en SIGAD',
             'moodle_users_in_scope' => 'Usuarios gestionados en Moodle',
             'moodle_active_enrolments' => 'Matrículas activas en cursos gestionados',
             'matched_users' => 'Alumnos emparejados',
-        ] as $key => $label) {
+            ] as $key => $label
+        ) {
             $md[] = "| {$label} | " . ($plan->stats[$key] ?? 0) . ' |';
         }
         if ($emails) {
@@ -112,7 +113,7 @@ class report {
             $md[] = '## Errores';
             $md[] = '';
             foreach ($result->errors as $e) {
-                $md[] = '- `' . $e['type'] . '` ' . $e['username'] . ': ' . self::inline($e['message']);
+                $md[] = '- [' . $e['type'] . '] ' . $e['username'] . ': ' . self::inline($e['message']);
             }
             $md[] = '';
         }

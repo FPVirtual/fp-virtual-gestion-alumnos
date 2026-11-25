@@ -27,7 +27,6 @@ use local_fpvirtual_gestion_alumnado\config;
  * @covers     \local_fpvirtual_gestion_alumnado\sigad\client
  */
 final class client_test extends \advanced_testcase {
-
     /** @var string[] URLs pedidas. */
     private array $urls = [];
 
@@ -50,13 +49,13 @@ final class client_test extends \advanced_testcase {
             'sigad_user' => 'u', 'sigad_password' => 'p',
             'sigad_maxretries' => 3, 'sigad_initialwait' => 7, 'sigad_retrydelay' => 2,
         ]);
-        $http = function(string $url, array $headers) use (&$responses): array {
+        $http = function (string $url, array $headers) use (&$responses): array {
             $this->urls[] = $url;
             $this->headers[] = $headers;
             [$status, $body] = array_shift($responses);
             return [$status, is_array($body) ? json_encode($body) : $body];
         };
-        return new client($config, $http, function(int $s): void {
+        return new client($config, $http, function (int $s): void {
             $this->sleeps[] = $s;
         });
     }

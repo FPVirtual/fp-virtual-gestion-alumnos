@@ -1,19 +1,29 @@
 <?php
-// Punto de ejecución único compartido por el lanzamiento manual y la tarea cron.
+// This file is part of Moodle - http://moodle.org/
 //
-// Motor 'php' (por defecto): la sincronización se ejecuta dentro de Moodle
-// (sync\engine). Motor 'external' (transición): lanza el comando configurado
-// (paquete Python) y registra su salida.
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_fpvirtual_gestion_alumnado;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Ejecuta el proceso de gestión de alumnado y registra la ejecución.
+ *
+ * @package    local_fpvirtual_gestion_alumnado
+ * @copyright  2026 FP virtual Aragón
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class runner {
-
     /** Modos soportados. */
     public const MODOS = ['dry', 'apply'];
 
@@ -153,7 +163,7 @@ class runner {
             return [124, $salida];
         }
         if ($exitcode === -1) {
-            // proc_close puede devolver -1 cuando el estado ya fue leído; se usa el del bucle.
+            // Proc_close puede devolver -1 cuando el estado ya fue leído; se usa el del bucle.
             $exitcode = $estado['exitcode'] ?? 1;
         }
 

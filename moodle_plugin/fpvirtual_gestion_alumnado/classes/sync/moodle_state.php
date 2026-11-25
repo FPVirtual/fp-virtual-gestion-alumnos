@@ -31,7 +31,6 @@ use local_fpvirtual_gestion_alumnado\config;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class moodle_state {
-
     /** @var string Campo de perfil con el identificador de SIGAD. */
     public const FIELD_IDSIGAD = 'IdSIGAD';
 
@@ -123,8 +122,13 @@ class moodle_state {
     protected function load_users(): void {
         global $DB, $CFG;
 
-        $fields = $DB->get_records_list('user_info_field', 'shortname',
-            [self::FIELD_IDSIGAD, self::FIELD_EMAILSIGAD], '', 'shortname, id');
+        $fields = $DB->get_records_list(
+            'user_info_field',
+            'shortname',
+            [self::FIELD_IDSIGAD, self::FIELD_EMAILSIGAD],
+            '',
+            'shortname, id'
+        );
         $idsigadfield = isset($fields[self::FIELD_IDSIGAD]) ? (int)$fields[self::FIELD_IDSIGAD]->id : 0;
         $emailfield = isset($fields[self::FIELD_EMAILSIGAD]) ? (int)$fields[self::FIELD_EMAILSIGAD]->id : 0;
 

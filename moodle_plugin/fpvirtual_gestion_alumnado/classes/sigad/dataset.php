@@ -32,7 +32,6 @@ namespace local_fpvirtual_gestion_alumnado\sigad;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class dataset {
-
     /** @var string Fecha de generación declarada por SIGAD. */
     public string $fecha = '';
 

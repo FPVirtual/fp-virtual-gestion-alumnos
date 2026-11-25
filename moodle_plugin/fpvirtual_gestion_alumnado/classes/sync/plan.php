@@ -29,7 +29,6 @@ use local_fpvirtual_gestion_alumnado\config;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class plan {
-
     // Acciones (escriben en Moodle), en orden de ejecución.
     /** Alta de usuario (R5). */
     public const CREATE_USER = 'create_user';

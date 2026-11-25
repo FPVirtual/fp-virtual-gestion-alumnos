@@ -31,7 +31,6 @@ use local_fpvirtual_gestion_alumnado\config;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class notifier implements notifier_interface {
-
     /** @var string Ajuste interno con el contador diario: "AAAAMMDD:N". */
     public const DAILY_COUNTER = 'emailcounter';
 
@@ -179,8 +178,14 @@ class notifier implements notifier_interface {
      * @param string $attachname
      * @return bool
      */
-    protected function deliver(string $to, string $subject, string $template, array $context,
-            ?string $attachment = null, string $attachname = ''): bool {
+    protected function deliver(
+        string $to,
+        string $subject,
+        string $template,
+        array $context,
+        ?string $attachment = null,
+        string $attachname = ''
+    ): bool {
         global $OUTPUT;
 
         $html = $OUTPUT->render_from_template(config::COMPONENT . '/' . $template, $context + $this->common_context());
@@ -194,8 +199,16 @@ class notifier implements notifier_interface {
         $recipient->lastname = $context['apellidos'] ?? '';
 
         try {
-            $ok = email_to_user($recipient, \core_user::get_noreply_user(), $subject, $text, $html,
-                $attachment ?? '', $attachname, true);
+            $ok = email_to_user(
+                $recipient,
+                \core_user::get_noreply_user(),
+                $subject,
+                $text,
+                $html,
+                $attachment ?? '',
+                $attachname,
+                true
+            );
         } catch (\Throwable $e) {
             $ok = false;
         }

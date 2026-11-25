@@ -27,7 +27,6 @@ namespace local_fpvirtual_gestion_alumnado;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class config {
-
     /** @var string Componente. */
     public const COMPONENT = 'local_fpvirtual_gestion_alumnado';
 

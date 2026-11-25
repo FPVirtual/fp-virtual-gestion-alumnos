@@ -30,7 +30,6 @@ use local_fpvirtual_gestion_alumnado\sigad\parser;
  * @covers     \local_fpvirtual_gestion_alumnado\sync\plan
  */
 final class analyzer_test extends \advanced_testcase {
-
     /** @var \stdClass[] Cursos por shortname. */
     private array $courses = [];
 
@@ -47,8 +46,10 @@ final class analyzer_test extends \advanced_testcase {
         foreach (['alumnado', '50009348-IFC303', '22002521-SSC302'] as $cohort) {
             $gen->create_cohort(['name' => $cohort, 'idnumber' => $cohort]);
         }
-        foreach (['50009348-IFC303-5001', '50009348-IFC303-5002', '50009348-IFC303-5099',
-                '50009348-IFC303-01t', 'ayuda'] as $shortname) {
+        foreach (
+            ['50009348-IFC303-5001', '50009348-IFC303-5002', '50009348-IFC303-5099',
+                '50009348-IFC303-01t', 'ayuda'] as $shortname
+        ) {
             $this->courses[$shortname] = $gen->create_course(['shortname' => $shortname]);
         }
         // 22002521-SSC302-6001 no existe en Moodle a propósito.
@@ -113,8 +114,10 @@ final class analyzer_test extends \advanced_testcase {
         $this->assertNull($ana['userid']);
 
         // Ana: 5001 y 5002; Luis: 5001 (6001 no existe en Moodle).
-        $this->assertSame(['50009348-IFC303-5001', '50009348-IFC303-5001', '50009348-IFC303-5002'],
-            $this->col($plan, plan::ENROL, 'shortname'));
+        $this->assertSame(
+            ['50009348-IFC303-5001', '50009348-IFC303-5001', '50009348-IFC303-5002'],
+            $this->col($plan, plan::ENROL, 'shortname')
+        );
         $this->assertSame(['22002521-SSC302-6001'], $this->col($plan, plan::MISSING_COURSE, 'nombre'));
         // Ana: alumnado + 1 ciclo; Luis: alumnado + 2 ciclos.
         $this->assertSame(5, $plan->count(plan::ADD_COHORT));
@@ -152,8 +155,10 @@ final class analyzer_test extends \advanced_testcase {
 
         $rename = $plan->get(plan::RENAME_USER);
         $this->assertCount(1, $rename);
-        $this->assertSame(['userid' => (int)$old->id, 'username' => 'x0000002t', 'oldusername' => 'y9999999z'],
-            array_intersect_key($rename[0], array_flip(['userid', 'username', 'oldusername'])));
+        $this->assertSame(
+            ['userid' => (int)$old->id, 'username' => 'x0000002t', 'oldusername' => 'y9999999z'],
+            array_intersect_key($rename[0], array_flip(['userid', 'username', 'oldusername']))
+        );
         $this->assertNotContains('x0000002t', $this->col($plan, plan::CREATE_USER, 'username'));
         // La matrícula existente se conserva: se cruza por id de usuario, no por username.
         $this->assertSame(0, $plan->count(plan::SUSPEND_ENROL));

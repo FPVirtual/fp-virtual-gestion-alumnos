@@ -24,10 +24,10 @@
 
 define('CLI_SCRIPT', true);
 
-// Directorio desde el que se lanzó el comando (para resolver rutas relativas).
-$cwd = getcwd();
-
 require(__DIR__ . '/../../../config.php');
+
+// Directorio desde el que se lanzó el comando (para resolver rutas relativas).
+$cwd = $_SERVER['PWD'] ?? getcwd();
 require_once($CFG->libdir . '/clilib.php');
 
 [$options, $unrecognized] = cli_get_params(

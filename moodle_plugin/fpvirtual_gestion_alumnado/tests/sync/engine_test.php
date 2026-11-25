@@ -32,7 +32,6 @@ use local_fpvirtual_gestion_alumnado\sigad\client;
  * @covers     \local_fpvirtual_gestion_alumnado\run_store
  */
 final class engine_test extends \advanced_testcase {
-
     /** @var string Fichero SIGAD de ejemplo. */
     private string $fixture;
 
@@ -109,8 +108,11 @@ final class engine_test extends \advanced_testcase {
         $csv = file_get_contents(run_store::artifact($record, 'csv'));
         $this->assertStringContainsString('00000001r@fpvirtualaragon.es', $csv);
         $this->assertStringContainsString('/Alumnado', $csv);
-        $this->assertStringNotContainsString('password', strtolower(json_encode(json_decode($record->summary))),
-            'Las contraseñas no se guardan en el resumen');
+        $this->assertStringNotContainsString(
+            'password',
+            strtolower(json_encode(json_decode($record->summary))),
+            'Las contraseñas no se guardan en el resumen'
+        );
 
         $to = array_column($this->sink->get_messages(), 'to');
         $this->assertSame(2, count(array_keys($to, 'pruebas@example.com')), 'Dos bienvenidas redirigidas');
@@ -154,7 +156,7 @@ final class engine_test extends \advanced_testcase {
             [200, json_encode(['codigo' => 0, 'estudiantes' => json_encode($datos)])],
         ];
         $config = config::from_array(['sigad_user' => 'u', 'sigad_password' => 'p', 'sigad_initialwait' => 0]);
-        $client = new client($config, function() use (&$responses) {
+        $client = new client($config, function () use (&$responses) {
             return array_shift($responses);
         }, fn() => null);
 

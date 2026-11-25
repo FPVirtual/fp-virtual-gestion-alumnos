@@ -75,8 +75,11 @@ jobs:
 
       - name: Code checker (phpcs)
         if: ${{ !cancelled() }}
-        continue-on-error: true   # informativo hasta alinear el estilo (fase 8)
         run: moodle-plugin-ci phpcs --max-warnings 0
+
+      - name: Mustache lint
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci mustache
 
       - name: PHPUnit
         if: ${{ !cancelled() }}

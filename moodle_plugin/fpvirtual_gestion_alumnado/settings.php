@@ -32,34 +32,60 @@ if ($hassiteconfig) {
     $str = fn(string $id) => get_string($id, $component);
 
     // Atajos para declarar ajustes con su cadena y descripción.
-    $text = function(string $name, string $param = PARAM_RAW_TRIMMED, int $size = 30) use ($component, $d, $str) {
-        return new admin_setting_configtext("{$component}/{$name}", $str("setting:{$name}"),
-            $str("setting:{$name}_desc"), $d[$name], $param, $size);
+    $text = function (string $name, string $param = PARAM_RAW_TRIMMED, int $size = 30) use ($component, $d, $str) {
+        return new admin_setting_configtext(
+            "{$component}/{$name}",
+            $str("setting:{$name}"),
+            $str("setting:{$name}_desc"),
+            $d[$name],
+            $param,
+            $size
+        );
     };
-    $check = function(string $name) use ($component, $d, $str) {
-        return new admin_setting_configcheckbox("{$component}/{$name}", $str("setting:{$name}"),
-            $str("setting:{$name}_desc"), $d[$name]);
+    $check = function (string $name) use ($component, $d, $str) {
+        return new admin_setting_configcheckbox(
+            "{$component}/{$name}",
+            $str("setting:{$name}"),
+            $str("setting:{$name}_desc"),
+            $d[$name]
+        );
     };
-    $heading = fn(string $id) => new admin_setting_heading("{$component}/heading_{$id}", $str("heading:{$id}"),
-        $str("heading:{$id}_desc"));
+    $heading = fn(string $id) => new admin_setting_heading(
+        "{$component}/heading_{$id}",
+        $str("heading:{$id}"),
+        $str("heading:{$id}_desc")
+    );
 
     $settings = new admin_settingpage($component, $str('pluginname'));
 
     // Ejecución.
     $settings->add($heading('run'));
     $settings->add($check('enabled'));
-    $settings->add(new admin_setting_configselect("{$component}/launchmode", $str('setting:launchmode'),
-        $str('setting:launchmode_desc'), $d['launchmode'], ['dry' => $str('mode:dry'), 'apply' => $str('mode:apply')]));
-    $settings->add(new admin_setting_configselect("{$component}/engine", $str('setting:engine'),
-        $str('setting:engine_desc'), $d['engine'], ['php' => $str('engine:php'), 'external' => $str('engine:external')]));
+    $settings->add(new admin_setting_configselect(
+        "{$component}/launchmode",
+        $str('setting:launchmode'),
+        $str('setting:launchmode_desc'),
+        $d['launchmode'],
+        ['dry' => $str('mode:dry'), 'apply' => $str('mode:apply')]
+    ));
+    $settings->add(new admin_setting_configselect(
+        "{$component}/engine",
+        $str('setting:engine'),
+        $str('setting:engine_desc'),
+        $d['engine'],
+        ['php' => $str('engine:php'), 'external' => $str('engine:external')]
+    ));
     $settings->add($text('retentiondays', PARAM_INT, 5));
 
     // SIGAD.
     $settings->add($heading('sigad'));
     $settings->add($text('sigad_baseurl', PARAM_URL, 70));
     $settings->add($text('sigad_user'));
-    $settings->add(new admin_setting_encryptedpassword("{$component}/sigad_password", $str('setting:sigad_password'),
-        $str('setting:sigad_password_desc')));
+    $settings->add(new admin_setting_encryptedpassword(
+        "{$component}/sigad_password",
+        $str('setting:sigad_password'),
+        $str('setting:sigad_password_desc')
+    ));
     $settings->add($text('sigad_timeout', PARAM_INT, 5));
     $settings->add($text('sigad_initialwait', PARAM_INT, 5));
     $settings->add($text('sigad_maxretries', PARAM_INT, 5));
@@ -69,8 +95,13 @@ if ($hassiteconfig) {
     $settings->add($heading('rules'));
     $settings->add($text('emaildomain'));
     $settings->add($text('excludedprefixes'));
-    $settings->add(new admin_setting_configtextarea("{$component}/protectedusers", $str('setting:protectedusers'),
-        $str('setting:protectedusers_desc'), $d['protectedusers'], PARAM_RAW_TRIMMED));
+    $settings->add(new admin_setting_configtextarea(
+        "{$component}/protectedusers",
+        $str('setting:protectedusers'),
+        $str('setting:protectedusers_desc'),
+        $d['protectedusers'],
+        PARAM_RAW_TRIMMED
+    ));
     $settings->add($text('excludedcourses'));
     $settings->add($text('cohortalumnado'));
     $settings->add($check('syncnames'));
@@ -88,16 +119,25 @@ if ($hassiteconfig) {
     $settings->add($text('notifyredirect', PARAM_RAW_TRIMMED, 40));
     $settings->add($text('dailyemaillimit', PARAM_INT, 6));
     $settings->add($text('emailpause', PARAM_INT, 4));
-    $settings->add(new admin_setting_configtextarea("{$component}/reportto", $str('setting:reportto'),
-        $str('setting:reportto_desc'), $d['reportto'], PARAM_RAW_TRIMMED));
+    $settings->add(new admin_setting_configtextarea(
+        "{$component}/reportto",
+        $str('setting:reportto'),
+        $str('setting:reportto_desc'),
+        $d['reportto'],
+        PARAM_RAW_TRIMMED
+    ));
     $settings->add($text('helpcourseid', PARAM_INT, 6));
     $settings->add($text('supporturl', PARAM_URL, 60));
 
     // Motor externo (transición).
     $settings->add($heading('external'));
     $settings->add($text('command', PARAM_RAW, 70));
-    $settings->add(new admin_setting_configtextarea("{$component}/extraenv", $str('setting:extraenv'),
-        $str('setting:extraenv_desc'), $d['extraenv']));
+    $settings->add(new admin_setting_configtextarea(
+        "{$component}/extraenv",
+        $str('setting:extraenv'),
+        $str('setting:extraenv_desc'),
+        $d['extraenv']
+    ));
     $settings->add($text('timeout', PARAM_INT, 6));
 
     $ADMIN->add('localplugins', $settings);

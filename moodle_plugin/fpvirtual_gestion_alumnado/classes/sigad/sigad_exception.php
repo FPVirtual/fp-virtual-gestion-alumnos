@@ -24,7 +24,6 @@ namespace local_fpvirtual_gestion_alumnado\sigad;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class sigad_exception extends \moodle_exception {
-
     /**
      * Constructor.
      *

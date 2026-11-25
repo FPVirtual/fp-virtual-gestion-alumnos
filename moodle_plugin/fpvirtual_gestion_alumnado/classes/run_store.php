@@ -1,18 +1,32 @@
 <?php
-// Almacenamiento del historial de ejecuciones y de sus logs.
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace local_fpvirtual_gestion_alumnado;
-
-defined('MOODLE_INTERNAL') || die();
 
 /**
  * Gestiona la tabla de ejecuciones y los ficheros de log en dataroot.
  *
  * Cada ejecución del proceso (manual o cron) queda registrada con su
  * origen, modo, tiempos, código de salida, resumen y ruta al log.
+ *
+ * @package    local_fpvirtual_gestion_alumnado
+ * @copyright  2026 FP virtual Aragón
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class run_store {
-
     /** Nombre de la tabla (sin prefijo). */
     public const TABLE = 'local_fpvirtual_gestion_alumnado_run';
 
@@ -71,8 +85,13 @@ class run_store {
      * @param int $exitcode código de salida del proceso
      * @param string $output salida completa (stdout + stderr)
      */
-    public static function finish(int $runid, int $exitcode, string $output, ?array $summary = null,
-            ?string $status = null): void {
+    public static function finish(
+        int $runid,
+        int $exitcode,
+        string $output,
+        ?array $summary = null,
+        ?string $status = null
+    ): void {
         global $DB;
 
         $logfile = self::run_dir($runid) . '/' . self::ARTIFACTS['log'][0];

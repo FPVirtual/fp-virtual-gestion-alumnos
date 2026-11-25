@@ -33,7 +33,6 @@ use local_fpvirtual_gestion_alumnado\sigad\parser;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class engine {
-
     /** Ejecución correcta. */
     public const EXIT_OK = 0;
     /** Error. */
@@ -64,8 +63,12 @@ class engine {
      * @param callable|null $echo
      * @param notifier|null $notifier
      */
-    public function __construct(?config $config = null, ?client $client = null, ?callable $echo = null,
-            ?notifier $notifier = null) {
+    public function __construct(
+        ?config $config = null,
+        ?client $client = null,
+        ?callable $echo = null,
+        ?notifier $notifier = null
+    ) {
         $this->config = $config ?? config::load();
         $this->client = $client;
         $this->echo = $echo;
@@ -137,8 +140,10 @@ class engine {
             // 4. Análisis.
             $state = moodle_state::load($this->config);
             $plan = (new analyzer($sigad, $state, $this->config, $now))->analyze();
-            file_put_contents($dir . '/' . run_store::ARTIFACTS['plan'][0],
-                json_encode($plan->to_array(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            file_put_contents(
+                $dir . '/' . run_store::ARTIFACTS['plan'][0],
+                json_encode($plan->to_array(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            );
             foreach ($plan->counts() as $type => $count) {
                 if ($count) {
                     $this->log("Plan: {$type} = {$count}");
@@ -195,8 +200,15 @@ class engine {
      * @param notifier $notifier
      * @return array
      */
-    protected function finish(int $runid, int $exitcode, string $status, array $meta, ?plan $plan, ?result $result,
-            notifier $notifier): array {
+    protected function finish(
+        int $runid,
+        int $exitcode,
+        string $status,
+        array $meta,
+        ?plan $plan,
+        ?result $result,
+        notifier $notifier
+    ): array {
         $estados = [
             run_store::STATUS_SUCCESS => 'Correcta',
             run_store::STATUS_ERROR => 'Con errores',
