@@ -71,3 +71,7 @@ $string['logs:view'] = 'View';
 
 $string['error:nocommand'] = 'The process command is not configured. Set it in the plugin settings.';
 $string['error:nolog'] = 'Log file not found for this execution.';
+
+$string['fpvirtual_gestion_alumnado:usewebservice'] = 'Read the users and enrolments snapshot through web services';
+$string['fpvirtual_gestion_alumnado:viewstatus'] = 'View student management status and history';
+$string['fpvirtual_gestion_alumnado:launch'] = 'Launch student management manually';

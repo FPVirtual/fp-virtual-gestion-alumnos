@@ -1,7 +1,7 @@
 # Roadmap v0.4 — Sincronización SIGAD ↔ Moodle íntegramente en el plugin PHP
 
 > **Rama:** `v0.4-plugin-php-dev` (creada desde `v0.3-estructura-paquete-con-logs`)
-> **Moodle objetivo:** 4.5 (producción: 4.5.12). Compatibilidad mínima: 4.1 LTS.
+> **Moodle objetivo:** 4.5 (producción: 4.5.12). Compatibilidad mínima: 4.2 (API `core_external`).
 > **Plugin:** `local_fpvirtual_gestion_alumnado`
 
 ## Índice
@@ -105,12 +105,15 @@ plugin para poder cambiarlas sin tocar código.
 - Eliminar el token y la IP del docstring de `tests/test_moodle_api_integration.py`.
 - ⚠️ **Pendiente de decisión**: purgar el historial (`git filter-repo`) y rotar el token.
 
-### Fase 1 — Entorno de desarrollo y CI
+### Fase 1 — Entorno de desarrollo y CI ✅
 - Entorno Docker reproducible (Moodle 4.5 + PHP 8.3 + MariaDB) para PHPUnit.
 - `phpunit.xml`/script `scripts/plugin-test.sh` que enlaza el plugin y ejecuta sus tests.
-- GitHub Actions con `moodle-plugin-ci` (phpunit, phplint, phpcs, validate) — Moodle 4.1 y 4.5.
+- GitHub Actions con `moodle-plugin-ci` (phpunit, phplint, phpcs, validate) — Moodle 4.2 y 4.5.
 
-### Fase 2 — Corrección del snapshot (transición)
+### Fase 2 — Corrección del snapshot (transición) ✅
+- Migrado a `core_external\*` (`lib/externallib.php` no se puede incluir en 4.5).
+- Capacidad `usewebservice` sin arquetipos (antes la tenía cualquier usuario autenticado)
+  y con `RISK_PERSONAL`; añadidas las cadenas de idioma de las capacidades.
 - `get_snapshot`: `get_recordset_sql` (hoy `get_records_sql` colapsa filas por la primera
   columna: una sola matrícula por usuario y campos de perfil perdidos). Test de regresión.
 
@@ -164,8 +167,8 @@ plugin para poder cambiarlas sin tocar código.
 | Fase | Estado |
 |------|--------|
 | 0 — Higiene | ✅ (purga de historial pendiente de decisión) |
-| 1 — Entorno y CI | 🟡 en curso |
-| 2 — Snapshot | ⬜ |
+| 1 — Entorno y CI | ✅ |
+| 2 — Snapshot | ✅ |
 | 3 — SIGAD | ⬜ |
 | 4 — Análisis | ⬜ |
 | 5 — Aplicación | ⬜ |

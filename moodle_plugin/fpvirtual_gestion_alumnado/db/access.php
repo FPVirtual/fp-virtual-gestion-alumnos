@@ -4,16 +4,14 @@
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = [
-    // Consumo de la función webservice del snapshot. El acceso real se
-    // restringe además configurando el servicio web externo (usuarios
-    // autorizados con token); aquí se permite a cualquier usuario
-    // autenticado para no bloquear al usuario de servicio.
+    // Consumo de la función webservice del snapshot (expone datos personales
+    // de todo el alumnado). Sin arquetipos: se asigna explícitamente al rol
+    // del usuario de servicio web; el administrador la tiene siempre.
     'local/fpvirtual_gestion_alumnado:usewebservice' => [
         'captype' => 'read',
+        'riskbitmask' => RISK_PERSONAL,
         'contextlevel' => CONTEXT_SYSTEM,
-        'archetypes' => [
-            'user' => CAP_ALLOW,
-        ],
+        'archetypes' => [],
     ],
 
     // Ver estado de la última ejecución y el historial de logs.

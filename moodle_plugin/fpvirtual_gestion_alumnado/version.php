@@ -6,7 +6,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_fpvirtual_gestion_alumnado';
-$plugin->version = 2026102900;
-$plugin->requires = 2022041900; // Moodle 4.0.
+$plugin->version = 2026112500;
+$plugin->requires = 2023042400; // Moodle 4.2 (core_external).
 $plugin->maturity = MATURITY_ALPHA;
 $plugin->release = '0.1.0';

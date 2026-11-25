@@ -1,0 +1,48 @@
+# Entorno de desarrollo y tests (PHPUnit) del plugin local_fpvirtual_gestion_alumnado.
+#
+# Requiere un código fuente de Moodle limpio (NO el de producción):
+#   git clone --depth 1 -b MOODLE_405_STABLE https://github.com/moodle/moodle.git <dir>
+#   export MOODLE_DIR=<dir>
+# y se usa a través de scripts/plugin-test.sh.
+name: fpga-dev
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: moodle
+      MARIADB_DATABASE: moodle
+      MARIADB_USER: moodle
+      MARIADB_PASSWORD: moodle
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb_file_per_table=1
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 30
+
+  php:
+    build:
+      context: .
+      args:
+        BASE_IMAGE: ${MOODLE_PHP_BASE_IMAGE:-moodlehq/moodle-php-apache:8.2}
+    image: fpga-dev-php:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    working_dir: /var/www/html
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - ${MOODLE_DIR:?Define MOODLE_DIR con la ruta a un Moodle limpio}:/var/www/html
+      - ../fpvirtual_gestion_alumnado:/var/www/html/local/fpvirtual_gestion_alumnado
+      - ./config.php:/var/www/html/config.php:ro
+      - phpunitdata:/var/www/phpunitdata
+      - moodledata:/var/www/moodledata
+
+volumes:
+  phpunitdata:
+  moodledata:

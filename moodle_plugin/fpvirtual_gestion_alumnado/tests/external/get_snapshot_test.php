@@ -42,6 +42,45 @@ class get_snapshot_test extends \advanced_testcase {
         $this->assertSame(0, $enrolment['status']);
     }
 
+    /**
+     * Regresión: get_records_sql colapsaba filas por la primera columna, así
+     * que solo quedaba una matrícula por usuario y se perdían campos de perfil.
+     */
+    public function test_execute_keeps_every_enrolment_and_custom_field(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+        $gen = $this->getDataGenerator();
+
+        foreach (['IdSIGAD', 'emailsigad', 'otrocampo'] as $shortname) {
+            $gen->create_custom_profile_field([
+                'datatype' => 'text', 'shortname' => $shortname, 'name' => $shortname,
+            ]);
+        }
+        $user = $gen->create_user([
+            'username' => '12345678a',
+            'profile_field_IdSIGAD' => '16839',
+            'profile_field_emailsigad' => 'personal@example.com',
+            'profile_field_otrocampo' => 'ignorar',
+        ]);
+        $c1 = $gen->create_course(['shortname' => '50009348-DAW-1001']);
+        $c2 = $gen->create_course(['shortname' => '50009348-DAW-1002']);
+        $gen->enrol_user($user->id, $c1->id);
+        $gen->enrol_user($user->id, $c2->id, null, 'manual', 0, 0, ENROL_USER_SUSPENDED);
+
+        $result = get_snapshot::execute();
+
+        $mias = array_values(array_filter($result['matriculas'], fn(array $m) => $m['userid'] === (int)$user->id));
+        $this->assertCount(2, $mias);
+        $estados = array_column($mias, 'status', 'shortname');
+        $this->assertSame(0, $estados['50009348-DAW-1001']);
+        $this->assertSame(1, $estados['50009348-DAW-1002']);
+
+        $usuario = array_values(array_filter($result['usuarios'], fn(array $u) => $u['id'] === (int)$user->id));
+        $this->assertCount(1, $usuario);
+        $campos = array_column($usuario[0]['customfields'], 'value', 'shortname');
+        $this->assertSame(['IdSIGAD' => '16839', 'emailsigad' => 'personal@example.com'], $campos);
+    }
+
     public function test_execute_requires_capability(): void {
         $this->resetAfterTest(true);
 

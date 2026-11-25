@@ -16,7 +16,7 @@ y auditar el proceso de sincronización de alumnado.
 
 ## Requisitos
 
-- Moodle 4.0+ (`$plugin->requires = 2022041900`).
+- Moodle 4.2+ (`$plugin->requires = 2023042400`). Producción: 4.5.
 - El paquete Python desplegado y accesible desde el servidor Moodle
   (p. ej. `/opt/gestion_alumnos.pyz` con sus dependencias o entorno).
 
@@ -72,7 +72,7 @@ crontab del sistema), como para cualquier tarea programada.
 
 | Capacidad | Quién la tiene por defecto | Para qué |
 |-----------|---------------------------|----------|
-| `local/fpvirtual_gestion_alumnado:usewebservice` | Usuario autenticado | Consumir el snapshot (restringir además el servicio web a usuarios concretos) |
+| `local/fpvirtual_gestion_alumnado:usewebservice` | Nadie (asignar al rol del usuario de servicio) | Consumir el snapshot (datos personales: `RISK_PERSONAL`) |
 | `local/fpvirtual_gestion_alumnado:viewstatus` | Manager | Ver estado e historial |
 | `local/fpvirtual_gestion_alumnado:launch` | Manager | Lanzar el proceso manualmente |
 
@@ -107,11 +107,23 @@ fpvirtual_gestion_alumnado/
 
 ## Tests
 
-Dentro de una instalación de Moodle con el plugin enlazado:
+Entorno Docker reproducible en [`../dev/`](../dev/) (Moodle limpio + MariaDB 10.11 +
+PHP 8.2). Necesita un código fuente de Moodle **limpio** (nunca el de producción):
 
 ```bash
-vendor/bin/phpunit local/fpvirtual_gestion_alumnado/tests/external/get_snapshot_test.php
+git clone --depth 1 -b MOODLE_405_STABLE https://github.com/moodle/moodle.git ~/moodle405
+export MOODLE_DIR=~/moodle405
+scripts/plugin-test.sh                    # todos los tests del plugin
+scripts/plugin-test.sh --filter analyzer  # argumentos extra para phpunit
+scripts/plugin-test.sh --down             # parar y borrar el entorno
 ```
+
+La primera ejecución construye la imagen, instala las dependencias de Composer de
+Moodle e inicializa la base de tests. Si cambia `version.php`, reinicializa con
+`docker compose -f moodle_plugin/dev/docker-compose.yml exec php php admin/tool/phpunit/cli/init.php`.
+
+En GitHub Actions se ejecuta `moodle-plugin-ci` contra Moodle 4.2 y 4.5
+(`.github/workflows/moodle-plugin-ci.yml`).
 
 ## Troubleshooting
 

@@ -1,0 +1,83 @@
+name: Plugin Moodle (local_fpvirtual_gestion_alumnado)
+
+on:
+  push:
+    paths:
+      - 'moodle_plugin/**'
+      - '.github/workflows/moodle-plugin-ci.yml'
+  pull_request:
+    paths:
+      - 'moodle_plugin/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_USER: 'root'
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'true'
+          MYSQL_CHARACTER_SET_SERVER: 'utf8mb4'
+          MYSQL_COLLATION_SERVER: 'utf8mb4_unicode_ci'
+        ports:
+          - 3306:3306
+        options: --health-cmd="healthcheck.sh --connect" --health-interval 10s --health-timeout 5s --health-retries 3
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.1'
+            moodle-branch: 'MOODLE_402_STABLE'
+          - php: '8.2'
+            moodle-branch: 'MOODLE_405_STABLE'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pgsql, mysqli, zip, gd, xmlrpc, soap, intl
+          ini-values: max_input_vars=5000
+          coverage: none
+
+      - name: Instalar moodle-plugin-ci
+        run: |
+          composer create-project -n --no-dev --prefer-dist moodlehq/moodle-plugin-ci ci ^4
+          echo $(cd ci/bin; pwd) >> $GITHUB_PATH
+          echo $(cd ci/vendor/bin; pwd) >> $GITHUB_PATH
+          sudo locale-gen en_AU.UTF-8
+
+      - name: Instalar Moodle + plugin
+        run: moodle-plugin-ci install --plugin ./repo/moodle_plugin/fpvirtual_gestion_alumnado --db-host=127.0.0.1
+        env:
+          DB: mariadb
+          MOODLE_BRANCH: ${{ matrix.moodle-branch }}
+
+      - name: PHP Lint
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phplint
+
+      - name: Validación del plugin
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci validate
+
+      - name: Savepoints de upgrade
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci savepoints
+
+      - name: Code checker (phpcs)
+        if: ${{ !cancelled() }}
+        continue-on-error: true   # informativo hasta alinear el estilo (fase 8)
+        run: moodle-plugin-ci phpcs --max-warnings 0
+
+      - name: PHPUnit
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpunit --fail-on-warning

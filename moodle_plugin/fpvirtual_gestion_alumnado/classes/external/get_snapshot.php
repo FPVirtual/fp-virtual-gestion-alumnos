@@ -4,16 +4,12 @@
 
 namespace local_fpvirtual_gestion_alumnado\external;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
-
 use context_system;
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 
 /**
  * Snapshot de Moodle para el proceso Python de gestión de alumnado.
@@ -60,14 +56,18 @@ class get_snapshot extends external_api {
     private static function obtener_usuarios(\moodle_database $db): array {
         [$insql, $params] = $db->get_in_or_equal(self::CAMPOS_SIGAD, SQL_PARAMS_NAMED, 'cf');
 
+        // Recordset (no get_records_sql): hay varias filas por usuario (una por
+        // campo personalizado) y get_records_sql las colapsaría por u.id.
         $sql = "SELECT u.id, u.username, u.email, u.firstname, u.lastname, u.suspended,
-                       f.shortname AS cf_shortname, d.data AS cf_value
+                       cf.shortname AS cf_shortname, cf.data AS cf_value
                   FROM {user} u
-             LEFT JOIN {user_info_data} d ON d.userid = u.id
-             LEFT JOIN {user_info_field} f ON f.id = d.fieldid AND f.shortname $insql
+             LEFT JOIN (SELECT d.userid, f.shortname, d.data
+                          FROM {user_info_data} d
+                          JOIN {user_info_field} f ON f.id = d.fieldid
+                         WHERE f.shortname $insql) cf ON cf.userid = u.id
                  WHERE u.deleted = 0
               ORDER BY u.id";
-        $rows = $db->get_records_sql($sql, $params);
+        $rows = $db->get_recordset_sql($sql, $params);
 
         $usuarios = [];
         foreach ($rows as $row) {
@@ -90,6 +90,7 @@ class get_snapshot extends external_api {
                 ];
             }
         }
+        $rows->close();
 
         return array_values($usuarios);
     }
@@ -101,12 +102,14 @@ class get_snapshot extends external_api {
      * @return array
      */
     private static function obtener_matriculas(\moodle_database $db): array {
-        $sql = "SELECT ue.userid, e.courseid, c.shortname, ue.status
+        // Recordset: un usuario tiene varias matrículas y get_records_sql
+        // indexaría por la primera columna (perdiendo filas).
+        $sql = "SELECT ue.id, ue.userid, e.courseid, c.shortname, ue.status
                   FROM {user_enrolments} ue
                   JOIN {enrol} e ON e.id = ue.enrolid
                   JOIN {course} c ON c.id = e.courseid
               ORDER BY ue.userid, e.courseid";
-        $rows = $db->get_records_sql($sql);
+        $rows = $db->get_recordset_sql($sql);
 
         $matriculas = [];
         foreach ($rows as $row) {
@@ -117,6 +120,7 @@ class get_snapshot extends external_api {
                 'status' => (int)$row->status,
             ];
         }
+        $rows->close();
 
         return $matriculas;
     }
