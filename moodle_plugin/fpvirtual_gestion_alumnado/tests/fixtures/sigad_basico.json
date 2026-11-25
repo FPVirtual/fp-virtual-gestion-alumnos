@@ -1,0 +1,47 @@
+{
+  "fecha": "15/11/2026",
+  "hora": "04:00:01",
+  "alumnos": [
+    {
+      "idAlumno": 1001, "idTipoDocumento": 1, "documento": "00000001R",
+      "nombre": "Ana", "apellido1": "De la Fuente", "apellido2": "Gil",
+      "email": "ana.personal@example.com",
+      "centros": [
+        {"codigoCentro": "50009348", "centro": "CPIFP Test",
+         "ciclos": [
+          {"idFicha": 1, "codigoCiclo": "11", "ciclo": "Desarrollo de Aplicaciones Web", "siglasCiclo": "IFC303",
+           "modulos": [
+             {"idMateria": 5001, "modulo": "Programación", "siglasModulo": "PRO"},
+             {"idMateria": 5002, "modulo": "Bases de datos", "siglasModulo": "BD"}
+           ]}
+         ]}
+      ]
+    },
+    {
+      "idAlumno": 1002, "idTipoDocumento": 2, "documento": " x0000002t ",
+      "nombre": "Luis", "apellido1": "Pérez", "apellido2": null,
+      "email": "luis@example.com",
+      "centros": [
+        {"codigoCentro": "50009348", "centro": "CPIFP Test",
+         "ciclos": [
+          {"idFicha": 1, "codigoCiclo": "11", "ciclo": "Desarrollo de Aplicaciones Web", "siglasCiclo": "IFC303",
+           "modulos": [{"idMateria": 5001, "modulo": "Programación", "siglasModulo": "PRO"}]}
+         ]},
+        {"codigoCentro": "22002521", "centro": "IES Otro",
+         "ciclos": [
+          {"idFicha": 2, "codigoCiclo": "12", "ciclo": "Educación Infantil", "siglasCiclo": "SSC302",
+           "modulos": [{"idMateria": 6001, "modulo": "Didáctica", "siglasModulo": "DID"}]}
+         ]}
+      ]
+    },
+    {
+      "idAlumno": 1003, "idTipoDocumento": 1, "documento": "00000003A",
+      "nombre": "Sin", "apellido1": "Email", "apellido2": "", "email": "",
+      "centros": []
+    },
+    {
+      "idAlumno": 1004, "idTipoDocumento": 1, "documento": null,
+      "nombre": "Sin", "apellido1": "Documento", "email": "x@example.com", "centros": []
+    }
+  ]
+}
