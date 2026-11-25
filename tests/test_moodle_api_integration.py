@@ -8,8 +8,8 @@ Se saltan automáticamente si Moodle no responde.
    suspendido.
 
 Configuración esperada en .env.test:
-    MOODLE_API_URL=http://192.168.2.253:8087/webservice/rest/server.php
-    MOODLE_API_TOKEN=9a8fb5343608c92a694165f59fdc2ae4
+    MOODLE_API_URL=<url del servicio REST de la instancia de pruebas>
+    MOODLE_API_TOKEN=<token del usuario de servicio>
 """
 
 import uuid
@@ -41,7 +41,7 @@ def _moodle_disponible() -> bool:
 # Saltar TODOS los tests de este módulo si Moodle no responde
 pytestmark = pytest.mark.skipif(
     not _moodle_disponible(),
-    reason="Moodle de test no disponible en 192.168.2.253:8087",
+    reason="Moodle de test no disponible (MOODLE_API_URL de .env.test)",
 )
 
 

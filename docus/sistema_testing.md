@@ -158,7 +158,7 @@ pytest tests/test_repositories_sigad.py -v
 
 **Archivo:** `tests/test_moodle_api_integration.py`  
 **Tests:** 9  
-**Requisitos:** Instancia de Moodle real accesible en `192.168.2.253:8087` con token válido.
+**Requisitos:** Instancia de Moodle real accesible en la URL configurada en `.env.test` con token válido.
 
 > ⚠️ **Advertencia:** Estos tests tocan datos reales en Moodle. Usan el usuario `prof_cd_daw` para operaciones de suspensión. **Nunca suspender `moodle-api`** (propietario del token).
 

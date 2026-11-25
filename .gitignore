@@ -16,12 +16,13 @@ build/
 # Configuración sensible
 .env
 .env.produccion
+.env.test
 
 # Datos y logs
 data/*.json
 !data/.gitkeep
-logs/*.log
-logs/*.md
+logs/**
+!logs/.gitkeep
 csvs/*.csv
 
 # IDE
