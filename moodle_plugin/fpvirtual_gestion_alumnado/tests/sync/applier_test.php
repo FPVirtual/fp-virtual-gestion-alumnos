@@ -42,7 +42,7 @@ final class applier_test extends \advanced_testcase {
         parent::setUp();
         $this->resetAfterTest();
         $gen = $this->getDataGenerator();
-        foreach (['IdSIGAD', 'emailsigad', 'tipoDocumento', 'consentimientoCDD'] as $field) {
+        foreach (['id_sigad', 'email_sigad', 'tipo_documento', 'consentimiento_cdd'] as $field) {
             $gen->create_custom_profile_field(['datatype' => 'text', 'shortname' => $field, 'name' => $field]);
         }
         foreach (['alumnado', '50009348-IFC303', '22002521-SSC302'] as $cohort) {
@@ -83,6 +83,17 @@ final class applier_test extends \advanced_testcase {
 
         $this->assertSame(0, $result->error_count(), json_encode($result->errors));
         $this->assertSame(0, $this->analyze()->total_actions(), json_encode($this->analyze()->counts()));
+    }
+
+    public function test_campo_opcional_vacio_no_se_escribe(): void {
+        global $DB;
+        $this->config = config::from_array(['field_consentimiento' => '']);
+        $this->assertSame(0, $this->apply($this->analyze())->error_count());
+
+        $ana = $DB->get_record('user', ['username' => '00000001r'], '*', MUST_EXIST);
+        profile_load_custom_fields($ana);
+        $this->assertSame('1001', $ana->profile['id_sigad']);
+        $this->assertSame('', $ana->profile['consentimiento_cdd'] ?? '');
     }
 
     public function test_alta_completa(): void {
@@ -127,9 +138,9 @@ final class applier_test extends \advanced_testcase {
         $this->assertSame('manual', $ana->auth);
         $this->assertSame('1', get_user_preferences('auth_forcepasswordchange', null, $ana->id));
         profile_load_custom_fields($ana);
-        $this->assertSame('1001', $ana->profile['IdSIGAD']);
-        $this->assertSame('ana.personal@example.com', $ana->profile['emailsigad']);
-        $this->assertSame('0', $ana->profile['consentimientoCDD']);
+        $this->assertSame('1001', $ana->profile['id_sigad']);
+        $this->assertSame('ana.personal@example.com', $ana->profile['email_sigad']);
+        $this->assertSame('0', $ana->profile['consentimiento_cdd']);
 
         $credentials = array_column($result->created, 'password', 'username');
         $this->assertTrue(validate_internal_user_password($ana, $credentials['00000001r']));
@@ -161,7 +172,7 @@ final class applier_test extends \advanced_testcase {
 
     public function test_renombrado_conserva_usuario_y_matriculas(): void {
         global $DB;
-        $old = $this->getDataGenerator()->create_user(['username' => 'y9999999z', 'profile_field_IdSIGAD' => '1002']);
+        $old = $this->getDataGenerator()->create_user(['username' => 'y9999999z', 'profile_field_id_sigad' => '1002']);
         $this->getDataGenerator()->enrol_user($old->id, $this->courses['50009348-IFC303-5001']->id);
 
         $result = $this->apply($this->analyze());

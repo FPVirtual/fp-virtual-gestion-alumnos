@@ -111,6 +111,20 @@ class engine {
             raise_memory_limit(MEMORY_HUGE);
             $this->log("Inicio de la ejecución #{$runid} (modo {$mode}, origen {$origin})");
 
+            // 0. Guarda: campos de perfil configurados. Sin ellos no se empareja por
+            // IdSIGAD y las escrituras se perderían en silencio.
+            $problems = $this->config->profile_field_problems();
+            if ($problems) {
+                $meta['violaciones'] = $problems;
+                $meta['mensaje'] = 'Campos de perfil mal configurados: se aborta sin consultar SIGAD. ' .
+                    'Revise los ajustes de la sección Reglas.';
+                $this->log($meta['mensaje']);
+                foreach ($problems as $problem) {
+                    $this->log('GUARDA: ' . $problem);
+                }
+                return $this->finish($runid, self::EXIT_GUARD, run_store::STATUS_ABORTED, $meta, new plan(), null, $notifier);
+            }
+
             // 1-2. SIGAD.
             if ($sigadfile !== null) {
                 $this->log("Leyendo SIGAD desde fichero: {$sigadfile}");

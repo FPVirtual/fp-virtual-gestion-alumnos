@@ -111,14 +111,14 @@ class TestUsuarios:
                 email="alumno1@ejemplo.com",
                 nombre="Ana",
                 apellido="García",
-                customfields={"IdSIGAD": "12345", "consentimientoCDD": "1"},
+                customfields={"id_sigad": "12345", "consentimiento_cdd": "1"},
             )
 
             data = mock_post.call_args.kwargs["data"]
-            assert data["users[0][customfields][0][shortname]"] == "IdSIGAD"
+            assert data["users[0][customfields][0][shortname]"] == "id_sigad"
             assert data["users[0][customfields][0][type]"] == "text"
             assert data["users[0][customfields][0][value]"] == "12345"
-            assert data["users[0][customfields][1][shortname]"] == "consentimientoCDD"
+            assert data["users[0][customfields][1][shortname]"] == "consentimiento_cdd"
             assert data["users[0][customfields][1][type]"] == "checkbox"
 
     def test_actualizar_usuario_busca_id_y_llama_update(self, repo):

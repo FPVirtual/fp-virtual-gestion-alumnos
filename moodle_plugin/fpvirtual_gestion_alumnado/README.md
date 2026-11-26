@@ -14,7 +14,18 @@ Reglas de negocio, decisiones y fases: [`docus/roadmap-v0.4-plugin-php.md`](../.
 ## Requisitos
 
 - Moodle 4.2+ (`$plugin->requires = 2023042400`). Producción: 4.5.
-- Campos de perfil `IdSIGAD`, `emailsigad` (y opcionalmente `tipoDocumento`, `consentimientoCDD`).
+- Campos de perfil de usuario (*Administración del sitio > Usuarios > Campos de perfil del usuario*).
+  Sus nombres cortos se configuran en la sección **Reglas**; los valores por defecto son los de producción:
+
+  | Ajuste | Nombre corto por defecto | Uso | Obligatorio |
+  |--------|--------------------------|-----|-------------|
+  | `field_idsigad` | `id_sigad` | Identificador del alumno en SIGAD; detecta cambios de documento | Sí |
+  | `field_emailsigad` | `email_sigad` | Email personal de SIGAD | Sí |
+  | `field_tipodocumento` | `tipo_documento` | Tipo de documento (solo en altas) | No (vacío = no se escribe) |
+  | `field_consentimiento` | `consentimiento_cdd` | Se pone a `0` en las altas | No (vacío = no se escribe) |
+
+  Cada ejecución comprueba al arrancar que los campos configurados existen (nombre corto exacto,
+  distinguiendo mayúsculas). Si no, se detiene sin consultar SIGAD (**Detenida por seguridad**, código 2).
 - Cohortes `alumnado` y `{codigoCentro}-{siglasCiclo}`; cursos `{codigoCentro}-{siglasCiclo}-{idMateria}`
   con matriculación manual activa.
 
@@ -34,7 +45,7 @@ Después, **Administración del sitio > Notificaciones** para completar la insta
 |---------|---------------------|
 | Ejecución | Activar tarea programada, modo (`dry`/`apply`), motor (integrado / comando externo), retención |
 | Conexión con SIGAD | URL base, usuario, contraseña (cifrada), timeout, espera y reintentos |
-| Reglas | Dominio del email, prefijos excluidos (`prof`), usuarios protegidos, cursos excluidos (`ayuda`), cohorte general, sincronizar nombres, limpieza anual (agosto) |
+| Reglas | Dominio del email, prefijos excluidos (`prof`), usuarios protegidos, cursos excluidos (`ayuda`), cohorte general, sincronizar nombres, nombres cortos de los campos de perfil, limpieza anual (agosto) |
 | Límites de seguridad | Máximo de usuarios suspendidos y % de matrículas suspendidas por ejecución |
 | Notificaciones | Activar, redirigir a un buzón de pruebas, límite diario, pausa, destinatarios del informe, curso de ayuda, URL de soporte |
 
@@ -119,6 +130,7 @@ fpvirtual_gestion_alumnado/
 | Síntoma | Causa probable | Solución |
 |---------|----------------|----------|
 | Ejecución «Detenida por seguridad» | SIGAD sin alumnos o plan por encima de los límites | Revisar el informe; si es correcto, `cli/sync.php --mode=apply --force` |
+| «El campo de perfil '…' no existe en Moodle» | Nombre corto de un campo de perfil mal configurado (`--force` no lo salta) | Ajustes > Reglas: poner el nombre corto exacto del campo |
 | «Faltan las credenciales de SIGAD» | Usuario/contraseña vacíos | Ajustes > Conexión con SIGAD |
 | Avisos «Cursos que no existen en Moodle» | Curso `{centro}-{ciclo}-{idMateria}` no creado | Crear el curso; la matrícula se hará en la siguiente ejecución |
 | Errores `create_user` por contraseña | Política de contraseñas muy estricta | Se usa `generate_password()` si la alfanumérica no cumple; revisar política |

@@ -105,6 +105,9 @@ if ($hassiteconfig) {
     $settings->add($text('excludedcourses'));
     $settings->add($text('cohortalumnado'));
     $settings->add($check('syncnames'));
+    foreach (array_keys(\local_fpvirtual_gestion_alumnado\config::PROFILE_FIELDS) as $field) {
+        $settings->add($text("field_{$field}", PARAM_ALPHANUMEXT));
+    }
     $settings->add($check('cleanupenabled'));
     $settings->add($text('cleanupmonth', PARAM_INT, 3));
 

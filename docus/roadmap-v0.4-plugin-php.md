@@ -73,7 +73,7 @@ Cada regla tendrá al menos un test PHPUnit.
 
 | Id | Regla | Origen |
 |----|-------|--------|
-| R1 | **Identidad**: `username = lower(documento)`. Email principal = `documento@fpvirtualaragon.es` (dominio configurable). `IdSIGAD` (campo de perfil) es el identificador estable. | legacy + py |
+| R1 | **Identidad**: `username = lower(documento)`. Email principal = `documento@fpvirtualaragon.es` (dominio configurable). `IdSIGAD` (campo de perfil `id_sigad`, configurable) es el identificador estable. | legacy + py |
 | R2 | **Ámbito**: solo se gestionan usuarios con `deleted = 0`, `auth` gestionado, que **no** empiecen por `prof` (prefijos configurables) y que **no** estén en la lista de usuarios protegidos (IDs configurables; incluye guest y admin). | legacy |
 | R3 | **Clave de curso**: `shortname = {codigoCentro}-{siglasCiclo}-{idMateria}`. Si el curso no existe se informa ("curso inexistente") y no se matricula. | legacy |
 | R4 | **Cursos excluidos de la sincronización de matrículas**: `ayuda` y los de tutoría (3.ª parte del shortname contiene `t`), que se gestionan por cohorte. | legacy |
@@ -85,7 +85,7 @@ Cada regla tendrá al menos un test PHPUnit.
 | R10 | **Baja de usuario**: usuario en ámbito (R2), activo, que no está en SIGAD (ni por username ni por `IdSIGAD`) → suspender todas sus matrículas, quitarlo de cohortes y suspender la cuenta. | legacy + py |
 | R11 | **Reactivar usuario**: usuario suspendido que vuelve a SIGAD → reactivar y añadir a `alumnado` (R6 completa el resto). | legacy + py |
 | R12 | **Cambio de documento** (NIE→DNI, etc.): usuario cuyo `IdSIGAD` coincide pero su username no → renombrar. Si el nuevo username ya existe → no se toca y se informa para revisión manual. | py (legacy usaba el email) |
-| R13 | **Email personal**: si el email de SIGAD difiere del campo `emailsigad` → actualizar el campo. El email principal de Moodle no se toca. | legacy + py |
+| R13 | **Email personal**: si el email de SIGAD difiere del campo de perfil `email_sigad` (configurable) → actualizar el campo. El email principal de Moodle no se toca. | legacy + py |
 | R14 | **Nombre/apellidos**: si `nombre` ≠ `firstname` o `apellido1 [apellido2]` ≠ `lastname` → actualizar. | py |
 | R15 | **Tutorías sobrantes**: alumno en una cohorte `{centro}-{ciclo}` que ya no corresponde a ningún ciclo suyo en SIGAD → quitar de esa cohorte. | legacy (generalizada) |
 | R16 | **Limpieza de agosto**: en agosto, las matrículas suspendidas de cursos gestionados se eliminan (unenrol). Configurable (mes y activación). | legacy |
@@ -189,6 +189,7 @@ no se corrigen allí (queda congelado) pero ninguno se ha portado.
 | Plugin `get_snapshot` | `lib/externallib.php` no se puede incluir en 4.5 | Migrado a `core_external` |
 | Plugin `access.php` | Cualquier usuario autenticado podía leer el snapshot completo | Sin arquetipos + `RISK_PERSONAL` |
 | Plugin panel | Capacidades `local_x:cap` (inexistentes) y `send_file()` sin `filelib.php`: el panel nunca funcionó | Corregido |
+| Plugin y Python | Shortnames de campos de perfil inventados (`IdSIGAD`, `emailsigad`, `tipoDocumento`, `consentimientoCDD`; desde c739948). En producción son `id_sigad`, `email_sigad`, `tipo_documento`, `consentimiento_cdd`, los mismos que usa el legacy. Detectado en el primer dry-run de pre: 3790 actualizaciones de perfil espurias y 0 cambios de documento | Configurables (`field_*`) + guarda al arrancar (código 2); Python corregido |
 | Legacy/moosh | La contraseña alfanumérica no cumple la política del sitio (moosh se la saltaba) | Contraseña conforme a la política |
 
 ## Estado
@@ -203,6 +204,6 @@ no se corrigen allí (queda congelado) pero ninguno se ha portado.
 | 5 — Aplicación | ✅ |
 | 6 — Notificaciones | ✅ |
 | 7 — Informe, panel y CLI | ✅ |
-| 8 — Tests y calidad | ✅ (48 tests; privacy provider por revisar) |
-| 9 — Preproducción | ⬜ requiere acceso a entornos |
+| 8 — Tests y calidad | ✅ (56 tests; privacy provider por revisar) |
+| 9 — Preproducción | 🟡 primer dry-run en pre (26/11/2026): conexión SIGAD OK; corregidos los nombres de los campos de perfil (0.2.1); repetir el dry-run |
 | 10 — Producción | ⬜ |

@@ -47,7 +47,7 @@ final class engine_test extends \advanced_testcase {
         $this->fixture = __DIR__ . '/../fixtures/sigad_basico.json';
 
         $gen = $this->getDataGenerator();
-        foreach (['IdSIGAD', 'emailsigad'] as $field) {
+        foreach (['id_sigad', 'email_sigad', 'tipo_documento', 'consentimiento_cdd'] as $field) {
             $gen->create_custom_profile_field(['datatype' => 'text', 'shortname' => $field, 'name' => $field]);
         }
         foreach (['alumnado', '50009348-IFC303', '22002521-SSC302'] as $cohort) {
@@ -131,6 +131,21 @@ final class engine_test extends \advanced_testcase {
 
         $this->assertSame(engine::EXIT_GUARD, $run['exitcode']);
         $this->assertSame(run_store::STATUS_ABORTED, run_store::get($run['runid'])->status);
+        $this->assertSame(0, (int)\core_user::get_user_by_username('11111111h')->suspended);
+    }
+
+    public function test_campo_de_perfil_inexistente_aborta_sin_consultar_sigad(): void {
+        $this->getDataGenerator()->create_user(['username' => '11111111h']);
+
+        // Fichero SIGAD inexistente: si se intentara leer, la ejecución acabaría en error (1), no en guarda (2).
+        $run = $this->engine(['field_idsigad' => 'IdSIGAD'])->run('apply', 'cron', '/no/existe.json');
+
+        $this->assertSame(engine::EXIT_GUARD, $run['exitcode']);
+        $record = run_store::get($run['runid']);
+        $this->assertSame(run_store::STATUS_ABORTED, $record->status);
+        $log = file_get_contents(run_store::artifact($record, 'log'));
+        $this->assertStringContainsString("'IdSIGAD' (ajuste field_idsigad) no existe", $log);
+        $this->assertStringNotContainsString('SIGAD:', $log);
         $this->assertSame(0, (int)\core_user::get_user_by_username('11111111h')->suspended);
     }
 

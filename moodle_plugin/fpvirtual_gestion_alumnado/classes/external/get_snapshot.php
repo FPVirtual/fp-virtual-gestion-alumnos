@@ -34,9 +34,6 @@ use core_external\external_value;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class get_snapshot extends external_api {
-    /** Shortnames de los campos de perfil que interesan a SIGAD. */
-    private const CAMPOS_SIGAD = ['IdSIGAD', 'emailsigad', 'consentimientoCDD'];
-
     /**
      * Parámetros de la función (no recibe ninguno).
      */
@@ -69,7 +66,9 @@ class get_snapshot extends external_api {
      * @return array
      */
     private static function obtener_usuarios(\moodle_database $db): array {
-        [$insql, $params] = $db->get_in_or_equal(self::CAMPOS_SIGAD, SQL_PARAMS_NAMED, 'cf');
+        // Shortnames configurados en el plugin (ajustes field_*).
+        $campos = array_values(\local_fpvirtual_gestion_alumnado\config::load()->profile_fields());
+        [$insql, $params] = $db->get_in_or_equal($campos ?: [''], SQL_PARAMS_NAMED, 'cf');
 
         // Recordset (no get_records_sql): hay varias filas por usuario (una por
         // campo personalizado) y get_records_sql las colapsaría por u.id.

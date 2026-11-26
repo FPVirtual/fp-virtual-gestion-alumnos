@@ -31,8 +31,8 @@ def _extract_customfield(user_dict: dict, shortname: str) -> str | None:
 
 
 def _extract_id_sigad(user_dict: dict) -> int | None:
-    """Extrae el valor numérico del custom field IdSIGAD de un usuario."""
-    value = _extract_customfield(user_dict, "IdSIGAD")
+    """Extrae el valor numérico del custom field id_sigad de un usuario."""
+    value = _extract_customfield(user_dict, "id_sigad")
     if value is None:
         return None
     try:
@@ -42,8 +42,8 @@ def _extract_id_sigad(user_dict: dict) -> int | None:
 
 
 def _extract_email_sigad(user_dict: dict) -> str | None:
-    """Extrae el valor del custom field emailsigad de un usuario."""
-    return _extract_customfield(user_dict, "emailsigad")
+    """Extrae el valor del custom field email_sigad de un usuario."""
+    return _extract_customfield(user_dict, "email_sigad")
 
 
 class BaseMoodleSource(MoodleSource):

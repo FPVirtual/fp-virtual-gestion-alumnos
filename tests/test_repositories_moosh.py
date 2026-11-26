@@ -23,9 +23,9 @@ def test_moosh_crear_usuario(mock_moosh, settings_test):
 def test_moosh_crear_usuario_con_customfields(mock_moosh, settings_test):
     repo = MooshMoodleRepository(settings_test)
     customfields = {
-        "IdSIGAD": "99999",
-        "tipoDocumento": "1",
-        "consentimientoCDD": "0",
+        "id_sigad": "99999",
+        "tipo_documento": "1",
+        "consentimiento_cdd": "0",
     }
     user_id = repo.crear_usuario(
         "testuser", "test@test.com", "Nombre", "Apellido",
@@ -38,7 +38,7 @@ def test_moosh_actualizar_usuario_con_customfields(mock_moosh, settings_test):
     repo = MooshMoodleRepository(settings_test)
     result = repo.actualizar_usuario(
         "testuser",
-        customfields={"emailsigad": "nuevo@ejemplo.com"},
+        customfields={"email_sigad": "nuevo@ejemplo.com"},
     )
     assert result is True
 

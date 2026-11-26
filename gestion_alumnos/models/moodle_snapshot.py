@@ -18,8 +18,8 @@ class MoodleUserRecord(BaseModel):
     firstname: str | None = Field(None)
     lastname: str | None = Field(None)
     suspended: int = Field(0, ge=0, le=1)
-    id_sigad: int | None = Field(None, description="Valor del custom field IdSIGAD en Moodle")
-    email_sigad: str | None = Field(None, description="Valor del custom field emailsigad en Moodle")
+    id_sigad: int | None = Field(None, description="Valor del custom field id_sigad en Moodle")
+    email_sigad: str | None = Field(None, description="Valor del custom field email_sigad en Moodle")
 
 
 class MoodleCourseRecord(BaseModel):

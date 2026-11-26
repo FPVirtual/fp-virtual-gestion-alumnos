@@ -65,15 +65,15 @@ final class get_snapshot_test extends \advanced_testcase {
         $this->setAdminUser();
         $gen = $this->getDataGenerator();
 
-        foreach (['IdSIGAD', 'emailsigad', 'otrocampo'] as $shortname) {
+        foreach (['id_sigad', 'email_sigad', 'otrocampo'] as $shortname) {
             $gen->create_custom_profile_field([
                 'datatype' => 'text', 'shortname' => $shortname, 'name' => $shortname,
             ]);
         }
         $user = $gen->create_user([
             'username' => '12345678a',
-            'profile_field_IdSIGAD' => '16839',
-            'profile_field_emailsigad' => 'personal@example.com',
+            'profile_field_id_sigad' => '16839',
+            'profile_field_email_sigad' => 'personal@example.com',
             'profile_field_otrocampo' => 'ignorar',
         ]);
         $c1 = $gen->create_course(['shortname' => '50009348-DAW-1001']);
@@ -92,7 +92,7 @@ final class get_snapshot_test extends \advanced_testcase {
         $usuario = array_values(array_filter($result['usuarios'], fn(array $u) => $u['id'] === (int)$user->id));
         $this->assertCount(1, $usuario);
         $campos = array_column($usuario[0]['customfields'], 'value', 'shortname');
-        $this->assertSame(['IdSIGAD' => '16839', 'emailsigad' => 'personal@example.com'], $campos);
+        $this->assertSame(['id_sigad' => '16839', 'email_sigad' => 'personal@example.com'], $campos);
     }
 
     public function test_execute_requires_capability(): void {

@@ -40,7 +40,7 @@ final class analyzer_test extends \advanced_testcase {
         parent::setUp();
         $this->resetAfterTest();
         $gen = $this->getDataGenerator();
-        foreach (['IdSIGAD', 'emailsigad'] as $field) {
+        foreach (['id_sigad', 'email_sigad'] as $field) {
             $gen->create_custom_profile_field(['datatype' => 'text', 'shortname' => $field, 'name' => $field]);
         }
         foreach (['alumnado', '50009348-IFC303', '22002521-SSC302'] as $cohort) {
@@ -129,7 +129,7 @@ final class analyzer_test extends \advanced_testcase {
 
     public function test_matriculas_de_alumno_existente(): void {
         $ana = $this->user('00000001r', ['firstname' => 'Ana', 'lastname' => 'De la Fuente Gil',
-            'profile_field_IdSIGAD' => '1001', 'profile_field_emailsigad' => 'ana.personal@example.com']);
+            'profile_field_id_sigad' => '1001', 'profile_field_email_sigad' => 'ana.personal@example.com']);
         $this->enrol($ana, '50009348-IFC303-5001');                       // Correcta.
         $this->enrol($ana, '50009348-IFC303-5002', ENROL_USER_SUSPENDED); // Se reactiva (R8).
         $this->enrol($ana, '50009348-IFC303-5099');                       // No está en SIGAD (R9).
@@ -148,7 +148,7 @@ final class analyzer_test extends \advanced_testcase {
 
     public function test_cambio_de_documento_por_idsigad(): void {
         $old = $this->user('y9999999z', ['firstname' => 'Luis', 'lastname' => 'Pérez',
-            'profile_field_IdSIGAD' => '1002', 'profile_field_emailsigad' => 'luis@example.com']);
+            'profile_field_id_sigad' => '1002', 'profile_field_email_sigad' => 'luis@example.com']);
         $this->enrol($old, '50009348-IFC303-5001');
 
         $plan = $this->analyze();
@@ -166,19 +166,19 @@ final class analyzer_test extends \advanced_testcase {
     }
 
     public function test_cambio_de_documento_por_email_si_no_hay_idsigad(): void {
-        $old = $this->user('y9999999z', ['profile_field_emailsigad' => 'LUIS@example.com']);
+        $old = $this->user('y9999999z', ['profile_field_email_sigad' => 'LUIS@example.com']);
 
         $plan = $this->analyze();
 
         $this->assertSame([(int)$old->id], $this->col($plan, plan::RENAME_USER, 'userid'));
         // Se rellena el IdSIGAD para que en adelante se empareje por él.
         $profile = $plan->get(plan::UPDATE_PROFILE)[0];
-        $this->assertSame(['IdSIGAD' => '1002'], $profile['fields']);
+        $this->assertSame(['idsigad' => '1002'], $profile['fields']);
     }
 
     public function test_idsigad_duplicado_es_conflicto(): void {
-        $this->user('a1', ['profile_field_IdSIGAD' => '1002']);
-        $this->user('a2', ['profile_field_IdSIGAD' => '1002']);
+        $this->user('a1', ['profile_field_id_sigad' => '1002']);
+        $this->user('a2', ['profile_field_id_sigad' => '1002']);
 
         $plan = $this->analyze();
 
@@ -220,21 +220,42 @@ final class analyzer_test extends \advanced_testcase {
 
     public function test_reactivacion_perfil_y_nombre(): void {
         $luis = $this->user('x0000002t', ['suspended' => 1, 'firstname' => 'Luis', 'lastname' => 'Perez',
-            'profile_field_emailsigad' => 'antiguo@example.com']);
+            'profile_field_email_sigad' => 'antiguo@example.com']);
 
         $plan = $this->analyze();
 
         $this->assertSame([(int)$luis->id], $this->col($plan, plan::REACTIVATE_USER, 'userid'));
         $profile = $plan->get(plan::UPDATE_PROFILE)[0];
-        $this->assertSame(['IdSIGAD' => '1002', 'emailsigad' => 'luis@example.com'], $profile['fields']);
+        $this->assertSame(['idsigad' => '1002', 'emailsigad' => 'luis@example.com'], $profile['fields']);
         $this->assertSame('antiguo@example.com', $profile['old']['emailsigad']);
         $this->assertSame(['Pérez'], $this->col($plan, plan::UPDATE_NAME, 'lastname'));
 
         $this->assertSame(0, $this->analyze(['syncnames' => 0])->count(plan::UPDATE_NAME));
     }
 
+    /**
+     * Regresión (pre, 26/11/2026): con shortnames que no existían se leían vacíos
+     * y se proponía actualizar el perfil de todos los alumnos emparejados.
+     */
+    public function test_perfil_al_dia_no_genera_actualizacion(): void {
+        $this->user('00000001r', ['profile_field_id_sigad' => '1001', 'profile_field_email_sigad' => 'ana.personal@example.com']);
+        $this->user('x0000002t', ['profile_field_id_sigad' => '1002', 'profile_field_email_sigad' => 'luis@example.com']);
+
+        $this->assertSame(0, $this->analyze()->count(plan::UPDATE_PROFILE));
+    }
+
+    public function test_shortnames_configurables(): void {
+        $gen = $this->getDataGenerator();
+        $gen->create_custom_profile_field(['datatype' => 'text', 'shortname' => 'otro_id', 'name' => 'otro_id']);
+        $old = $this->user('y9999999z', ['profile_field_otro_id' => '1002']);
+
+        $plan = $this->analyze(['field_idsigad' => 'otro_id']);
+
+        $this->assertSame([(int)$old->id], $this->col($plan, plan::RENAME_USER, 'userid'));
+    }
+
     public function test_cohorte_de_ciclo_que_ya_no_corresponde(): void {
-        $ana = $this->user('00000001r', ['profile_field_IdSIGAD' => '1001']);
+        $ana = $this->user('00000001r', ['profile_field_id_sigad' => '1001']);
         cohort_add_member($this->cohort('22002521-SSC302'), $ana->id);
 
         $plan = $this->analyze();
@@ -244,7 +265,7 @@ final class analyzer_test extends \advanced_testcase {
     }
 
     public function test_limpieza_en_agosto(): void {
-        $ana = $this->user('00000001r', ['profile_field_IdSIGAD' => '1001']);
+        $ana = $this->user('00000001r', ['profile_field_id_sigad' => '1001']);
         $this->enrol($ana, '50009348-IFC303-5099', ENROL_USER_SUSPENDED);
         $this->enrol($ana, '50009348-IFC303-5002', ENROL_USER_SUSPENDED); // Se reactiva: no se limpia.
         $agosto = mktime(4, 0, 0, 8, 10, 2027);

@@ -27,10 +27,10 @@ class APIMoodleRepository(MoodleRepository):
     })
 
     CUSTOMFIELD_TYPES: dict[str, str] = {
-        "IdSIGAD": "text",
-        "consentimientoCDD": "checkbox",
-        "tipoDocumento": "text",
-        "emailsigad": "text",
+        "id_sigad": "text",
+        "consentimiento_cdd": "checkbox",
+        "tipo_documento": "text",
+        "email_sigad": "text",
     }
 
     def __init__(self, settings: Settings | None = None) -> None:

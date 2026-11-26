@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **Nombres de los campos de perfil de Moodle** (plugin 0.2.1 y paquete Python). Se usaban `IdSIGAD`, `emailsigad`, `tipoDocumento` y `consentimientoCDD`, que nunca han existido en producción. Los reales, los mismos que usa el legacy de `curso2627`, son `id_sigad`, `email_sigad`, `tipo_documento` y `consentimiento_cdd`. Con los nombres erróneos el IdSIGAD y el email personal se leían vacíos: un dry-run en pre proponía actualizar el perfil de los 3790 alumnos emparejados, sin detectar ningún cambio de documento, y en `apply` las escrituras se habrían ignorado sin avisar.
+  - **Plugin:** los shortnames son ahora ajustes (sección «Reglas»: `field_idsigad`, `field_emailsigad`, `field_tipodocumento`, `field_consentimiento`), con esos valores por defecto. `db/upgrade.php` los inicializa.
+  - **Plugin:** al arrancar, cada ejecución comprueba que los campos configurados existen en `mdl_user_info_field`. Si falta alguno, o si `field_idsigad`/`field_emailsigad` están vacíos, aborta antes de consultar SIGAD con «Detenida por seguridad» (código de salida 2).
+  - **Plugin:** el plan (`plan.json`) usa claves lógicas (`idsigad`, `emailsigad`) en lugar de shortnames.
+  - **Plugin:** `get_snapshot` devuelve los campos configurados.
+  - **Python:** usa los mismos shortnames en snake_case.
+
 ### Added
 
 - **Portación de mejoras desde `curso2627`** (línea legacy), ver `docus/roadmap-portacion-curso2627.md`:

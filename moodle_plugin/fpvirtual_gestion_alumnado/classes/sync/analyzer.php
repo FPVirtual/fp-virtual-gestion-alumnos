@@ -226,18 +226,18 @@ class analyzer {
         // R12 (relleno de IdSIGAD) y R13 (email personal).
         $fields = [];
         if ($student['idsigad'] && $user['idsigad'] !== $student['idsigad']) {
-            $fields[moodle_state::FIELD_IDSIGAD] = (string)$student['idsigad'];
+            $fields['idsigad'] = (string)$student['idsigad'];
         }
         if (
             $student['email'] !== null
                 && \core_text::strtolower($student['email']) !== \core_text::strtolower($user['emailsigad'])
         ) {
-            $fields[moodle_state::FIELD_EMAILSIGAD] = $student['email'];
+            $fields['emailsigad'] = $student['email'];
         }
         if ($fields) {
             $old = [
-                moodle_state::FIELD_IDSIGAD => (string)$user['idsigad'],
-                moodle_state::FIELD_EMAILSIGAD => $user['emailsigad'],
+                'idsigad' => (string)$user['idsigad'],
+                'emailsigad' => $user['emailsigad'],
             ];
             $this->plan->add(plan::UPDATE_PROFILE, $ref + ['fields' => $fields, 'old' => array_intersect_key($old, $fields)]);
         }

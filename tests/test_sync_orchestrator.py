@@ -264,9 +264,9 @@ class TestSyncOrchestratorApply:
         assert len(create_calls) == 1
         kwargs = create_calls[0].kwargs
         assert kwargs["username"] == "12345678a"
-        assert kwargs["customfields"]["IdSIGAD"] == "16840"
-        assert kwargs["customfields"]["tipoDocumento"] == "1"
-        assert kwargs["customfields"]["consentimientoCDD"] == "0"
+        assert kwargs["customfields"]["id_sigad"] == "16840"
+        assert kwargs["customfields"]["tipo_documento"] == "1"
+        assert kwargs["customfields"]["consentimiento_cdd"] == "0"
 
     def test_email_updated(self, mock_sigad_repo, mock_moodle_source, mock_moodle_sink):
         orchestrator = SyncOrchestrator(
@@ -282,7 +282,7 @@ class TestSyncOrchestratorApply:
         args = update_calls[0].args
         kwargs = update_calls[0].kwargs
         assert args[0] == "78842153q"
-        assert kwargs["customfields"]["emailsigad"] == "valeria.torres.medina@ejemplo.com"
+        assert kwargs["customfields"]["email_sigad"] == "valeria.torres.medina@ejemplo.com"
 
     def test_enrolments_applied(self, mock_sigad_repo, mock_moodle_source, mock_moodle_sink):
         # Nota: las nuevas matrículas no se aplican porque los shortnames

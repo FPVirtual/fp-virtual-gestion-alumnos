@@ -159,10 +159,10 @@ class applier {
         $userid = user_create_user($user, true, true);
 
         $this->save_profile($userid, array_filter([
-            moodle_state::FIELD_IDSIGAD => $op['idsigad'] ? (string)$op['idsigad'] : null,
-            'tipoDocumento' => $op['idtipodocumento'] ? (string)$op['idtipodocumento'] : null,
-            moodle_state::FIELD_EMAILSIGAD => $op['email'],
-            'consentimientoCDD' => '0',
+            'idsigad' => $op['idsigad'] ? (string)$op['idsigad'] : null,
+            'tipodocumento' => $op['idtipodocumento'] ? (string)$op['idtipodocumento'] : null,
+            'emailsigad' => $op['email'],
+            'consentimiento' => '0',
         ], fn($v) => $v !== null), false);
         set_user_preference('auth_forcepasswordchange', 1, $userid);
 
@@ -318,13 +318,17 @@ class applier {
      * Guarda campos de perfil y opcionalmente dispara user_updated.
      *
      * @param int $userid
-     * @param array $fields shortname => valor
+     * @param array $fields clave lógica (config::PROFILE_FIELDS) => valor
      * @param bool $event
      */
     protected function save_profile(int $userid, array $fields, bool $event): void {
+        $shortnames = $this->config->profile_fields();
         $data = (object)['id' => $userid];
-        foreach ($fields as $shortname => $value) {
-            $data->{'profile_field_' . $shortname} = $value;
+        foreach ($fields as $field => $value) {
+            // Clave lógica => shortname configurado; los opcionales vacíos no se escriben.
+            if (isset($shortnames[$field])) {
+                $data->{'profile_field_' . $shortnames[$field]} = $value;
+            }
         }
         profile_save_data($data);
         if ($event) {

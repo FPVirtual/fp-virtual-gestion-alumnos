@@ -30,23 +30,23 @@ def default_customfields(
     """Custom fields por defecto para nuevos usuarios en Moodle.
 
     Args:
-        id_sigad: Identificador de SIGAD (IdSIGAD). Si es None se omite.
+        id_sigad: Identificador de SIGAD (id_sigad). Si es None se omite.
         id_tipo_documento: Tipo de documento de SIGAD (idTipoDocumento).
             1=DNI, 2=NIE, etc. Si es None se omite.
-        email_sigad: Email personal de SIGAD (emailsigad). Si es None se omite.
+        email_sigad: Email personal de SIGAD (email_sigad). Si es None se omite.
 
     Returns:
         Diccionario shortname -> valor. Los tipos se infieren por shortname.
     """
     fields: dict[str, str] = {
-        "consentimientoCDD": "0",
+        "consentimiento_cdd": "0",
     }
     if id_sigad is not None:
-        fields["IdSIGAD"] = str(id_sigad)
+        fields["id_sigad"] = str(id_sigad)
     if id_tipo_documento is not None:
-        fields["tipoDocumento"] = str(id_tipo_documento)
+        fields["tipo_documento"] = str(id_tipo_documento)
     if email_sigad is not None:
-        fields["emailsigad"] = email_sigad
+        fields["email_sigad"] = email_sigad
     return fields
 
 
@@ -198,7 +198,7 @@ class SyncApplier:
                 logger.error(f"Error creando usuario: {e}", username=alumno.username_moodle)
 
     def _apply_email_changes(self, stats: dict) -> None:
-        """Actualiza el email personal de SIGAD (custom field emailsigad).
+        """Actualiza el email personal de SIGAD (custom field email_sigad).
 
         El email principal/institucional de Moodle no se modifica.
         """
@@ -208,7 +208,7 @@ class SyncApplier:
             try:
                 self._sink.update_user(
                     delta.documento.lower(),
-                    customfields={"emailsigad": delta.email_sigad},
+                    customfields={"email_sigad": delta.email_sigad},
                 )
                 stats["emails_updated"] += 1
                 logger.info(

@@ -30,6 +30,19 @@ class config {
     /** @var string Componente. */
     public const COMPONENT = 'local_fpvirtual_gestion_alumnado';
 
+    /**
+     * @var bool[] Campos de perfil que usa la sincronización (clave lógica => obligatorio).
+     *
+     * El shortname real de cada uno es el ajuste field_{clave}. Los opcionales se
+     * pueden dejar vacíos y entonces no se escriben.
+     */
+    public const PROFILE_FIELDS = [
+        'idsigad' => true,
+        'emailsigad' => true,
+        'tipodocumento' => false,
+        'consentimiento' => false,
+    ];
+
     /** @var array Valores por defecto de cada ajuste. */
     public const DEFAULTS = [
         // Ejecución.
@@ -55,6 +68,11 @@ class config {
         'excludedcourses' => 'ayuda',
         'cohortalumnado' => 'alumnado',
         'syncnames' => 1,
+        // Shortnames de los campos de perfil (mdl_user_info_field).
+        'field_idsigad' => 'id_sigad',
+        'field_emailsigad' => 'email_sigad',
+        'field_tipodocumento' => 'tipo_documento',
+        'field_consentimiento' => 'consentimiento_cdd',
         'cleanupenabled' => 1,
         'cleanupmonth' => 8,
         // Guardas.
@@ -176,5 +194,59 @@ class config {
             }
         }
         return array_values(array_unique($ids));
+    }
+
+    /**
+     * Shortname configurado de un campo de perfil ('' si no se usa).
+     *
+     * @param string $field clave lógica de PROFILE_FIELDS
+     * @return string
+     */
+    public function field(string $field): string {
+        return $this->str('field_' . $field);
+    }
+
+    /**
+     * Shortnames configurados no vacíos (clave lógica => shortname).
+     *
+     * @return string[]
+     */
+    public function profile_fields(): array {
+        $fields = [];
+        foreach (array_keys(self::PROFILE_FIELDS) as $field) {
+            if ($this->field($field) !== '') {
+                $fields[$field] = $this->field($field);
+            }
+        }
+        return $fields;
+    }
+
+    /**
+     * Problemas con los campos de perfil configurados: obligatorios sin configurar
+     * o shortnames que no existen en mdl_user_info_field.
+     *
+     * @return string[] mensajes; vacío si todo es correcto
+     */
+    public function profile_field_problems(): array {
+        global $DB;
+
+        $problems = [];
+        foreach (self::PROFILE_FIELDS as $field => $required) {
+            if ($required && $this->field($field) === '') {
+                $problems[] = "El ajuste field_{$field} es obligatorio y está vacío.";
+            }
+        }
+        $configured = $this->profile_fields();
+        if ($configured) {
+            // Comparación exacta en PHP: profile_save_data() usa el shortname tal cual
+            // y la colación de MariaDB no distingue mayúsculas.
+            $existing = $DB->get_fieldset_sql('SELECT shortname FROM {user_info_field}');
+            foreach ($configured as $field => $shortname) {
+                if (!in_array($shortname, $existing, true)) {
+                    $problems[] = "El campo de perfil '{$shortname}' (ajuste field_{$field}) no existe en Moodle.";
+                }
+            }
+        }
+        return $problems;
     }
 }

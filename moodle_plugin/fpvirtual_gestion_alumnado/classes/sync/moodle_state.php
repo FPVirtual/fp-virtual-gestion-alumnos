@@ -31,12 +31,6 @@ use local_fpvirtual_gestion_alumnado\config;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class moodle_state {
-    /** @var string Campo de perfil con el identificador de SIGAD. */
-    public const FIELD_IDSIGAD = 'IdSIGAD';
-
-    /** @var string Campo de perfil con el email personal de SIGAD. */
-    public const FIELD_EMAILSIGAD = 'emailsigad';
-
     /** @var array[] Usuarios no borrados por id: id, username, firstname, lastname, suspended, idsigad, emailsigad. */
     public array $users = [];
 
@@ -116,21 +110,35 @@ class moodle_state {
     }
 
     /**
+     * Id del campo de perfil configurado (0 si no existe).
+     *
+     * @param string $field clave lógica (config::PROFILE_FIELDS)
+     * @return int
+     */
+    protected function field_id(string $field): int {
+        global $DB;
+        $shortname = $this->config->field($field);
+        if ($shortname === '') {
+            return 0;
+        }
+        foreach ($DB->get_records('user_info_field', ['shortname' => $shortname], '', 'id, shortname') as $f) {
+            if ($f->shortname === $shortname) {
+                return (int)$f->id;
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Usuarios (R2): no borrados, de esta instalación, fuera de protegidos, cuentas de
      * servicio web y prefijos excluidos.
      */
     protected function load_users(): void {
         global $DB, $CFG;
 
-        $fields = $DB->get_records_list(
-            'user_info_field',
-            'shortname',
-            [self::FIELD_IDSIGAD, self::FIELD_EMAILSIGAD],
-            '',
-            'shortname, id'
-        );
-        $idsigadfield = isset($fields[self::FIELD_IDSIGAD]) ? (int)$fields[self::FIELD_IDSIGAD]->id : 0;
-        $emailfield = isset($fields[self::FIELD_EMAILSIGAD]) ? (int)$fields[self::FIELD_EMAILSIGAD]->id : 0;
+        // Shortnames configurables (ajustes field_*); el motor comprueba antes que existen.
+        $idsigadfield = $this->field_id('idsigad');
+        $emailfield = $this->field_id('emailsigad');
 
         $sql = "SELECT u.id, u.username, u.auth, u.firstname, u.lastname, u.suspended,
                        ids.data AS idsigad, em.data AS emailsigad
